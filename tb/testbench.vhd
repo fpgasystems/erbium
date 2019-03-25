@@ -3,8 +3,8 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.std_logic_arith.all;
 
-library abr;
-use abr.pkg_abr.all;
+library bre;
+use bre.pkg_bre.all;
 
 entity nfabre_testbench is
 end nfabre_testbench;
@@ -77,7 +77,7 @@ begin
     
 end process sim;
 
-dut : entity abr.top_bram port map(
+dut : entity bre.top port map(
     clk_i    => sys_clk,
     rst_i    => sys_rst,
     query_i  => queries,

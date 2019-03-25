@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wave_config>
+   <wave_state>
+   </wave_state>
+   <db_ref_list>
+      <db_ref path="nfabre_testbench_behav.wdb" id="1">
+         <top_modules>
+            <top_module name="nfabre_testbench" />
+            <top_module name="pkg_abr" />
+            <top_module name="ram_pkg" />
+         </top_modules>
+      </db_ref>
+   </db_ref_list>
+   <zoom_setting>
+      <ZoomStartTime time="0fs"></ZoomStartTime>
+      <ZoomEndTime time="2080000001fs"></ZoomEndTime>
+      <Cursor1Time time="1000000000fs"></Cursor1Time>
+   </zoom_setting>
+   <column_width_setting>
+      <NameColumnWidth column_width="235"></NameColumnWidth>
+      <ValueColumnWidth column_width="338"></ValueColumnWidth>
+   </column_width_setting>
+   <WVObjectSize size="17" />
+   <wvobject type="logic" fp_name="/nfabre_testbench/sys_clk">
+      <obj_property name="ElementShortName">sys_clk</obj_property>
+      <obj_property name="ObjectShortName">sys_clk</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/nfabre_testbench/sys_rst">
+      <obj_property name="ElementShortName">sys_rst</obj_property>
+      <obj_property name="ObjectShortName">sys_rst</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/nfabre_testbench/queries">
+      <obj_property name="ElementShortName">queries[8:0][7:0]</obj_property>
+      <obj_property name="ObjectShortName">queries[8:0][7:0]</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/nfabre_testbench/results">
+      <obj_property name="ElementShortName">results[157:0]</obj_property>
+      <obj_property name="ObjectShortName">results[157:0]</obj_property>
+      <obj_property name="Radix">HEXRADIX</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/nfabre_testbench/dut/sig_fnc_ruleAr">
+      <obj_property name="ElementShortName">sig_fnc_ruleAr</obj_property>
+      <obj_property name="ObjectShortName">sig_fnc_ruleAr</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/nfabre_testbench/dut/sig_fnc_ruleBr">
+      <obj_property name="ElementShortName">sig_fnc_ruleBr</obj_property>
+      <obj_property name="ObjectShortName">sig_fnc_ruleBr</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/nfabre_testbench/dut/sig_ram_mrktA">
+      <obj_property name="ElementShortName">sig_ram_mrktA[3:0]</obj_property>
+      <obj_property name="ObjectShortName">sig_ram_mrktA[3:0]</obj_property>
+      <obj_property name="Radix">BINARYRADIX</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/nfabre_testbench/dut/sig_ram_mrktB">
+      <obj_property name="ElementShortName">sig_ram_mrktB[3:0]</obj_property>
+      <obj_property name="ObjectShortName">sig_ram_mrktB[3:0]</obj_property>
+      <obj_property name="Radix">BINARYRADIX</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/nfabre_testbench/dut/sig_ram_cabin">
+      <obj_property name="ElementShortName">sig_ram_cabin[7:0]</obj_property>
+      <obj_property name="ObjectShortName">sig_ram_cabin[7:0]</obj_property>
+      <obj_property name="Radix">BINARYRADIX</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/nfabre_testbench/dut/sig_ram_opair">
+      <obj_property name="ElementShortName">sig_ram_opair[2:0]</obj_property>
+      <obj_property name="ObjectShortName">sig_ram_opair[2:0]</obj_property>
+      <obj_property name="Radix">BINARYRADIX</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/nfabre_testbench/dut/sig_ram_flgrp">
+      <obj_property name="ElementShortName">sig_ram_flgrp[13:0]</obj_property>
+      <obj_property name="ObjectShortName">sig_ram_flgrp[13:0]</obj_property>
+      <obj_property name="Radix">BINARYRADIX</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/nfabre_testbench/dut/sig_ram_bkg">
+      <obj_property name="ElementShortName">sig_ram_bkg[25:0]</obj_property>
+      <obj_property name="ObjectShortName">sig_ram_bkg[25:0]</obj_property>
+      <obj_property name="Radix">BINARYRADIX</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/nfabre_testbench/dut/sig_fnc_04MAY200701JAN9999">
+      <obj_property name="ElementShortName">sig_fnc_04MAY200701JAN9999</obj_property>
+      <obj_property name="ObjectShortName">sig_fnc_04MAY200701JAN9999</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/nfabre_testbench/dut/sig_fnc_15MAY200801JAN9999">
+      <obj_property name="ElementShortName">sig_fnc_15MAY200801JAN9999</obj_property>
+      <obj_property name="ObjectShortName">sig_fnc_15MAY200801JAN9999</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/nfabre_testbench/dut/sig_fnc_07JUL200901JAN9999">
+      <obj_property name="ElementShortName">sig_fnc_07JUL200901JAN9999</obj_property>
+      <obj_property name="ObjectShortName">sig_fnc_07JUL200901JAN9999</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/nfabre_testbench/dut/sig_fnc_08JUL200901JAN9999">
+      <obj_property name="ElementShortName">sig_fnc_08JUL200901JAN9999</obj_property>
+      <obj_property name="ObjectShortName">sig_fnc_08JUL200901JAN9999</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/nfabre_testbench/dut/sig_fnc_18APR201501JAN9999">
+      <obj_property name="ElementShortName">sig_fnc_18APR201501JAN9999</obj_property>
+      <obj_property name="ObjectShortName">sig_fnc_18APR201501JAN9999</obj_property>
+   </wvobject>
+</wave_config>

@@ -11,6 +11,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 library std;
+use std.pkg_ram.all;
 use std.textio.all;
 
 entity xilinx_single_port_ram_no_change is

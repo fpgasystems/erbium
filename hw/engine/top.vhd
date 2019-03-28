@@ -2,7 +2,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.all;
 
 library std;
-use std.pkg_ram.all;;
+use std.pkg_ram.all;
 
 library bre;
 use bre.pkg_bre.all;
@@ -1552,169 +1552,169 @@ end architecture behavioural;
 
 
 
-    signal sig_fnc_ACR0 : std_logic;
-    signal sig_fnc_AFS0 : std_logic;
-    signal sig_fnc_AGG0 : std_logic;
-    signal sig_fnc_APR0 : std_logic;
-    signal sig_fnc_APR1 : std_logic;
-    signal sig_fnc_ARC0 : std_logic;
-    signal sig_fnc_ASR0 : std_logic;
-    signal sig_fnc_ASR1 : std_logic;
-    signal sig_fnc_BCR2 : std_logic;
-    signal sig_fnc_CCM0 : std_logic;
-    signal sig_fnc_CMT0 : std_logic;
-    signal sig_fnc_EFT0 : std_logic;
-    signal sig_fnc_ETR0 : std_logic;
-    signal sig_fnc_FCM0 : std_logic;
-    signal sig_fnc_FCM2 : std_logic;
-    signal sig_fnc_FRS0 : std_logic;
-    signal sig_fnc_FSR0 : std_logic;
-    signal sig_fnc_GHA0 : std_logic;
-    signal sig_fnc_IDC0 : std_logic;
-    signal sig_fnc_INT0 : std_logic;
-    signal sig_fnc_MCO1 : std_logic;
-    signal sig_fnc_MIC0 : std_logic;
-    signal sig_fnc_MIL0 : std_logic;
-    signal sig_fnc_NSR1 : std_logic;
-    signal sig_fnc_NSR2 : std_logic;
-    signal sig_fnc_OCC0 : std_logic;
-    signal sig_fnc_OCC1 : std_logic;
-    signal sig_fnc_OCC2 : std_logic;
-    signal sig_fnc_ODC0 : std_logic;
-    signal sig_fnc_ODP0 : std_logic;
-    signal sig_fnc_OED0 : std_logic;
-    signal sig_fnc_OFD0 : std_logic;
-    signal sig_fnc_PAL0 : std_logic;
-    signal sig_fnc_PDR0 : std_logic;
-    signal sig_fnc_RCR0 : std_logic;
-    signal sig_fnc_SCD0 : std_logic;
-    signal sig_fnc_SLR0 : std_logic;
-    signal sig_fnc_SPR0 : std_logic;
-    signal sig_fnc_STP0 : std_logic;
-    signal sig_fnc_STS0 : std_logic;
-    signal sig_fnc_TIF0 : std_logic;
-    signal sig_fnc_TIL0 : std_logic;
-    signal sig_fnc_TNR0 : std_logic;
-    signal sig_fnc_TPL0 : std_logic;
-    signal sig_fnc_YCR0 : std_logic;
+    --signal sig_fnc_ACR0 : std_logic;
+    --signal sig_fnc_AFS0 : std_logic;
+    --signal sig_fnc_AGG0 : std_logic;
+    --signal sig_fnc_APR0 : std_logic;
+    --signal sig_fnc_APR1 : std_logic;
+    --signal sig_fnc_ARC0 : std_logic;
+    --signal sig_fnc_ASR0 : std_logic;
+    --signal sig_fnc_ASR1 : std_logic;
+    --signal sig_fnc_BCR2 : std_logic;
+    --signal sig_fnc_CCM0 : std_logic;
+    --signal sig_fnc_CMT0 : std_logic;
+    --signal sig_fnc_EFT0 : std_logic;
+    --signal sig_fnc_ETR0 : std_logic;
+    --signal sig_fnc_FCM0 : std_logic;
+    --signal sig_fnc_FCM2 : std_logic;
+    --signal sig_fnc_FRS0 : std_logic;
+    --signal sig_fnc_FSR0 : std_logic;
+    --signal sig_fnc_GHA0 : std_logic;
+    --signal sig_fnc_IDC0 : std_logic;
+    --signal sig_fnc_INT0 : std_logic;
+    --signal sig_fnc_MCO1 : std_logic;
+    --signal sig_fnc_MIC0 : std_logic;
+    --signal sig_fnc_MIL0 : std_logic;
+    --signal sig_fnc_NSR1 : std_logic;
+    --signal sig_fnc_NSR2 : std_logic;
+    --signal sig_fnc_OCC0 : std_logic;
+    --signal sig_fnc_OCC1 : std_logic;
+    --signal sig_fnc_OCC2 : std_logic;
+    --signal sig_fnc_ODC0 : std_logic;
+    --signal sig_fnc_ODP0 : std_logic;
+    --signal sig_fnc_OED0 : std_logic;
+    --signal sig_fnc_OFD0 : std_logic;
+    --signal sig_fnc_PAL0 : std_logic;
+    --signal sig_fnc_PDR0 : std_logic;
+    --signal sig_fnc_RCR0 : std_logic;
+    --signal sig_fnc_SCD0 : std_logic;
+    --signal sig_fnc_SLR0 : std_logic;
+    --signal sig_fnc_SPR0 : std_logic;
+    --signal sig_fnc_STP0 : std_logic;
+    --signal sig_fnc_STS0 : std_logic;
+    --signal sig_fnc_TIF0 : std_logic;
+    --signal sig_fnc_TIL0 : std_logic;
+    --signal sig_fnc_TNR0 : std_logic;
+    --signal sig_fnc_TPL0 : std_logic;
+    --signal sig_fnc_YCR0 : std_logic;
 
-    -- not in use
-    -- code="ACV"
-    -- code="DURA_PAIR"
-    -- code="DAYS"
-    -- code="POS_NAME"
-    -- code="POS_MKT"
-    -- code="FG2" ONLY ONE RULE and same value as fg1??? weird test
-    -- code="SALECFG"
-    -- code="SEASON"
-    -- code="S_ENUM2"
-    -- code="TIME_PAIR"
+    ---- not in use
+    ---- code="ACV"
+    ---- code="DURA_PAIR"
+    ---- code="DAYS"
+    ---- code="POS_NAME"
+    ---- code="POS_MKT"
+    ---- code="FG2" ONLY ONE RULE and same value as fg1??? weird test
+    ---- code="SALECFG"
+    ---- code="SEASON"
+    ---- code="S_ENUM2"
+    ---- code="TIME_PAIR"
 
-    -- implemented
-    code="BKG"
-    code="CABIN"
-    code="S_OPAIR"
+    ---- implemented
+    --code="BKG"
+    --code="CABIN"
+    --code="S_OPAIR"
     
-    -- to be implemented
-    code="CSH" -- one value accepted, just directed from encoding ie. query_i(3)()
-    code="EQP"
-    code="FG1"
-    code="MKT1"
-    code="MKT_PAIR"
-    code="STR1"
-    code="S_SYST"
-    code="S_STR1"
-    code="TIA"
+    ---- to be implemented
+    --code="CSH" -- one value accepted, just directed from encoding ie. query_i(3)()
+    --code="EQP"
+    --code="FG1"
+    --code="MKT1"
+    --code="MKT_PAIR"
+    --code="STR1"
+    --code="S_SYST"
+    --code="S_STR1"
+    --code="TIA"
 
-    code="DATE_PAIR"
+    --code="DATE_PAIR"
 
-    signal sig_fnc_ACR00   : std_logic;
-    signal sig_fnc_ACR00_r : std_logic;
-    signal sig_fnc_AFS00   : std_logic;
-    signal sig_fnc_AFS00_r : std_logic;
-    signal sig_fnc_AGG00   : std_logic;
-    signal sig_fnc_AGG00_r : std_logic;
-    signal sig_fnc_APR00   : std_logic;
-    signal sig_fnc_APR00_r : std_logic;
-    signal sig_fnc_APR11   : std_logic;
-    signal sig_fnc_APR11_r : std_logic;
-    signal sig_fnc_ARC00   : std_logic;
-    signal sig_fnc_ARC00_r : std_logic;
-    signal sig_fnc_ASR00   : std_logic;
-    signal sig_fnc_ASR00_r : std_logic;
-    signal sig_fnc_ASR11   : std_logic;
-    signal sig_fnc_ASR11_r : std_logic;
-    signal sig_fnc_BCR22   : std_logic;
-    signal sig_fnc_BCR22_r : std_logic;
-    signal sig_fnc_CCM00   : std_logic;
-    signal sig_fnc_CCM00_r : std_logic;
-    signal sig_fnc_CMT00   : std_logic;
-    signal sig_fnc_CMT00_r : std_logic;
-    signal sig_fnc_EFT00   : std_logic;
-    signal sig_fnc_EFT00_r : std_logic;
-    signal sig_fnc_ETR00   : std_logic;
-    signal sig_fnc_ETR00_r : std_logic;
-    signal sig_fnc_FCM00   : std_logic;
-    signal sig_fnc_FCM00_r : std_logic;
-    signal sig_fnc_FCM22   : std_logic;
-    signal sig_fnc_FCM22_r : std_logic;
-    signal sig_fnc_FRS00   : std_logic;
-    signal sig_fnc_FRS00_r : std_logic;
-    signal sig_fnc_FSR00   : std_logic;
-    signal sig_fnc_FSR00_r : std_logic;
-    signal sig_fnc_GHA00   : std_logic;
-    signal sig_fnc_GHA00_r : std_logic;
-    signal sig_fnc_IDC00   : std_logic;
-    signal sig_fnc_IDC00_r : std_logic;
-    signal sig_fnc_INT00   : std_logic;
-    signal sig_fnc_INT00_r : std_logic;
-    signal sig_fnc_MCO11   : std_logic;
-    signal sig_fnc_MCO11_r : std_logic;
-    signal sig_fnc_MIC00   : std_logic;
-    signal sig_fnc_MIC00_r : std_logic;
-    signal sig_fnc_MIL00   : std_logic;
-    signal sig_fnc_MIL00_r : std_logic;
-    signal sig_fnc_NSR11   : std_logic;
-    signal sig_fnc_NSR11_r : std_logic;
-    signal sig_fnc_NSR22   : std_logic;
-    signal sig_fnc_NSR22_r : std_logic;
-    signal sig_fnc_OCC00   : std_logic;
-    signal sig_fnc_OCC00_r : std_logic;
-    signal sig_fnc_OCC11   : std_logic;
-    signal sig_fnc_OCC11_r : std_logic;
-    signal sig_fnc_OCC22   : std_logic;
-    signal sig_fnc_OCC22_r : std_logic;
-    signal sig_fnc_ODC00   : std_logic;
-    signal sig_fnc_ODC00_r : std_logic;
-    signal sig_fnc_ODP00   : std_logic;
-    signal sig_fnc_ODP00_r : std_logic;
-    signal sig_fnc_OED00   : std_logic;
-    signal sig_fnc_OED00_r : std_logic;
-    signal sig_fnc_OFD00   : std_logic;
-    signal sig_fnc_OFD00_r : std_logic;
-    signal sig_fnc_PAL00   : std_logic;
-    signal sig_fnc_PAL00_r : std_logic;
-    signal sig_fnc_PDR00   : std_logic;
-    signal sig_fnc_PDR00_r : std_logic;
-    signal sig_fnc_RCR00   : std_logic;
-    signal sig_fnc_RCR00_r : std_logic;
-    signal sig_fnc_SCD00   : std_logic;
-    signal sig_fnc_SCD00_r : std_logic;
-    signal sig_fnc_SLR00   : std_logic;
-    signal sig_fnc_SLR00_r : std_logic;
-    signal sig_fnc_SPR00   : std_logic;
-    signal sig_fnc_SPR00_r : std_logic;
-    signal sig_fnc_STP00   : std_logic;
-    signal sig_fnc_STP00_r : std_logic;
-    signal sig_fnc_STS00   : std_logic;
-    signal sig_fnc_STS00_r : std_logic;
-    signal sig_fnc_TIF00   : std_logic;
-    signal sig_fnc_TIF00_r : std_logic;
-    signal sig_fnc_TIL00   : std_logic;
-    signal sig_fnc_TIL00_r : std_logic;
-    signal sig_fnc_TNR00   : std_logic;
-    signal sig_fnc_TNR00_r : std_logic;
-    signal sig_fnc_TPL00   : std_logic;
-    signal sig_fnc_TPL00_r : std_logic;
-    signal sig_fnc_YCR00   : std_logic;
-    signal sig_fnc_YCR00_r : std_logic;
+    --signal sig_fnc_ACR00   : std_logic;
+    --signal sig_fnc_ACR00_r : std_logic;
+    --signal sig_fnc_AFS00   : std_logic;
+    --signal sig_fnc_AFS00_r : std_logic;
+    --signal sig_fnc_AGG00   : std_logic;
+    --signal sig_fnc_AGG00_r : std_logic;
+    --signal sig_fnc_APR00   : std_logic;
+    --signal sig_fnc_APR00_r : std_logic;
+    --signal sig_fnc_APR11   : std_logic;
+    --signal sig_fnc_APR11_r : std_logic;
+    --signal sig_fnc_ARC00   : std_logic;
+    --signal sig_fnc_ARC00_r : std_logic;
+    --signal sig_fnc_ASR00   : std_logic;
+    --signal sig_fnc_ASR00_r : std_logic;
+    --signal sig_fnc_ASR11   : std_logic;
+    --signal sig_fnc_ASR11_r : std_logic;
+    --signal sig_fnc_BCR22   : std_logic;
+    --signal sig_fnc_BCR22_r : std_logic;
+    --signal sig_fnc_CCM00   : std_logic;
+    --signal sig_fnc_CCM00_r : std_logic;
+    --signal sig_fnc_CMT00   : std_logic;
+    --signal sig_fnc_CMT00_r : std_logic;
+    --signal sig_fnc_EFT00   : std_logic;
+    --signal sig_fnc_EFT00_r : std_logic;
+    --signal sig_fnc_ETR00   : std_logic;
+    --signal sig_fnc_ETR00_r : std_logic;
+    --signal sig_fnc_FCM00   : std_logic;
+    --signal sig_fnc_FCM00_r : std_logic;
+    --signal sig_fnc_FCM22   : std_logic;
+    --signal sig_fnc_FCM22_r : std_logic;
+    --signal sig_fnc_FRS00   : std_logic;
+    --signal sig_fnc_FRS00_r : std_logic;
+    --signal sig_fnc_FSR00   : std_logic;
+    --signal sig_fnc_FSR00_r : std_logic;
+    --signal sig_fnc_GHA00   : std_logic;
+    --signal sig_fnc_GHA00_r : std_logic;
+    --signal sig_fnc_IDC00   : std_logic;
+    --signal sig_fnc_IDC00_r : std_logic;
+    --signal sig_fnc_INT00   : std_logic;
+    --signal sig_fnc_INT00_r : std_logic;
+    --signal sig_fnc_MCO11   : std_logic;
+    --signal sig_fnc_MCO11_r : std_logic;
+    --signal sig_fnc_MIC00   : std_logic;
+    --signal sig_fnc_MIC00_r : std_logic;
+    --signal sig_fnc_MIL00   : std_logic;
+    --signal sig_fnc_MIL00_r : std_logic;
+    --signal sig_fnc_NSR11   : std_logic;
+    --signal sig_fnc_NSR11_r : std_logic;
+    --signal sig_fnc_NSR22   : std_logic;
+    --signal sig_fnc_NSR22_r : std_logic;
+    --signal sig_fnc_OCC00   : std_logic;
+    --signal sig_fnc_OCC00_r : std_logic;
+    --signal sig_fnc_OCC11   : std_logic;
+    --signal sig_fnc_OCC11_r : std_logic;
+    --signal sig_fnc_OCC22   : std_logic;
+    --signal sig_fnc_OCC22_r : std_logic;
+    --signal sig_fnc_ODC00   : std_logic;
+    --signal sig_fnc_ODC00_r : std_logic;
+    --signal sig_fnc_ODP00   : std_logic;
+    --signal sig_fnc_ODP00_r : std_logic;
+    --signal sig_fnc_OED00   : std_logic;
+    --signal sig_fnc_OED00_r : std_logic;
+    --signal sig_fnc_OFD00   : std_logic;
+    --signal sig_fnc_OFD00_r : std_logic;
+    --signal sig_fnc_PAL00   : std_logic;
+    --signal sig_fnc_PAL00_r : std_logic;
+    --signal sig_fnc_PDR00   : std_logic;
+    --signal sig_fnc_PDR00_r : std_logic;
+    --signal sig_fnc_RCR00   : std_logic;
+    --signal sig_fnc_RCR00_r : std_logic;
+    --signal sig_fnc_SCD00   : std_logic;
+    --signal sig_fnc_SCD00_r : std_logic;
+    --signal sig_fnc_SLR00   : std_logic;
+    --signal sig_fnc_SLR00_r : std_logic;
+    --signal sig_fnc_SPR00   : std_logic;
+    --signal sig_fnc_SPR00_r : std_logic;
+    --signal sig_fnc_STP00   : std_logic;
+    --signal sig_fnc_STP00_r : std_logic;
+    --signal sig_fnc_STS00   : std_logic;
+    --signal sig_fnc_STS00_r : std_logic;
+    --signal sig_fnc_TIF00   : std_logic;
+    --signal sig_fnc_TIF00_r : std_logic;
+    --signal sig_fnc_TIL00   : std_logic;
+    --signal sig_fnc_TIL00_r : std_logic;
+    --signal sig_fnc_TNR00   : std_logic;
+    --signal sig_fnc_TNR00_r : std_logic;
+    --signal sig_fnc_TPL00   : std_logic;
+    --signal sig_fnc_TPL00_r : std_logic;
+    --signal sig_fnc_YCR00   : std_logic;
+    --signal sig_fnc_YCR00_r : std_logic;

@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 use ieee.std_logic_arith.all;
 
 library std;
-use std.pkg_ram.all;;
+use std.pkg_ram.all;
 
 PACKAGE pkg_bre IS
 

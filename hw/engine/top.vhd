@@ -205,7 +205,7 @@ fnc_ruleA: matcher generic map (
     G_FUNCTION_A        => C_FNCTR_SIMP_SEQ
 )
 port map (
-    query_opA_i         => query_i(C_QUERY_RULE),
+    query_opA_i         => query_i(C_QUERY_RTD),
     match_result_o      => sig_fnc_ruleA
 );
 fnc_ruleB: matcher generic map (
@@ -214,7 +214,7 @@ fnc_ruleB: matcher generic map (
     G_FUNCTION_A        => C_FNCTR_SIMP_SEQ
 )
 port map (
-    query_opA_i         => query_i(C_QUERY_RULE),
+    query_opA_i         => query_i(C_QUERY_RTD),
     match_result_o      => sig_fnc_ruleB
 );
 
@@ -237,7 +237,7 @@ bram_marketA : xilinx_single_port_ram_no_change
   )
   port map (
     clka   => clk_i,
-    addra  => query_i(C_QUERY_MRKTA)((clogb2(C_BRAM_MARKT_DEPTH)-1) downto 0),
+    addra  => query_i(C_QUERY_MKTA)((clogb2(C_BRAM_MARKT_DEPTH)-1) downto 0),
     douta  => sig_ram_mrktA,
     dina   => mem_i(C_BRAM_MARKT_WIDTH-1 downto 0),
     ena    => '1',              -- RAM Enable, for additional power savings, disable port when not in use
@@ -254,7 +254,7 @@ bram_marketB : xilinx_single_port_ram_no_change
   )
   port map (
     clka   => clk_i,
-    addra  => query_i(C_QUERY_MRKTB)((clogb2(C_BRAM_MARKT_DEPTH)-1) downto 0),
+    addra  => query_i(C_QUERY_MKTB)((clogb2(C_BRAM_MARKT_DEPTH)-1) downto 0),
     douta  => sig_ram_mrktB,    -- RAM output data
     dina   => mem_i(C_BRAM_MARKT_WIDTH-1 downto 0),
     ena    => '1',              -- RAM Enable, for additional power savings, disable port when not in use

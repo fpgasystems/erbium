@@ -9,7 +9,7 @@ use std.pkg_ram.all;
 PACKAGE pkg_bre IS
 
 -- MAIN PARAMETERS
-constant C_ENGINE_NCRITERIA         : integer := 9;
+constant C_ENGINE_NCRITERIA         : integer := 12;
 constant C_ENGINE_CRITERIUM_WIDTH   : integer := 16;
 
 type query_in_array_type is array(C_ENGINE_NCRITERIA-1 downto 0) of std_logic_vector(C_ENGINE_CRITERIUM_WIDTH-1 downto 0);
@@ -29,15 +29,20 @@ constant C_FNCTR_PAIR_PMA   : integer := 7;
 constant C_FNCTR_PAIR_PAN   : integer := 8;
 constant C_FNCTR_PAIR_PCA   : integer := 9;  -- [!] EQUALS TO 8 PAN CROSS
 
-constant C_QUERY_RULE   : natural := 0;
-constant C_QUERY_MRKTA  : natural := 1;
-constant C_QUERY_MRKTB  : natural := 2;
-constant C_QUERY_DATEA  : natural := 3;
-constant C_QUERY_DATEB  : natural := 4;
-constant C_QUERY_CABIN  : natural := 5;
-constant C_QUERY_OPAIR  : natural := 6;
-constant C_QUERY_FLGRP  : natural := 7;
-constant C_QUERY_BKG    : natural := 8;
+
+constant C_QUERY_RTD    : natural := 0;
+constant C_QUERY_VERS   : natural := 1;
+constant C_QUERY_OWN    : natural := 2;
+constant C_QUERY_APP    : natural := 3;
+constant C_QUERY_DATEA  : natural := 4;
+constant C_QUERY_DATEB  : natural := 5;
+constant C_QUERY_MKTA   : natural := 6;
+constant C_QUERY_MKTB   : natural := 7;
+constant C_QUERY_CABIN  : natural := 8;
+constant C_QUERY_BKG    : natural := 9;
+--
+constant C_QUERY_OPAIR  : natural := 10;
+constant C_QUERY_FLGRP  : natural := 11;
 --
 constant C_RULE_A       : std_logic_vector(C_ENGINE_CRITERIUM_WIDTH-1 downto 0) := conv_std_logic_vector(1, C_ENGINE_CRITERIUM_WIDTH);
 constant C_RULE_B       : std_logic_vector(C_ENGINE_CRITERIUM_WIDTH-1 downto 0) := conv_std_logic_vector(2, C_ENGINE_CRITERIUM_WIDTH);
@@ -111,16 +116,16 @@ constant C_LBL_BKG_Y             : natural := 24;
 constant C_LBL_BKG_Z             : natural := 25;
 constant C_LBL_BKG_OFF           : natural := 26;
 --
-constant C_BRAM_MARKT_DEPTH      : natural := 6;
-constant C_BRAM_MARKT_WIDTH      : natural := 4;
-constant C_BRAM_CABIN_DEPTH      : natural := 9;
-constant C_BRAM_CABIN_WIDTH      : natural := 8;
-constant C_BRAM_OPAIR_DEPTH      : natural := 5;
-constant C_BRAM_OPAIR_WIDTH      : natural := 3;
-constant C_BRAM_FLGRP_DEPTH      : natural := 256;
-constant C_BRAM_FLGRP_WIDTH      : natural := 14;
-constant C_BRAM_BKG_DEPTH        : natural := 27;
-constant C_BRAM_BKG_WIDTH        : natural := 26;
+--constant C_BRAM_MARKT_DEPTH      : natural := 6;
+--constant C_BRAM_MARKT_WIDTH      : natural := 4;
+--constant C_BRAM_CABIN_DEPTH      : natural := 9;
+--constant C_BRAM_CABIN_WIDTH      : natural := 8;
+--constant C_BRAM_OPAIR_DEPTH      : natural := 5;
+--constant C_BRAM_OPAIR_WIDTH      : natural := 3;
+--constant C_BRAM_FLGRP_DEPTH      : natural := 256;
+--constant C_BRAM_FLGRP_WIDTH      : natural := 14;
+--constant C_BRAM_BKG_DEPTH        : natural := 27;
+--constant C_BRAM_BKG_WIDTH        : natural := 26;
 --
 
 

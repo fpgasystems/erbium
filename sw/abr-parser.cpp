@@ -26,15 +26,17 @@ struct criterionDefinition_s
     bool m_isMandatory;
     std::string m_supertag;
     int m_weight;
+    int m_used;
     bool operator < (const criterionDefinition_s &other) const { return m_index < other.m_index; }
     void print(const std::string &level)
     {
-        printf("%s[Criterion] index=%d code=%s isMandatory=%s supertag=%s weight=%d\n", level.c_str(),
+        printf("%s[Criterion] index=%d code=%s isMandatory=%s supertag=%s weight=%d used=%d\n", level.c_str(),
                                      m_index,
                                      m_code.c_str(),
                                      (m_isMandatory)?"true":"false",
                                      m_supertag.c_str(),
-                                     m_weight);
+                                     m_weight,
+                                     m_used);
     }
 };
 struct ruleType_s
@@ -42,7 +44,7 @@ struct ruleType_s
     std::string m_organization;
     std::string m_code;
     int m_release;
-    std::set<criterionDefinition_s> m_criterionDefinition;
+    std::vector<criterionDefinition_s> m_criterionDefinition;
 
     void print(const std::string &level)
     {
@@ -164,7 +166,7 @@ void abr_dataset::load(const std::string &filename)
                             aux_criterionDef.m_isMandatory = aux_b.second.get("<xmlattr>.isMandatory",false);
                             aux_criterionDef.m_supertag = aux_b.second.get<std::string>("criterionType.<xmlattr>.supertag");
                             aux_criterionDef.m_weight = aux_b.second.get<int>("criterionWeight.<xmlattr>.weight");
-                            aux_ruleType.m_criterionDefinition.insert(aux_criterionDef);
+                            aux_ruleType.m_criterionDefinition.push_back(aux_criterionDef);
                         }
                         //printf("[%s] %s\n", aux_b.first.c_str(), aux_b.second.data().c_str());
                         //boost::property_tree::ptree::value_type &aux_c = aux_b.second.get_child("<xmlattr>");
@@ -200,6 +202,7 @@ void abr_dataset::load(const std::string &filename)
 //[abr_dataset_save
 void abr_dataset::save(const std::string &filename)
 {
+    // TODO
     pt::ptree tree;
 
     //BOOST_FOREACH(const std::string &name, m_modules)
@@ -210,8 +213,115 @@ void abr_dataset::save(const std::string &filename)
 }
 //]
 
+
+class CSVRow
+{
+public:
+    std::string const& operator[](std::size_t index) const
+    {
+        return m_data[index];
+    }
+    std::size_t size() const
+    {
+        return m_data.size();
+    }
+    std::string get_value(std::size_t index)
+    {
+        // REMOVE " "
+        return m_data[index].substr(1, m_data[index].size()-2);
+    }
+    void readNextRow(std::istream& str)
+    {
+        std::string         line;
+        std::getline(str, line);
+
+        std::stringstream   lineStream(line);
+        std::string         cell;
+
+        m_data.clear();
+        while(std::getline(lineStream, cell, ','))
+        {
+            m_data.push_back(cell);
+        }
+        // This checks for a trailing comma with no data after it.
+        if (!lineStream && cell.empty())
+        {
+            // If there was a trailing comma then add an empty element.
+            m_data.push_back("");
+        }
+    }
+    std::vector<std::string>    m_data;
+};
+std::istream& operator>>(std::istream& str, CSVRow& data)
+{
+    data.readNextRow(str);
+    return str;
+}
+
 int main()
 {
+    std::ifstream       file("../../../Documents/amadeus-share/mct_rules.csv");
+    CSVRow              row;
+
+    row.readNextRow(file);
+    abr_dataset ds;
+    rulePack_s rp;
+    ds.m_organization = "Amadeus";
+    ds.m_application = "MCT";
+
+    rp.m_ruleType.m_organization = "Amadeus";
+    rp.m_ruleType.m_code = "MINCT";
+    rp.m_ruleType.m_release = 0;
+
+    for (int i=6; i<row.m_data.size()-4; i++)
+    {
+        criterionDefinition_s cd;
+        cd.m_index = i-6;
+        cd.m_code = row.m_data[i];
+        //cd.m_isMandatory;
+        //cd.m_supertag;
+        //cd.m_weight;
+        //cd.print("");
+        rp.m_ruleType.m_criterionDefinition.push_back(cd);
+    }
+
+    int aux = row.m_data.size()-4;
+    while(file >> row)
+    {
+        if (row.m_data[aux+2] == "\"TRUE\"")
+            continue;
+
+        rule_s rl;
+        rl.m_ruleId = std::stoi(row.m_data[0].substr(1));
+        rl.m_weight = std::stoi(row.m_data[1]);
+        for (int i=6; i<aux; i++)
+        {
+            if(!row.m_data[i].empty())
+            {
+                criterion_s ct;
+                ct.m_index = i-6;
+                ct.m_code = rp.m_ruleType.m_criterionDefinition[i-6].m_code;
+                ct.m_value = row.get_value(i);
+
+                rp.m_ruleType.m_criterionDefinition[i-6].m_used++;
+                rl.m_criteria.insert(ct);
+            }
+        }
+        //if (row.m_data[aux+2] == "\"FALSE\"")
+        //{
+            rl.m_content = std::to_string(std::stoi(row.get_value(aux+1))*60 + 
+                                          std::stoi(row.get_value(aux+3)));
+        //}
+        //rl.print("");
+        rp.m_rules.insert(rl);
+    }
+
+    rp.m_ruleType.print("");
+    std::cout << rp.m_rules.size() << " rules loaded" << std::endl;
+    ds.m_rulePacks.insert(rp);
+
+    return 0;
+
     try
     {
         abr_dataset ds;

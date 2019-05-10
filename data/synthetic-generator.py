@@ -26,7 +26,7 @@ class Criteria:
 
 
 C_ENGINE_CRITERIUM_WIDTH = 16
-C_TOTAL_RULES = 1024
+C_TOTAL_RULES = 2**8
 C_HAS_CRITERIA_THRESHOLD = 0.7
 
 def dec2bin(decimal, width = C_ENGINE_CRITERIUM_WIDTH):
@@ -223,7 +223,8 @@ def main():
 			if criteria.mandatory or rdn > C_HAS_CRITERIA_THRESHOLD:
 				
 				if(aux):
-					file.write("\n\t\t\t\t and ")
+					#file.write("\n\t\t\t\t and ")
+					file.write(" and ")
 				aux = True
 
 				rdn = random.randint(0,criteria.width-1);

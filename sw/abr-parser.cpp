@@ -9,11 +9,14 @@
 // ----------------------------------------------------------------------------
 
 //[abr_dataset_includes
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/graphviz.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/foreach.hpp>
 #include <string>
 #include <set>
+#include <map>
 #include <exception>
 #include <iostream>
 namespace pt = boost::property_tree;
@@ -260,7 +263,8 @@ std::istream& operator>>(std::istream& str, CSVRow& data)
 
 int main()
 {
-    std::ifstream       file("../../../Documents/amadeus-share/mct_rules.csv");
+    //std::ifstream       file("../../../Documents/amadeus-share/mct_rules.csv");
+    std::ifstream       file("../data/demo_01.csv");
     CSVRow              row;
 
     row.readNextRow(file);
@@ -306,19 +310,187 @@ int main()
                 rp.m_ruleType.m_criterionDefinition[i-6].m_used++;
                 rl.m_criteria.insert(ct);
             }
+            else
+            {
+                // IF NO VALUE, USE "*"
+                criterion_s ct;
+                ct.m_index = i-6;
+                ct.m_code = rp.m_ruleType.m_criterionDefinition[i-6].m_code;
+                ct.m_value = "*";
+                rl.m_criteria.insert(ct);
+            }
         }
-        //if (row.m_data[aux+2] == "\"FALSE\"")
-        //{
-            rl.m_content = std::to_string(std::stoi(row.get_value(aux+1))*60 + 
-                                          std::stoi(row.get_value(aux+3)));
-        //}
-        //rl.print("");
+        rl.m_content = std::to_string(std::stoi(row.get_value(aux+1))*60 + 
+                                      std::stoi(row.get_value(aux+3)));
         rp.m_rules.insert(rl);
     }
 
     rp.m_ruleType.print("");
     std::cout << rp.m_rules.size() << " rules loaded" << std::endl;
-    ds.m_rulePacks.insert(rp);
+    //ds.m_rulePacks.insert(rp);
+
+    ////////////////////////////////////////////////////////////////////////////////////////
+
+    //####### DICTIONNARY
+    std::vector<std::map<std::string, uint>> dictionnary;
+    std::map<std::string, uint> contents;
+    for(auto criterium : rp.m_ruleType.m_criterionDefinition)
+    {
+        std::map<std::string, uint> dic;
+        dictionnary.push_back(dic);
+    }
+
+    for (auto rule : rp.m_rules)
+    {
+        for (auto aux : rule.m_criteria)
+            dictionnary[aux.m_index][aux.m_value]=0;
+        contents[rule.m_content] = 0;
+    }
+    dictionnary.push_back(contents);
+
+    uint key;
+    for(auto& aux : dictionnary)
+    {
+        key = 0;
+        for(auto& x : aux)
+            x.second = key++;
+    }
+
+    // for(auto& aux : dictionnary)
+    // {
+    //     for(auto& x : aux)
+    //         std::cout << x.first << "," << x.second << std::endl;
+    // }
+
+    //####### GRAPH
+    std::map<std::string, uint> netSI;
+    std::vector<std::string> labels;
+    std::map<uint, std::set<uint>> vertexes;
+
+    labels.push_back("o");
+    boost::adjacency_list <> g(1);
+    for (auto rule : rp.m_rules)
+    {
+        std::string label = "";
+        uint prev_id = 0;
+        for (auto criterium : rule.m_criteria)
+        {
+            label = criterium.m_value + "_" + label;
+
+            if (netSI[label] == 0)
+            {
+                netSI[label] = add_vertex(g);
+                labels.push_back(criterium.m_value);
+                vertexes[criterium.m_index].insert(netSI[label]);
+            }
+            remove_edge(prev_id, netSI[label], g);
+            add_edge(prev_id, netSI[label], g);
+            prev_id = netSI[label];
+            //std::cout << "net[" << label << "]=" << net[label] << std::endl;
+        }
+        // Add content
+        if (netSI[rule.m_content] == 0)
+        {
+            // It does not exist
+            netSI[rule.m_content] = add_vertex(g);
+            //netIS[netSI[rule.m_content]] = rule.m_content;
+            labels.push_back(rule.m_content);
+        }
+        remove_edge(prev_id, netSI[rule.m_content], g);
+        add_edge(prev_id, netSI[rule.m_content], g);
+    }
+
+    ////// OPTIMISATIONS
+
+    boost::graph_traits < boost::adjacency_list <> >::adjacency_iterator ai, a_end;
+    boost::graph_traits < boost::adjacency_list <> >::adjacency_iterator bi, b_end;
+    // iterates all the levels (one level per criterium)
+    for (auto level = vertexes.rbegin(); level != vertexes.rend(); ++level)
+    {
+        // iterates all the nodes within this criterium
+        for (auto vertex = level->second.begin(); std::next(vertex) != level->second.end(); ++vertex)
+        {
+            // iterates all the other nodes within this criterium as well
+            for (auto aux = std::next(vertex); aux != level->second.end(); ++aux)
+            {
+                // Check if both nodes have the same value
+                if (labels[*aux] == labels[*vertex])
+                {
+                    bool equal = true;
+
+                    // Check if both nodes point to the same nodes
+                    boost::tie(ai, a_end) = adjacent_vertices(*vertex, g);
+                    boost::tie(bi, b_end) = adjacent_vertices(*aux, g);
+                    for (; ai != a_end && bi != b_end; ++ai, ++bi)
+                    {
+                        if (*ai != *bi)
+                            equal = false;
+                    }
+                    if (ai != a_end || bi != b_end)
+                        equal = false;
+
+                    if (equal)
+                    {
+                        // Merge both nodes
+                        // check all transitions from std::next(level)
+                        // if they point to the deleted node, replace to the one that remains
+
+
+                        // inverse of netSI[label] = add_vertex(g);
+                        // inverse of labels.push_back(criterium.m_value);
+                        // inverse of vertexes[criterium.m_index].insert(netSI[label]);
+
+                        //boost::tie(ai, a_end) = adjacent_vertices(*vertex, g);
+                        //boost::tie(bi, b_end) = adjacent_vertices(*aux, g);
+                        //for (; ai != a_end && bi != b_end; ++ai, ++bi)
+                        //    std::cout << "they point to " << *ai << std::endl;
+                        //std::cout << "VERTEX=" << *vertex << " and AUX=" << *aux << " are " << labels[*vertex] << std::endl;
+                    }
+
+                    // same values
+                    // check points
+                }
+            }
+        }
+        // check for vertexes of same value
+        // if they point to the same vertexes, merge them!
+    }
+
+    // vertex with the same value pointing to exactly the same vertex can be merged
+    //  so check all vertices pointing to them
+
+    //for(auto it = netIS.begin(); it != netIS.end(); ++it)
+    //    labels.push_back(it->second);
+    
+    //boost::write_graphviz(std::cout, g, boost::make_label_writer(&labels[0]));
+
+
+    
+
+
+    // boost::graph_traits < boost::adjacency_list <> >::vertex_iterator i, end;
+    // boost::graph_traits < boost::adjacency_list <> >::adjacency_iterator ai, a_end;
+    // boost::property_map < boost::adjacency_list <>, boost::vertex_index_t >::type index_map = get(boost::vertex_index, g);
+    // for (boost::tie(i, end) = vertices(g); i != end; ++i)
+    // {
+    //     std::cout << netIS[get(index_map, *i)];
+    //     boost::tie(ai, a_end) = adjacent_vertices(*i, g);
+    //     if (ai == a_end)
+    //         std::cout << " has no children";
+    //     else
+    //         std::cout << " is the parent of ";
+    //     
+    //     for (; ai != a_end; ++ai)
+    //     {
+    //         std::cout << netIS[get(index_map, *ai)];
+    //         if (boost::next(ai) != a_end)
+    //             std::cout << ", ";
+    //     }
+    //     std::cout << std::endl;
+    // }
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////
 
     return 0;
 

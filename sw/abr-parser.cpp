@@ -265,8 +265,9 @@ int main()
 {
     std::ifstream       file("../../../Documents/amadeus-share/mct_rules.csv");
     //std::ifstream       file("../data/demo_01.csv");
-    CSVRow              row;
 
+    std::cout << "# LOAD" << std::endl;
+    CSVRow              row;
     row.readNextRow(file);
     abr_dataset ds;
     rulePack_s rp;
@@ -282,10 +283,10 @@ int main()
         criterionDefinition_s cd;
         cd.m_index = i-6;
         cd.m_code = row.m_data[i];
-        //cd.m_isMandatory;
-        //cd.m_supertag;
-        //cd.m_weight;
-        //cd.print("");
+        cd.m_isMandatory = false;
+        cd.m_supertag = "";
+        cd.m_weight = 0;
+        cd.m_used = 0;
         rp.m_ruleType.m_criterionDefinition.push_back(cd);
     }
 
@@ -327,6 +328,7 @@ int main()
 
     rp.m_ruleType.print("");
     std::cout << rp.m_rules.size() << " rules loaded" << std::endl;
+    std::cout << "# LOAD COMPLETED" << std::endl;
     //ds.m_rulePacks.insert(rp);
 
     ////////////////////////////////////////////////////////////////////////////////////////
@@ -364,6 +366,7 @@ int main()
     }*/
 
     //####### GRAPH
+    std::cout << "# GRAPH" << std::endl;
     std::map<std::string, uint> netSI; // from node_path to node_id
     std::map<uint, std::string> netIS; // from node_id to node_path
     std::vector<std::string> labels;   // from node_id to node_value
@@ -413,8 +416,18 @@ int main()
         add_edge(prev_id, netSI[rule.m_content], g);
         parents_of[netSI[rule.m_content]].insert(prev_id);
     }
+    for(auto level : v_perLevel_perValue)
+    {
+        std::cout << "level " << level.first << " has " << level.second.size() << " different values" << std::endl;
+    }
+    std::cout << "total number of nodes: " << netSI.size() << std::endl;
+    std::cout << "# GRAPH COMPLETED" << std::endl;
 
     ////// OPTIMISATIONS
+
+    // stats
+    uint merged = 0;
+
 
     std::set<std::pair<uint, uint>> vertexes_to_remove;
     boost::graph_traits < boost::adjacency_list <> >::adjacency_iterator ai, a_end;
@@ -423,19 +436,20 @@ int main()
     // iterates all the levels (one level per criterium)
     for (auto level = v_perLevel_perValue.rbegin(); level != v_perLevel_perValue.rend(); ++level)
     {
-        std::cout << "level " << level->first << std::endl;
+        std::cout << "level " << (level->first);
+        merged = 0;
         // iterates all the values
         for (auto value_id : v_perLevel_perValue[level->first])
         {
             // iterates all the nodes with this value within this level
-            for (auto vertex = v_perLevel_perValue[level->first][value_id.first].begin(); vertex != v_perLevel_perValue[level->first][value_id.first].end(); ++vertex)
+            for (auto vertex = v_perLevel_perValue[level->first][value_id.first].rbegin(); vertex != v_perLevel_perValue[level->first][value_id.first].rend(); ++vertex)
             {
                 // skip if already merged
                 if (labels[*vertex] == "")
                     continue;
 
                 // compare to all the other nodes with same value (within same level)
-                for (auto aux = std::next(vertex); aux != v_perLevel_perValue[level->first][value_id.first].end(); ++aux)
+                for (auto aux = std::next(vertex); aux != v_perLevel_perValue[level->first][value_id.first].rend(); ++aux)
                 {
                     // skip if already merged
                     if (labels[*aux] == "")
@@ -468,120 +482,19 @@ int main()
 
                         vertexes_to_remove.insert(std::make_pair(*aux, level->first));
                         labels[*aux] = "";
-                        // rename vertex netIS/netSI ?
+                        merged++;
 
-                        // DEBUG
-                        //boost::tie(ai, a_end) = adjacent_vertices(*vertex, g);
-                        //boost::tie(bi, b_end) = adjacent_vertices(*aux, g);
-                        //for (; ai != a_end && bi != b_end; ++ai, ++bi)
-                        //    std::cout << "they point to " << *ai << std::endl;
-                        //std::cout << "VERTEX=" << *vertex << " and AUX=" << *aux << " are " << labels[*vertex] << std::endl;
+                        // rename vertex netIS/netSI ?
                     }
                 }
             }
         }
+        std::cout << " merged " << merged << " nodes" << std::endl;
     }
-    /*
-    for (auto level = vertexes.rbegin(); level != vertexes.rend(); ++level)
-    {
-        // iterates all the nodes within this criterium
-        for (auto vertex = level->second.begin(); std::next(vertex) != level->second.end(); ++vertex)
-        {
-            if (labels[*vertex] == "")
-                continue;
-            
-            // iterates all the other nodes with same value within this criterium
-            for (auto aux : v_perLevel_perValue[level->first][dictionnary[level->first][labels[*vertex]]])
-            {
-                if (aux != *vertex)
-                {
-                    bool equal = true;
-
-                    // Check if both nodes point to the same nodes
-                    boost::tie(ai, a_end) = adjacent_vertices(*vertex, g);
-                    boost::tie(bi, b_end) = adjacent_vertices(aux, g);
-                    for (; ai != a_end && bi != b_end && equal; ++ai, ++bi)
-                    {
-                        if (*ai != *bi)
-                            equal = false;
-                    }
-                    if (ai != a_end || bi != b_end)
-                        equal = false;
-
-                    if (equal)
-                    {
-                        // redirect all the in edges of aux to vertex
-                        for (auto cr : parents_of[aux])
-                        {
-                            // std::cout << "replacing edge [" << cr << "]-[" << *aux;
-                            // std::cout << "] to [" << cr << "]-[" << *vertex << "]" << std::endl;
-                            remove_edge(cr, aux, g);
-                            add_edge(cr, *vertex, g);
-                            parents_of[aux].erase(cr);
-                        }
-
-                        vertexes_to_remove.insert(std::make_pair(aux, level->first));
-                        labels[aux] = "";
-                        // rename vertex netIS/netSI ?
-
-                        // DEBUG
-                        //boost::tie(ai, a_end) = adjacent_vertices(*vertex, g);
-                        //boost::tie(bi, b_end) = adjacent_vertices(*aux, g);
-                        //for (; ai != a_end && bi != b_end; ++ai, ++bi)
-                        //    std::cout << "they point to " << *ai << std::endl;
-                        //std::cout << "VERTEX=" << *vertex << " and AUX=" << *aux << " are " << labels[*vertex] << std::endl;
-                    }
-                }
-            }
-            
-//            for (auto aux = std::next(vertex); aux != level->second.end(); ++aux)
-//            {
-//                // Check if both nodes have the same value
-//                if (labels[*aux] == labels[*vertex] && labels[*vertex] != "")
-//                {
-//                    bool equal = true;
-//
-//                    // Check if both nodes point to the same nodes
-//                    boost::tie(ai, a_end) = adjacent_vertices(*vertex, g);
-//                    boost::tie(bi, b_end) = adjacent_vertices(*aux, g);
-//                    for (; ai != a_end && bi != b_end && equal; ++ai, ++bi)
-//                    {
-//                        if (*ai != *bi)
-//                            equal = false;
-//                    }
-//                    if (ai != a_end || bi != b_end)
-//                        equal = false;
-//
-//                    if (equal)
-//                    {
-//                        // redirect all the in edges of aux to vertex
-//                        for (auto cr : parents_of[*aux])
-//                        {
-//                            // std::cout << "replacing edge [" << cr << "]-[" << *aux;
-//                            // std::cout << "] to [" << cr << "]-[" << *vertex << "]" << std::endl;
-//                            remove_edge(cr, *aux, g);
-//                            add_edge(cr, *vertex, g);
-//                            parents_of[*aux].erase(cr);
-//                        }
-//
-//                        vertexes_to_remove.insert(std::make_pair(*aux, level->first));
-//                        labels[*aux] = "";
-//                        // rename vertex netIS/netSI ?
-//
-//                        // DEBUG
-//                        //boost::tie(ai, a_end) = adjacent_vertices(*vertex, g);
-//                        //boost::tie(bi, b_end) = adjacent_vertices(*aux, g);
-//                        //for (; ai != a_end && bi != b_end; ++ai, ++bi)
-//                        //    std::cout << "they point to " << *ai << std::endl;
-//                        //std::cout << "VERTEX=" << *vertex << " and AUX=" << *aux << " are " << labels[*vertex] << std::endl;
-//                    }
-//                }
-//            }
-        }
-    }*/
 
     // effectively remove obsolete vertexes from the graph
     //for (auto aux : vertexes_to_remove)
+    std::cout << "deleting " << vertexes_to_remove.size() << " nodes" << std::endl;
     for (auto aux = vertexes_to_remove.rbegin(); aux != vertexes_to_remove.rend(); ++aux)
     {
         // std::cout << "removing [" << aux->first << "] " << netIS[aux->first] << " from level " << aux->second << std::endl;
@@ -592,14 +505,13 @@ int main()
         labels.erase(labels.begin() + aux->first);
         remove_vertex(aux->first, g);
     }
+    std::cout << "total number of nodes: " << netSI.size() << std::endl;
 
     // vertex with the same value pointing to exactly the same vertex can be merged
     //  so check all vertices pointing to them
-
-    //for(auto it = netIS.begin(); it != netIS.end(); ++it)
-    //    labels.push_back(it->second);
     
-    boost::write_graphviz(std::cout, g, boost::make_label_writer(&labels[0]));
+    std::ofstream dot_file("automaton.dot");
+    boost::write_graphviz(dot_file, g, boost::make_label_writer(&labels[0]));
 
     // boost::graph_traits < boost::adjacency_list <> >::vertex_iterator i, end;
     // boost::graph_traits < boost::adjacency_list <> >::adjacency_iterator ai, a_end;

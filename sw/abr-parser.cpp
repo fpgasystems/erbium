@@ -19,6 +19,7 @@
 #include <map>
 #include <exception>
 #include <iostream>
+#include <chrono>
 namespace pt = boost::property_tree;
 
 //[abr_dataset_data
@@ -296,6 +297,13 @@ int main()
         if (row.m_data[aux+2] == "\"TRUE\"")
             continue;
 
+        // NOT PRODUCTION
+        // JUST TO FILTER WHILE IN DEV
+        //if (row.m_data[8] != "\"CDG\"" && row.m_data[9] != "\"CDG\"")
+        //    continue;
+        //if (row.m_data[aux+3] != "\"35\"")
+        //    continue;
+
         rule_s rl;
         rl.m_ruleId = std::stoi(row.m_data[0].substr(1));
         rl.m_weight = std::stoi(row.m_data[1]);
@@ -366,43 +374,80 @@ int main()
     }*/
 
     //####### GRAPH
+    auto start = std::chrono::high_resolution_clock::now();
     std::cout << "# GRAPH" << std::endl;
     std::map<std::string, uint> netSI; // from node_path to node_id
+    std::map<std::string, uint> netSI_bwd; // from node_path_bwd to node_id
     std::map<uint, std::string> netIS; // from node_id to node_path
+    std::map<uint, std::string> netIS_bwd; // from node_id to node_path
     std::vector<std::string> labels;   // from node_id to node_value
     std::map<uint, std::set<uint>> parents_of; // from node_id to parents of it (parent node_id)
-    //std::map<uint, std::set<uint>> vertexes; // per level -> list of nodes
-    std::map<uint, std::map<uint, std::set<uint>>> v_perLevel_perValue; // per level -> per value -> list of nodes
+    std::map<uint, std::map<uint, std::set<uint>>> vertexes; // per level -> per value -> list of nodes
 
     std::map<uint, std::map<std::string, uint>> dictionnary; // per level -> per value -> value_id
 
     labels.push_back("o");
     boost::adjacency_list <> g(1);
+
+    uint stats_bwd = 0;
+    uint stats_fwd = 0;
+
     for (auto rule : rp.m_rules)
     {
-        std::string node_path = "";
+        std::string path_fwd = "";
+        std::string path_bwd = "";
+        std::map<uint, std::string> path_bwd_db;
         uint prev_id = 0;
+
+        // build path_bwd
+        for (auto criterium : rule.m_criteria)
+        {
+            for (uint i=0; i<=criterium.m_index; ++i)
+                path_bwd_db[i] = path_bwd_db[i] + "_" + criterium.m_value;
+        }
+        for (uint i=0; i<=rule.m_criteria.size(); ++i)
+            path_bwd_db[i] = path_bwd_db[i] + "_" + rule.m_content;
+
+        uint node_to_use;
         for (auto criterium : rule.m_criteria)
         {
             // DICTIONNARY
             if (dictionnary[criterium.m_index][criterium.m_value] == 0)
                 dictionnary[criterium.m_index][criterium.m_value] = dictionnary[criterium.m_index].size();
 
-            node_path = criterium.m_value + "_" + node_path;
+            path_fwd = criterium.m_value + "_" + path_fwd;
+            path_bwd = path_bwd_db[criterium.m_index];
 
-            if (netSI[node_path] == 0)
+            // if one of the paths already exists, use it
+            // if none, them create it
+            node_to_use = 0;
+            if (netSI[path_fwd] == 0 && netSI_bwd[path_bwd] == 0)
             {
-                netSI[node_path] = add_vertex(g);
-                netIS[netSI[node_path]] = node_path;
+                node_to_use = add_vertex(g);
+                netSI_bwd[path_bwd] = node_to_use;
+                netIS_bwd[netSI_bwd[path_bwd]] = path_bwd;
+                netSI[path_fwd] = node_to_use;
+                netIS[netSI[path_fwd]] = path_fwd;
                 labels.push_back(criterium.m_value);
-                //vertexes[criterium.m_index].insert(netSI[node_path]);
-                v_perLevel_perValue[criterium.m_index][dictionnary[criterium.m_index][criterium.m_value]].insert(netSI[node_path]);
+                vertexes[criterium.m_index][dictionnary[criterium.m_index][criterium.m_value]].insert(netSI[path_fwd]);
             }
-            remove_edge(prev_id, netSI[node_path], g);
-            add_edge(prev_id, netSI[node_path], g);
-            parents_of[netSI[node_path]].insert(prev_id);
-            prev_id = netSI[node_path];
-            //std::cout << "net[" << node_path << "]=" << net[node_path] << std::endl;
+            else if (netSI[path_fwd] != 0)
+            {
+                // use forward node
+                node_to_use = netSI[path_fwd];
+                stats_fwd++;
+            }
+            else
+            {
+                // use backward node
+                node_to_use = netSI_bwd[path_bwd];
+                stats_bwd++;// rule.m_criteria.size() - criterium.m_index;
+            }
+            boost::remove_edge(prev_id, node_to_use, g);
+            boost::add_edge(prev_id, node_to_use, g);
+            parents_of[node_to_use].insert(prev_id);
+            prev_id = node_to_use;
+            //std::cout << "net[" << path_fwd << "]=" << net[path_fwd] << std::endl;
         }
         // Add content
         if (netSI[rule.m_content] == 0)
@@ -411,45 +456,61 @@ int main()
             netSI[rule.m_content] = add_vertex(g);
             netIS[netSI[rule.m_content]] = rule.m_content;
             labels.push_back(rule.m_content);
+
+            if (dictionnary[rule.m_criteria.size()][rule.m_content] == 0)
+                dictionnary[rule.m_criteria.size()][rule.m_content] = dictionnary[rule.m_criteria.size()].size();
+            vertexes[rule.m_criteria.size()][dictionnary[rule.m_criteria.size()][rule.m_content]].insert(netSI[rule.m_content]);
         }
-        remove_edge(prev_id, netSI[rule.m_content], g);
-        add_edge(prev_id, netSI[rule.m_content], g);
+        boost::remove_edge(prev_id, netSI[rule.m_content], g);
+        boost::add_edge(prev_id, netSI[rule.m_content], g);
         parents_of[netSI[rule.m_content]].insert(prev_id);
     }
-    for(auto level : v_perLevel_perValue)
-    {
+    auto finish = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = finish - start;
+    std::cout << "Elapsed time: " << elapsed.count() << " s\n";
+    
+    #ifdef _DEBUG
+    for(auto level : vertexes)
         std::cout << "level " << level.first << " has " << level.second.size() << " different values" << std::endl;
-    }
-    std::cout << "total number of nodes: " << netSI.size() << std::endl;
+    #endif
+
+    // Stats
+    std::cout << "total number of nodes: " << boost::num_vertices(g) << std::endl;
+    std::cout << "total number of transitions: " << boost::num_edges(g) << std::endl;
+    std::cout << "total number of fwd merges: " << stats_fwd << std::endl;
+    std::cout << "total number of bwd merges: " << stats_bwd << std::endl;
     std::cout << "# GRAPH COMPLETED" << std::endl;
 
-    ////// OPTIMISATIONS
+    std::ofstream dost_file("automatona_before.dot");
+    boost::write_graphviz(dost_file, g, boost::make_label_writer(&labels[0]));
 
+
+    ////// OPTIMISATIONS
+    std::cout << "# OPTIMISATIONS" << std::endl;
     // stats
     uint merged = 0;
-
 
     std::set<std::pair<uint, uint>> vertexes_to_remove;
     boost::graph_traits < boost::adjacency_list <> >::adjacency_iterator ai, a_end;
     boost::graph_traits < boost::adjacency_list <> >::adjacency_iterator bi, b_end;
     
     // iterates all the levels (one level per criterium)
-    for (auto level = v_perLevel_perValue.rbegin(); level != v_perLevel_perValue.rend(); ++level)
+    for (auto level = vertexes.rbegin(); level != vertexes.rend(); ++level)
     {
-        std::cout << "level " << (level->first);
+        //std::cout << "level " << (level->first);
         merged = 0;
         // iterates all the values
-        for (auto value_id : v_perLevel_perValue[level->first])
+        for (auto value_id : vertexes[level->first])
         {
             // iterates all the nodes with this value within this level
-            for (auto vertex = v_perLevel_perValue[level->first][value_id.first].rbegin(); vertex != v_perLevel_perValue[level->first][value_id.first].rend(); ++vertex)
+            for (auto vertex = vertexes[level->first][value_id.first].rbegin(); vertex != vertexes[level->first][value_id.first].rend(); ++vertex)
             {
                 // skip if already merged
                 if (labels[*vertex] == "")
                     continue;
 
                 // compare to all the other nodes with same value (within same level)
-                for (auto aux = std::next(vertex); aux != v_perLevel_perValue[level->first][value_id.first].rend(); ++aux)
+                for (auto aux = std::next(vertex); aux != vertexes[level->first][value_id.first].rend(); ++aux)
                 {
                     // skip if already merged
                     if (labels[*aux] == "")
@@ -460,6 +521,10 @@ int main()
                     // Check if both nodes point to the same nodes
                     boost::tie(ai, a_end) = adjacent_vertices(*vertex, g);
                     boost::tie(bi, b_end) = adjacent_vertices(*aux, g);
+
+                    if (*ai != *bi && a_end != b_end)
+                        continue;
+
                     for (; ai != a_end && bi != b_end && equal; ++ai, ++bi)
                     {
                         if (*ai != *bi)
@@ -473,66 +538,70 @@ int main()
                         // redirect all the in edges of aux to vertex
                         for (auto cr : parents_of[*aux])
                         {
-                            // std::cout << "replacing edge [" << cr << "]-[" << *aux;
-                            // std::cout << "] to [" << cr << "]-[" << *vertex << "]" << std::endl;
-                            remove_edge(cr, *aux, g);
-                            add_edge(cr, *vertex, g);
-                            parents_of[*aux].erase(cr);
+                            #ifdef _DEBUG
+                                std::cout << "replacing edge [" << cr << "]-[" << *aux;
+                                std::cout << "] to [" << cr << "]-[" << *vertex << "]" << std::endl;
+                                std::cout << "[" << cr << "] " << netIS[cr] << " & " << netIS_bwd[cr] << std::endl;
+                            #endif
+                            boost::remove_edge(cr, *aux, g);
+                            boost::add_edge(cr, *vertex, g);
                         }
+                        parents_of[*aux].clear();
+                        #ifdef _DEBUG
+                            std::cout << "[" << *aux << "] " << netIS[*aux] << " & " << netIS_bwd[*aux] << std::endl;
+                            std::cout << "[" << *vertex << "] " << netIS[*vertex] << " & " << netIS_bwd[*vertex] << std::endl;
+                        #endif
+
+                        //boost::tie(bi, b_end) = adjacent_vertices(*aux, g);
+                        //for (; bi != b_end; ++bi)
+                        //    std::cout << "pointing to [" << *bi << "] " << netIS[*bi] << " & " << netIS_bwd[*bi] << std::endl;
 
                         vertexes_to_remove.insert(std::make_pair(*aux, level->first));
                         labels[*aux] = "";
                         merged++;
-
+                        //std::cout << std::endl;
                         // rename vertex netIS/netSI ?
                     }
                 }
             }
         }
-        std::cout << " merged " << merged << " nodes" << std::endl;
+        #ifdef _DEBUG
+            std::cout << "level " << (level->first);
+            std::cout << " merged " << merged << " nodes" << std::endl;
+        #endif
     }
 
     // effectively remove obsolete vertexes from the graph
-    //for (auto aux : vertexes_to_remove)
-    std::cout << "deleting " << vertexes_to_remove.size() << " nodes" << std::endl;
+    std::cout << "deleting " << vertexes_to_remove.size() << " nodes" << std::endl << std::endl;
     for (auto aux = vertexes_to_remove.rbegin(); aux != vertexes_to_remove.rend(); ++aux)
     {
-        // std::cout << "removing [" << aux->first << "] " << netIS[aux->first] << " from level " << aux->second << std::endl;
-        //vertexes[aux->second].erase(aux->first);
-        v_perLevel_perValue[aux->second][dictionnary[aux->second][labels[aux->first]]].erase(aux->first);
+        //std::cout << "removing [" << aux->first << "] " << netIS[aux->first] << " from level " << aux->second << std::endl;
+
+        // this is not working!
+        //vertexes[aux->second][dictionnary[aux->second][labels[aux->first]]].erase(aux->first);
+        
+
         netSI.erase(netIS[aux->first]);
         netIS.erase(aux->first);
         labels.erase(labels.begin() + aux->first);
         remove_vertex(aux->first, g);
     }
-    std::cout << "total number of nodes: " << netSI.size() << std::endl;
 
-    // vertex with the same value pointing to exactly the same vertex can be merged
-    //  so check all vertices pointing to them
+    // print final state
+    #ifdef _DEBUG
+    for (auto level : vertexes; aux=0)
+    {
+        for (auto value : level.second)
+            aux += value.second.size();
+        std::cout << "level " << level.first << " has " << aux << " nodes" << std::endl;
+    }
+    #endif
+    std::cout << "total number of nodes: " << boost::num_vertices(g) << std::endl;
+    std::cout << "total number of transitions: " << boost::num_edges(g) << std::endl;
     
-    std::ofstream dot_file("automaton.dot");
+    // save file
+    std::ofstream dot_file("automatona.dot");
     boost::write_graphviz(dot_file, g, boost::make_label_writer(&labels[0]));
-
-    // boost::graph_traits < boost::adjacency_list <> >::vertex_iterator i, end;
-    // boost::graph_traits < boost::adjacency_list <> >::adjacency_iterator ai, a_end;
-    // boost::property_map < boost::adjacency_list <>, boost::vertex_index_t >::type index_map = get(boost::vertex_index, g);
-    // for (boost::tie(i, end) = vertices(g); i != end; ++i)
-    // {
-    //     std::cout << *i;
-    //     boost::tie(ai, a_end) = adjacent_vertices(*i, g);
-    //     if (ai == a_end)
-    //         std::cout << " has no children";
-    //     else
-    //         std::cout << " is the parent of ";
-    //     
-    //     for (; ai != a_end; ++ai)
-    //     {
-    //         std::cout << *ai;
-    //         if (boost::next(ai) != a_end)
-    //             std::cout << ", ";
-    //     }
-    //     std::cout << std::endl;
-    // }
 
     ////////////////////////////////////////////////////////////////////////////////////////
 

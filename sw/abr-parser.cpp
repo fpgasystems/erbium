@@ -32,7 +32,7 @@ struct criterionDefinition_s
     int m_weight;
     int m_used;
     bool operator < (const criterionDefinition_s &other) const { return m_index < other.m_index; }
-    void print(const std::string &level)
+    void print(const std::string &level) const
     {
         printf("%s[Criterion] index=%d code=%s isMandatory=%s supertag=%s weight=%d used=%d\n", level.c_str(),
                                      m_index,
@@ -50,14 +50,14 @@ struct ruleType_s
     int m_release;
     std::vector<criterionDefinition_s> m_criterionDefinition;
 
-    void print(const std::string &level)
+    void print(const std::string &level) const
     {
         printf("%s[RuleType] org=%s app=%s v=%d\n",
             level.c_str(),
             m_organization.c_str(),
             m_code.c_str(),
             m_release);
-        for(auto aux : m_criterionDefinition)
+        for(auto& aux : m_criterionDefinition)
             aux.print(level + "\t");
     }
 
@@ -68,7 +68,7 @@ struct criterion_s
     std::string m_code;
     std::string m_value;
     bool operator < (const criterion_s &other) const { return m_index < other.m_index; }
-    void print(const std::string &level)
+    void print(const std::string &level) const
     {
         printf("%s[Criterion] id=%d code=%s value=%s\n",
             level.c_str(),
@@ -84,13 +84,13 @@ struct rule_s
     std::set<criterion_s> m_criteria;
     std::string m_content;
     bool operator < (const rule_s &other) const { return m_ruleId < other.m_ruleId; }
-    void print(const std::string &level)
+    void print(const std::string &level) const
     {
         printf("%s[Rule] id=%d weight=%d\n", 
             level.c_str(),
             m_ruleId,
             m_weight);
-        for(auto aux : m_criteria)
+        for(auto& aux : m_criteria)
             aux.print(level + "\t");
     }
 };
@@ -100,10 +100,10 @@ struct rulePack_s
     std::set<rule_s> m_rules;
 
     bool operator < (const rulePack_s &other) const { return true; }
-    void print(const std::string &level)
+    void print(const std::string &level) const
     {
         m_ruleType.print(level);
-        for(auto aux : m_rules)
+        for(auto& aux : m_rules)
             aux.print(level + "\t");
     }
 };
@@ -117,11 +117,11 @@ struct abr_dataset
     void save(const std::string &filename);
 
     //[abr_dataset_print
-    void print(const std::string &level)
+    void print(const std::string &level) const
     {
         printf("%sorg: %s\n", level.c_str(), m_organization.c_str());
         printf("%sapp: %s\n", level.c_str(), m_application.c_str());
-        for(auto aux : m_rulePacks)
+        for(auto& aux : m_rulePacks)
             aux.print(level + "\t");
     }
     //]
@@ -268,6 +268,7 @@ int main()
     //std::ifstream       file("../data/demo_01.csv");
 
     std::cout << "# LOAD" << std::endl;
+    auto start = std::chrono::high_resolution_clock::now();
     CSVRow              row;
     row.readNextRow(file);
     abr_dataset ds;
@@ -333,49 +334,63 @@ int main()
                                       std::stoi(row.get_value(aux+3)));
         rp.m_rules.insert(rl);
     }
-
-    rp.m_ruleType.print("");
-    std::cout << rp.m_rules.size() << " rules loaded" << std::endl;
-    std::cout << "# LOAD COMPLETED" << std::endl;
+    //rp.m_ruleType.print("");
     //ds.m_rulePacks.insert(rp);
+
+    auto finish = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = finish - start;
+    std::cout << rp.m_rules.size() << " rules loaded" << std::endl;
+    std::cout << "# LOAD COMPLETED in " << elapsed.count() << " s\n";
 
     ////////////////////////////////////////////////////////////////////////////////////////
 
-    /*//####### DICTIONNARY
+    //####### DICTIONNARY
+    start = std::chrono::high_resolution_clock::now();
+    std::cout << "# DICTIONNARY" << std::endl;
+    
     std::map<uint, std::map<std::string, uint>> dictionnary; // per criteira -> per value -> ID
     std::map<std::string, uint> contents;                    // per value -> ID
-    for(auto criterium : rp.m_ruleType.m_criterionDefinition)
-    {
-        std::map<std::string, uint> dic;
-        dictionnary.push_back(dic);
-    }
+    //for(auto& criterium : rp.m_ruleType.m_criterionDefinition)
+    //{
+    //    std::map<std::string, uint> dic;
+    //    dictionnary.push_back(dic);
+    //}
 
-    for (auto rule : rp.m_rules)
+    for (auto& rule : rp.m_rules)
     {
-        for (auto aux : rule.m_criteria)
+        for (auto& aux : rule.m_criteria)
             dictionnary[aux.m_index][aux.m_value]=0;
         contents[rule.m_content] = 0;
     }
-    dictionnary.push_back(contents);
+    dictionnary[rp.m_ruleType.m_criterionDefinition.size()] = contents;
 
     uint key;
     for(auto& aux : dictionnary)
     {
         key = 0;
-        for(auto& x : aux)
+        for(auto& x : aux.second)
             x.second = key++;
     }
 
     // PRINT
-    for(auto& aux : dictionnary)
-    {
-        for(auto& x : aux)
-            std::cout << x.first << "," << x.second << std::endl;
-    }*/
+    // for(auto& aux : dictionnary)
+    // {
+    //     for(auto& x : aux.second)
+    //         std::cout << x.first << "," << x.second << std::endl;
+    // }
+    finish = std::chrono::high_resolution_clock::now();
+    elapsed = finish - start;
+
+    // Stats    
+    #ifdef _DEBUG
+    #endif
+
+    std::cout << "# DICTIONNARY COMPLETED in " << elapsed.count() << " s\n";
 
     //####### GRAPH
-    auto start = std::chrono::high_resolution_clock::now();
     std::cout << "# GRAPH" << std::endl;
+    start = std::chrono::high_resolution_clock::now();
+
     std::map<std::string, uint> netSI; // from node_path to node_id
     std::map<std::string, uint> netSI_bwd; // from node_path_bwd to node_id
     std::map<uint, std::string> netIS; // from node_id to node_path
@@ -384,23 +399,25 @@ int main()
     std::map<uint, std::set<uint>> parents_of; // from node_id to parents of it (parent node_id)
     std::map<uint, std::map<uint, std::set<uint>>> vertexes; // per level -> per value -> list of nodes
 
-    std::map<uint, std::map<std::string, uint>> dictionnary; // per level -> per value -> value_id
-
     labels.push_back("o");
     boost::adjacency_list <> g(1);
 
     uint stats_bwd = 0;
     uint stats_fwd = 0;
 
-    for (auto rule : rp.m_rules)
+    uint node_to_use;
+    uint prev_id;
+    std::string path_fwd;
+    std::string path_bwd;
+    std::map<uint, std::string> path_bwd_db;
+    for (auto& rule : rp.m_rules)
     {
-        std::string path_fwd = "";
-        std::string path_bwd = "";
-        std::map<uint, std::string> path_bwd_db;
-        uint prev_id = 0;
+        path_fwd = "";
+        path_bwd_db.clear();
+        prev_id = 0;
 
         // build path_bwd
-        for (auto criterium : rule.m_criteria)
+        for (auto& criterium : rule.m_criteria)
         {
             for (uint i=0; i<=criterium.m_index; ++i)
                 path_bwd_db[i] = path_bwd_db[i] + "_" + criterium.m_value;
@@ -408,13 +425,8 @@ int main()
         for (uint i=0; i<=rule.m_criteria.size(); ++i)
             path_bwd_db[i] = path_bwd_db[i] + "_" + rule.m_content;
 
-        uint node_to_use;
-        for (auto criterium : rule.m_criteria)
+        for (auto& criterium : rule.m_criteria)
         {
-            // DICTIONNARY
-            if (dictionnary[criterium.m_index][criterium.m_value] == 0)
-                dictionnary[criterium.m_index][criterium.m_value] = dictionnary[criterium.m_index].size();
-
             path_fwd = criterium.m_value + "_" + path_fwd;
             path_bwd = path_bwd_db[criterium.m_index];
 
@@ -456,21 +468,17 @@ int main()
             netSI[rule.m_content] = add_vertex(g);
             netIS[netSI[rule.m_content]] = rule.m_content;
             labels.push_back(rule.m_content);
-
-            if (dictionnary[rule.m_criteria.size()][rule.m_content] == 0)
-                dictionnary[rule.m_criteria.size()][rule.m_content] = dictionnary[rule.m_criteria.size()].size();
             vertexes[rule.m_criteria.size()][dictionnary[rule.m_criteria.size()][rule.m_content]].insert(netSI[rule.m_content]);
         }
         boost::remove_edge(prev_id, netSI[rule.m_content], g);
         boost::add_edge(prev_id, netSI[rule.m_content], g);
         parents_of[netSI[rule.m_content]].insert(prev_id);
     }
-    auto finish = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = finish - start;
-    std::cout << "Elapsed time: " << elapsed.count() << " s\n";
+    finish = std::chrono::high_resolution_clock::now();
+    elapsed = finish - start;
     
     #ifdef _DEBUG
-    for(auto level : vertexes)
+    for(auto& level : vertexes)
         std::cout << "level " << level.first << " has " << level.second.size() << " different values" << std::endl;
     #endif
 
@@ -479,12 +487,13 @@ int main()
     std::cout << "total number of transitions: " << boost::num_edges(g) << std::endl;
     std::cout << "total number of fwd merges: " << stats_fwd << std::endl;
     std::cout << "total number of bwd merges: " << stats_bwd << std::endl;
-    std::cout << "# GRAPH COMPLETED" << std::endl;
+    std::cout << "# GRAPH COMPLETED in " << elapsed.count() << " s\n";
 
     ////// OPTIMISATIONS
     std::cout << "# OPTIMISATIONS" << std::endl;
     // stats
     uint merged = 0;
+    uint aux_v;
 
     std::set<std::pair<uint, uint>> vertexes_to_remove;
     boost::graph_traits < boost::adjacency_list <> >::adjacency_iterator ai, a_end;
@@ -510,16 +519,19 @@ int main()
                 boost::tie(ci, c_end) = adjacent_vertices(*vertex, g);
                 // compare to all the other nodes with same value (within same level)
                 for (auto aux = std::next(vertex); aux != vertexes[level->first][value_id.first].rend(); ++aux)
+                //for (auto& aux : vertexes[level->first][value_id.first])
                 {
+                    aux_v = *aux;
+
                     // skip if already merged
-                    if (labels[*aux] == "")
+                    if (labels[aux_v] == "")
                         continue;
 
                     bool equal = true;
 
                     // Check if both nodes point to the same nodes
                     boost::tie(ai, a_end) = boost::tie(ci, c_end);
-                    boost::tie(bi, b_end) = adjacent_vertices(*aux, g);
+                    boost::tie(bi, b_end) = adjacent_vertices(aux_v, g);
 
                     for (; ai != a_end && equal; ++ai, ++bi)
                     {
@@ -532,28 +544,28 @@ int main()
                     if (equal)
                     {
                         // redirect all the in edges of aux to vertex
-                        for (auto cr : parents_of[*aux])
+                        for (auto cr : parents_of[aux_v])
                         {
                             #ifdef _DEBUG
-                            std::cout << "replacing edge [" << cr << "]-[" << *aux;
+                            std::cout << "replacing edge [" << cr << "]-[" << aux_v;
                             std::cout << "] to [" << cr << "]-[" << *vertex << "]" << std::endl;
                             std::cout << "[" << cr << "] " << netIS[cr] << " & " << netIS_bwd[cr] << std::endl;
                             #endif
-                            boost::remove_edge(cr, *aux, g);
+                            boost::remove_edge(cr, aux_v, g);
                             boost::add_edge(cr, *vertex, g);
                         }
-                        parents_of[*aux].clear();
+                        parents_of[aux_v].clear();
 
                         #ifdef _DEBUG
-                        std::cout << "[" << *aux << "] " << netIS[*aux] << " & " << netIS_bwd[*aux] << std::endl;
+                        std::cout << "[" << aux_v << "] " << netIS[aux_v] << " & " << netIS_bwd[aux_v] << std::endl;
                         std::cout << "[" << *vertex << "] " << netIS[*vertex] << " & " << netIS_bwd[*vertex] << std::endl;
-                        boost::tie(bi, b_end) = boost::adjacent_vertices(*aux, g);
+                        boost::tie(bi, b_end) = boost::adjacent_vertices(aux_v, g);
                         for (; bi != b_end; ++bi)
                             std::cout << "pointing to [" << *bi << "] " << netIS[*bi] << " & " << netIS_bwd[*bi] << std::endl;
                         #endif
 
-                        vertexes_to_remove.insert(std::make_pair(*aux, level->first));
-                        labels[*aux] = "";
+                        vertexes_to_remove.insert(std::make_pair(aux_v, level->first));
+                        labels[aux_v] = "";
                         merged++;
                         //std::cout << std::endl;
                         // rename vertex netIS/netSI ?
@@ -591,10 +603,10 @@ int main()
 
     // print final state
     #ifdef _DEBUG
-    for (auto level : vertexes)
+    for (auto& level : vertexes)
     {
         aux=0;
-        for (auto value : level.second)
+        for (auto& value : level.second)
             aux += value.second.size();
         std::cout << "level " << level.first << " has " << aux << " nodes" << std::endl;
     }
@@ -603,7 +615,7 @@ int main()
     std::cout << "total number of transitions: " << boost::num_edges(g) << std::endl;
     
     // save file
-    std::ofstream dot_file("automatona.dot");
+    std::ofstream dot_file("automaton.dot");
     boost::write_graphviz(dot_file, g, boost::make_label_writer(&labels[0]));
 
     ////////////////////////////////////////////////////////////////////////////////////////

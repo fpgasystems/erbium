@@ -1,0 +1,166 @@
+/////////////////////////////////////////////////////////////// LOADING ALL RULES
+[RuleType] org=Amadeus app=MINCT v=0
+	[Criterion] index=0 code=CTN_TYPE 			used=136002
+	[Criterion] index=1 code=MCT_PRD 			used=18414
+	[Criterion] index=2 code=MCT_BRD 			used=136002
+	[Criterion] index=3 code=MCT_OFF 			used=136002
+	[Criterion] index=4 code=IN_CRR 			used=102583
+	[Criterion] index=5 code=OUT_CRR 			used=104224
+	[Criterion] index=6 code=IN_EQP 			used=1503
+	[Criterion] index=7 code=OUT_EQP 			used=1030
+	[Criterion] index=8 code=NXT_APT 			used=9286
+	[Criterion] index=9 code=NXT_AREA 			used=1325
+	[Criterion] index=10 code=NXT_CTRY 			used=6471
+	[Criterion] index=11 code=PRV_AREA 			used=1327
+	[Criterion] index=12 code=PRV_CTRY 			used=6681
+	[Criterion] index=13 code=NXT_STATE 		used=7
+	[Criterion] index=14 code=PRV_STATE 		used=7
+	[Criterion] index=15 code=IN_FLT_NB 		used=5172
+	[Criterion] index=16 code=OUT_FLT_NB 		used=4630
+	[Criterion] index=17 code=IN_TER 			used=34344
+	[Criterion] index=18 code=IN_FLT_RG 		used=31902
+	[Criterion] index=19 code=OUT_FLT_RG 		used=32424
+	[Criterion] index=20 code=OUT_TER 			used=34506
+	[Criterion] index=21 code=PRV_APT 			used=10425
+136002 rules loaded
+
+/////////////////////////////////////////////////////////////// LOADING ONLY VALID RULES
+[RuleType] org=Amadeus app=MINCT v=0
+	[Criterion] index=0 code=CTN_TYPE 			used=107394
+	[Criterion] index=1 code=MCT_PRD 			used=12221
+	[Criterion] index=2 code=MCT_BRD 			used=107394
+	[Criterion] index=3 code=MCT_OFF 			used=107394
+	[Criterion] index=4 code=IN_CRR 			used=78042
+	[Criterion] index=5 code=OUT_CRR 			used=79517
+	[Criterion] index=6 code=IN_EQP 			used=1330
+	[Criterion] index=7 code=OUT_EQP 			used=868
+	[Criterion] index=8 code=NXT_APT 			used=5655
+	[Criterion] index=9 code=NXT_AREA 			used=1322
+	[Criterion] index=10 code=NXT_CTRY 			used=2470
+	[Criterion] index=11 code=PRV_AREA 			used=1324
+	[Criterion] index=12 code=PRV_CTRY 			used=2560
+	[Criterion] index=13 code=NXT_STATE 		used=0
+	[Criterion] index=14 code=PRV_STATE 		used=0
+	[Criterion] index=15 code=IN_FLT_NB 		used=4756
+	[Criterion] index=16 code=OUT_FLT_NB 		used=4230
+	[Criterion] index=17 code=IN_TER 			used=27318
+	[Criterion] index=18 code=IN_FLT_RG 		used=18401
+	[Criterion] index=19 code=OUT_FLT_RG 		used=19080
+	[Criterion] index=20 code=OUT_TER 			used=27484
+	[Criterion] index=21 code=PRV_APT 			used=6899
+107394 rules loaded
+
+/////////////////////////////////////////////////////////////// SORTED
+[RuleType] org=Amadeus app=MINCT v=0
+	[Criterion] index=0 code=CTN_TYPE 			used=107394*
+	[Criterion] index=2 code=MCT_BRD 			used=107394*
+	[Criterion] index=3 code=MCT_OFF 			used=107394*
+	[Criterion] index=5 code=OUT_CRR 			used= 79517
+	[Criterion] index=4 code=IN_CRR 			used= 78042
+	[Criterion] index=20 code=OUT_TER 			used= 27484
+	[Criterion] index=17 code=IN_TER 			used= 27318
+	[Criterion] index=19 code=OUT_FLT_RG 		used= 19080
+	[Criterion] index=18 code=IN_FLT_RG 		used= 18401
+	[Criterion] index=1 code=MCT_PRD 			used= 12221
+	[Criterion] index=21 code=PRV_APT 			used=  6899
+	[Criterion] index=8 code=NXT_APT 			used=  5655
+	[Criterion] index=15 code=IN_FLT_NB 		used=  4756
+	[Criterion] index=16 code=OUT_FLT_NB 		used=  4230
+	[Criterion] index=12 code=PRV_CTRY 			used=  2560
+	[Criterion] index=10 code=NXT_CTRY 			used=  2470
+	[Criterion] index=6 code=IN_EQP 			used=  1330
+	[Criterion] index=11 code=PRV_AREA 			used=  1324
+	[Criterion] index=9 code=NXT_AREA 			used=  1322
+	[Criterion] index=7 code=OUT_EQP 			used=   868
+	[Criterion] index=13 code=NXT_STATE 		used=     0
+	[Criterion] index=14 code=PRV_STATE 		used=     0
+107394 rules loaded
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! test with auto on optimisations !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+///////////////////////////////////////////////////////// FULL WITH SORT
+# LOAD
+136002 rules loaded
+# LOAD COMPLETED in 2.18089 s
+# DICTIONNARY
+# DICTIONNARY COMPLETED in 1.31274 s
+# GRAPH
+total number of nodes: 345558
+total number of transitions: 533771
+total number of fwd merges: 1944252
+total number of bwd merges: 702335
+# GRAPH COMPLETED in 34.3206 s
+# OPTIMISATIONS
+# OPTIMISATIONS COMPLETED in 130.649 s
+# DELETING
+deleting 246872 nodes
+# DELETING COMPLETED in 1.22935 s
+total number of nodes: 98686
+total number of transitions: 270944
+
+
+///////////////////////////////////////////////////////// FULL NO SORT
+# LOAD
+136002 rules loaded
+# LOAD COMPLETED in 2.2085 s
+# DICTIONNARY
+# DICTIONNARY COMPLETED in 1.36532 s
+# GRAPH
+total number of nodes: 224743
+total number of transitions: 360644
+total number of fwd merges: 1002623
+total number of bwd merges: 1764779
+# GRAPH COMPLETED in 35.6328 s
+# OPTIMISATIONS
+# OPTIMISATIONS COMPLETED in 456.316 s
+# DELETING
+deleting 327 nodes
+# DELETING COMPLETED in 1.54451 s
+total number of nodes: 224416
+total number of transitions: 360202
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! test  old school  optimisations !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+///////////////////////////////////////////////////////// FULL WITH SORT
+# LOAD
+136002 rules loaded
+# LOAD COMPLETED in 2.2773 s
+# DICTIONNARY
+# DICTIONNARY COMPLETED in 1.36585 s
+# GRAPH
+total number of nodes: 345558
+total number of transitions: 533771
+total number of fwd merges: 1944252
+total number of bwd merges: 702335
+# GRAPH COMPLETED in 36.2072 s
+# OPTIMISATIONS
+# OPTIMISATIONS COMPLETED in 160.015 s
+# DELETING
+deleting 246915 nodes
+# DELETING COMPLETED in 1.20294 s
+total number of nodes: 98643
+total number of transitions: 270581
+
+
+///////////////////////////////////////////////////////// FULL NO SORT
+# LOAD
+136002 rules loaded
+# LOAD COMPLETED in 2.23904 s
+# DICTIONNARY
+# DICTIONNARY COMPLETED in 1.35265 s
+# GRAPH
+total number of nodes: 224743
+total number of transitions: 360644
+total number of fwd merges: 1002623
+total number of bwd merges: 1764779
+# GRAPH COMPLETED in 36.1987 s
+# OPTIMISATIONS
+# OPTIMISATIONS COMPLETED in 676.856 s
+# DELETING
+deleting 334 nodes
+# DELETING COMPLETED in 1.48732 s
+total number of nodes: 224409
+total number of transitions: 360194

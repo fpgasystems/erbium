@@ -299,6 +299,8 @@ int main()
         // JUST TO FILTER WHILE IN DEV
         //if (row.m_data[8] != "\"ZRH\"" && row.m_data[9] != "\"ZRH\"")
         //    continue;
+        //if (row.m_data[8] != "\"CDG\"" && row.m_data[9] != "\"CDG\"")
+        //    continue;
         //if (row.m_data[aux+3] != "\"35\"")
         //    continue;
 
@@ -378,34 +380,25 @@ int main()
         std::cout << "[" << key << "] " << rp.m_ruleType.m_criterionDefinition[aux.second].m_code << " #" << aux.first << std::endl;
         key++;
     }
-    // PRINT
-    // for(auto& aux : dictionnary)
-    // {
-    //     for(auto& x : aux.second)
-    //         std::cout << x.first << "," << x.second << std::endl;
-    // }
+
     finish = std::chrono::high_resolution_clock::now();
     elapsed = finish - start;
-
-    // Stats    
-    #ifdef _DEBUG
-    #endif
-
     std::cout << "# DICTIONNARY COMPLETED in " << elapsed.count() << " s\n";
 
     //####### GRAPH
     std::cout << "# GRAPH" << std::endl;
     start = std::chrono::high_resolution_clock::now();
 
-    std::map<std::string, uint> netSI; // from node_path to node_id
+    std::map<std::string, uint> netSI;     // from node_path_fwd to node_id
     std::map<std::string, uint> netSI_bwd; // from node_path_bwd to node_id
-    std::map<uint, std::string> netIS; // from node_id to node_path
-    std::map<uint, std::string> netIS_bwd; // from node_id to node_path
-    std::vector<std::string> labels;   // from node_id to node_value
+    std::map<uint, std::string> netIS;     // from node_id to node_path_fwd
+    std::map<uint, std::string> netIS_bwd; // from node_id to node_path_bwd
+    std::vector<std::string> labels;       // from node_id to node_value
     std::map<uint, std::set<uint>> parents_of; // from node_id to parents of it (parent node_id)
     std::map<uint, std::map<uint, std::set<uint>>> vertexes; // per level -> per value -> list of nodes
 
     labels.push_back("o");
+    parents_of[0].clear();
     boost::adjacency_list <> g(1);
 
     uint stats_bwd = 0;
@@ -490,7 +483,7 @@ int main()
     }
     finish = std::chrono::high_resolution_clock::now();
     elapsed = finish - start;
-
+    #ifdef _DEBUG
     for (auto& level : vertexes)
     {
         aux=0;
@@ -498,6 +491,7 @@ int main()
             aux += value.second.size();
         std::cout << "level " << level.first << " has " << aux << " nodes" << std::endl;
     }
+    #endif
     // Stats
     std::cout << "total number of nodes: " << boost::num_vertices(g) << std::endl;
     std::cout << "total number of transitions: " << boost::num_edges(g) << std::endl;
@@ -507,6 +501,7 @@ int main()
 
     ////// OPTIMISATIONS
     std::cout << "# OPTIMISATIONS" << std::endl;
+    start = std::chrono::high_resolution_clock::now();
     // stats
     uint merged = 0;
 
@@ -518,16 +513,18 @@ int main()
     // iterates all the levels (one level per criterium)
     for (auto level = ++(vertexes.rbegin()); level != vertexes.rend(); ++level)
     {
+        #ifdef _DEBUG
         std::cout << "level " << (level->first);
         start = std::chrono::high_resolution_clock::now();
+        #endif
         merged = 0;
         // iterates all the values
         for (auto value_id : vertexes[level->first])
         {
             // TODO: check why using the "auto" form misses some merges! (227 instead of 234)
-            // for (auto& vertex : vertexes[level->first][value_id.first])
             // iterates all the nodes with this value within this level
             for (auto vertex = vertexes[level->first][value_id.first].rbegin(); vertex != vertexes[level->first][value_id.first].rend(); ++vertex)
+            //for (auto& vertex : vertexes[level->first][value_id.first])
             {
                 // skip if already merged
                 if (labels[*vertex] == "")
@@ -589,33 +586,65 @@ int main()
                 }
             }
         }
+        #ifdef _DEBUG
         finish = std::chrono::high_resolution_clock::now();
         elapsed = finish - start;
-        //#ifdef _DEBUG
         std::cout << " merged " << merged << " nodes in " << elapsed.count() << " s\n";
-        //#endif
-    }
-
-    // effectively remove obsolete vertexes from the graph
-    std::cout << "deleting " << vertexes_to_remove.size() << " nodes" << std::endl;
-    start = std::chrono::high_resolution_clock::now();
-    for (auto aux = vertexes_to_remove.rbegin(); aux != vertexes_to_remove.rend(); ++aux)
-    {
-        //std::cout << "removing [" << aux->first << "] " << netIS[aux->first] << " from level " << aux->second << std::endl;
-
-        // this is not working!
-        //vertexes[aux->second][dictionnary[aux->second][labels[aux->first]]].erase(aux->first);
-
-        //netSI.erase(netIS[aux->first]);
-        //netIS.erase(aux->first);
-        labels.erase(labels.begin() + aux->first);
-
-        //boost::clear_vertex(aux->first, g);
-        boost::remove_vertex(aux->first, g);
+        #endif
     }
     finish = std::chrono::high_resolution_clock::now();
     elapsed = finish - start;
     std::cout << "# OPTIMISATIONS COMPLETED in " << elapsed.count() << " s\n";
+
+    // effectively remove obsolete vertexes from the graph
+    std::cout << "# DELETING" << std::endl;
+    std::cout << "deleting " << vertexes_to_remove.size() << " nodes" << std::endl;
+    start = std::chrono::high_resolution_clock::now();
+
+    boost::adjacency_list <> final_one(1);
+    std::vector<std::string> final_labels;   // from node_id to node_value
+    std::vector<uint> mapa;
+    std::map<uint, uint> mapaa;
+
+    auto lbl = labels.begin();
+    boost::graph_traits < boost::adjacency_list <> >::vertex_iterator vi, vi_end;
+    for (boost::tie(vi, vi_end) = vertices(g); vi != vi_end; ++vi)
+    {
+        if (parents_of[*vi].size() != 0)
+        {
+            mapa.push_back(*vi);
+            mapaa[*vi] = boost::add_vertex(final_one);
+            final_labels.push_back(*lbl);
+        }
+    }
+    for(boost::tie(bi, b_end) = adjacent_vertices(0, g); bi != b_end; ++bi)
+        boost::add_edge(0, mapaa[*bi], final_one);
+    for (auto itr : mapa)
+    {
+        for(boost::tie(bi, b_end) = adjacent_vertices(itr, g); bi != b_end; ++bi)
+            boost::add_edge(mapaa[itr], mapaa[*bi], final_one);
+
+    }
+    g = final_one;
+    finish = std::chrono::high_resolution_clock::now();
+    elapsed = finish - start;
+    std::cout << "# DELETING COMPLETED in " << elapsed.count() << " s\n";
+
+    // start = std::chrono::high_resolution_clock::now();
+    // for (auto aux = vertexes_to_remove.rbegin(); aux != vertexes_to_remove.rend(); ++aux)
+    // {
+    //     //std::cout << "removing [" << aux->first << "] " << netIS[aux->first] << " from level " << aux->second << std::endl;
+    //     // this is not working!
+    //     //vertexes[aux->second][dictionnary[aux->second][labels[aux->first]]].erase(aux->first);
+    //     //netSI.erase(netIS[aux->first]);
+    //     //netIS.erase(aux->first);
+    //     labels.erase(labels.begin() + aux->first);
+    //     //boost::clear_vertex(aux->first, g);
+    //     boost::remove_vertex(aux->first, g);
+    // }
+    // finish = std::chrono::high_resolution_clock::now();
+    // elapsed = finish - start;
+    // std::cout << "# DELETING 2 COMPLETED in " << elapsed.count() << " s\n";
 
     // print final state
     #ifdef _DEBUG

@@ -1,0 +1,67 @@
+///////////////////////////////////////////////////////// FULL WITH SORT
+# LOAD
+6 rules loaded
+# LOAD COMPLETED in 8.9761e-05 s
+# DICTIONNARY
+[0] AIRPORT #2
+[1] INBOUND #2
+[2] OUTBOUND #3
+[3] TERMINAL #4
+# DICTIONNARY COMPLETED in 4.4947e-05 s
+# GRAPH
+level 0 has 2 nodes
+level 1 has 3 nodes
+level 2 has 3 nodes
+level 3 has 5 nodes
+level 4 has 4 nodes
+total number of nodes: 18
+total number of transitions: 19
+total number of fwd merges: 8
+total number of bwd merges: 3
+# GRAPH COMPLETED in 0.000178021 s
+# OPTIMISATIONS
+level 3 merged 0 nodes in 1.0462e-05 s
+level 2 merged 0 nodes in 4.967e-06 s
+level 1 merged 0 nodes in 5.119e-06 s
+level 0 merged 0 nodes in 3.301e-06 s
+# OPTIMISATIONS COMPLETED
+# DELETING
+deleting 0 nodes
+# DELETING COMPLETED in 7.6016e-05 s
+# DELETING 2 COMPLETED in 1.92e-07 s
+total number of nodes: 18
+total number of transitions: 19
+
+///////////////////////////////////////////////////////// FULL NO SORT
+# LOAD
+6 rules loaded
+# LOAD COMPLETED in 8.359e-05 s
+# DICTIONNARY
+[0] AIRPORT #2
+[1] TERMINAL #4
+[2] INBOUND #2
+[3] OUTBOUND #3
+# DICTIONNARY COMPLETED in 3.9688e-05 s
+# GRAPH
+level 0 has 2 nodes
+level 1 has 4 nodes
+level 2 has 4 nodes
+level 3 has 4 nodes
+level 4 has 4 nodes
+total number of nodes: 19
+total number of transitions: 20
+total number of fwd merges: 5
+total number of bwd merges: 5
+# GRAPH COMPLETED in 0.000194276 s
+# OPTIMISATIONS
+level 3 merged 0 nodes in 8.951e-06 s
+level 2 merged 0 nodes in 6.815e-06 s
+level 1 merged 0 nodes in 6.418e-06 s
+level 0 merged 0 nodes in 3.244e-06 s
+# OPTIMISATIONS COMPLETED
+# DELETING
+deleting 0 nodes
+# DELETING COMPLETED in 0.000104119 s
+# DELETING 2 COMPLETED in 1.9e-07 s
+total number of nodes: 19
+total number of transitions: 20

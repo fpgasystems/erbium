@@ -295,12 +295,9 @@ int main()
     int aux = row.m_data.size()-4;
     while(file >> row)
     {
-        if (row.m_data[aux+2] == "\"TRUE\"")
-            continue;
-
         // NOT PRODUCTION
         // JUST TO FILTER WHILE IN DEV
-        //if (row.m_data[8] != "\"CDG\"" && row.m_data[9] != "\"CDG\"")
+        //if (row.m_data[8] != "\"ZRH\"" && row.m_data[9] != "\"ZRH\"")
         //    continue;
         //if (row.m_data[aux+3] != "\"35\"")
         //    continue;
@@ -330,8 +327,11 @@ int main()
                 rl.m_criteria.insert(ct);
             }
         }
-        rl.m_content = std::to_string(std::stoi(row.get_value(aux+1))*60 + 
-                                      std::stoi(row.get_value(aux+3)));
+        if (row.m_data[aux+2] == "\"TRUE\"")
+            rl.m_content = "999";
+        else
+            rl.m_content = std::to_string(std::stoi(row.get_value(aux+1))*60 + 
+                                          std::stoi(row.get_value(aux+3)));
         rp.m_rules.insert(rl);
     }
     //rp.m_ruleType.print("");
@@ -350,28 +350,34 @@ int main()
     
     std::map<uint, std::map<std::string, uint>> dictionnary; // per criteira -> per value -> ID
     std::map<std::string, uint> contents;                    // per value -> ID
-    //for(auto& criterium : rp.m_ruleType.m_criterionDefinition)
-    //{
-    //    std::map<std::string, uint> dic;
-    //    dictionnary.push_back(dic);
-    //}
+    std::vector<std::pair<uint, uint>> ordered;              // list of pair < (#diff values) & (level)>
 
+    // create it
     for (auto& rule : rp.m_rules)
     {
         for (auto& aux : rule.m_criteria)
             dictionnary[aux.m_index][aux.m_value]=0;
         contents[rule.m_content] = 0;
     }
-    dictionnary[rp.m_ruleType.m_criterionDefinition.size()] = contents;
 
+    // indexes
     uint key;
     for(auto& aux : dictionnary)
     {
         key = 0;
         for(auto& x : aux.second)
             x.second = key++;
+        ordered.push_back(std::pair<uint, uint>(aux.second.size(), aux.first));
     }
+    sort(ordered.begin(), ordered.end());
+    dictionnary[rp.m_ruleType.m_criterionDefinition.size()] = contents;
 
+    key = 0;
+    for (auto& aux : ordered)
+    {
+        std::cout << "[" << key << "] " << rp.m_ruleType.m_criterionDefinition[aux.second].m_code << " #" << aux.first << std::endl;
+        key++;
+    }
     // PRINT
     // for(auto& aux : dictionnary)
     // {
@@ -404,12 +410,13 @@ int main()
 
     uint stats_bwd = 0;
     uint stats_fwd = 0;
-
     uint node_to_use;
     uint prev_id;
+    uint level = 0;
     std::string path_fwd;
     std::string path_bwd;
     std::map<uint, std::string> path_bwd_db;
+
     for (auto& rule : rp.m_rules)
     {
         path_fwd = "";
@@ -417,18 +424,24 @@ int main()
         prev_id = 0;
 
         // build path_bwd
-        for (auto& criterium : rule.m_criteria)
+        //for (auto& criterium : rule.m_criteria)
+        for (auto ord : ordered)
         {
-            for (uint i=0; i<=criterium.m_index; ++i)
+            criterion_s criterium = *std::next(rule.m_criteria.begin(), ord.second);
+            for (uint i=0; i<=ord.second; ++i)
                 path_bwd_db[i] = path_bwd_db[i] + "_" + criterium.m_value;
         }
         for (uint i=0; i<=rule.m_criteria.size(); ++i)
             path_bwd_db[i] = path_bwd_db[i] + "_" + rule.m_content;
 
-        for (auto& criterium : rule.m_criteria)
+        //for (auto& criterium : rule.m_criteria)
+        level = 0;
+        for (auto ord : ordered)
         {
+            criterion_s criterium = *std::next(rule.m_criteria.begin(), ord.second);
+
             path_fwd = criterium.m_value + "_" + path_fwd;
-            path_bwd = path_bwd_db[criterium.m_index];
+            path_bwd = path_bwd_db[ord.second];
 
             // if one of the paths already exists, use it
             // if none, them create it
@@ -441,7 +454,7 @@ int main()
                 netSI[path_fwd] = node_to_use;
                 netIS[netSI[path_fwd]] = path_fwd;
                 labels.push_back(criterium.m_value);
-                vertexes[criterium.m_index][dictionnary[criterium.m_index][criterium.m_value]].insert(netSI[path_fwd]);
+                vertexes[level][dictionnary[criterium.m_index][criterium.m_value]].insert(netSI[path_fwd]);
             }
             else if (netSI[path_fwd] != 0)
             {
@@ -460,6 +473,7 @@ int main()
             parents_of[node_to_use].insert(prev_id);
             prev_id = node_to_use;
             //std::cout << "net[" << path_fwd << "]=" << net[path_fwd] << std::endl;
+            level++;
         }
         // Add content
         if (netSI[rule.m_content] == 0)
@@ -468,7 +482,7 @@ int main()
             netSI[rule.m_content] = add_vertex(g);
             netIS[netSI[rule.m_content]] = rule.m_content;
             labels.push_back(rule.m_content);
-            vertexes[rule.m_criteria.size()][dictionnary[rule.m_criteria.size()][rule.m_content]].insert(netSI[rule.m_content]);
+            vertexes[level][dictionnary[rule.m_criteria.size()][rule.m_content]].insert(netSI[rule.m_content]);
         }
         boost::remove_edge(prev_id, netSI[rule.m_content], g);
         boost::add_edge(prev_id, netSI[rule.m_content], g);
@@ -476,12 +490,14 @@ int main()
     }
     finish = std::chrono::high_resolution_clock::now();
     elapsed = finish - start;
-    
-    #ifdef _DEBUG
-    for(auto& level : vertexes)
-        std::cout << "level " << level.first << " has " << level.second.size() << " different values" << std::endl;
-    #endif
 
+    for (auto& level : vertexes)
+    {
+        aux=0;
+        for (auto& value : level.second)
+            aux += value.second.size();
+        std::cout << "level " << level.first << " has " << aux << " nodes" << std::endl;
+    }
     // Stats
     std::cout << "total number of nodes: " << boost::num_vertices(g) << std::endl;
     std::cout << "total number of transitions: " << boost::num_edges(g) << std::endl;
@@ -493,7 +509,6 @@ int main()
     std::cout << "# OPTIMISATIONS" << std::endl;
     // stats
     uint merged = 0;
-    uint aux_v;
 
     std::set<std::pair<uint, uint>> vertexes_to_remove;
     boost::graph_traits < boost::adjacency_list <> >::adjacency_iterator ai, a_end;
@@ -509,6 +524,8 @@ int main()
         // iterates all the values
         for (auto value_id : vertexes[level->first])
         {
+            // TODO: check why using the "auto" form misses some merges! (227 instead of 234)
+            // for (auto& vertex : vertexes[level->first][value_id.first])
             // iterates all the nodes with this value within this level
             for (auto vertex = vertexes[level->first][value_id.first].rbegin(); vertex != vertexes[level->first][value_id.first].rend(); ++vertex)
             {
@@ -517,21 +534,20 @@ int main()
                     continue;
 
                 boost::tie(ci, c_end) = adjacent_vertices(*vertex, g);
+                // for (auto& aux : vertexes[level->first][value_id.first])
                 // compare to all the other nodes with same value (within same level)
                 for (auto aux = std::next(vertex); aux != vertexes[level->first][value_id.first].rend(); ++aux)
                 //for (auto& aux : vertexes[level->first][value_id.first])
                 {
-                    aux_v = *aux;
-
                     // skip if already merged
-                    if (labels[aux_v] == "")
+                    if (labels[*aux] == "")
                         continue;
 
                     bool equal = true;
 
                     // Check if both nodes point to the same nodes
                     boost::tie(ai, a_end) = boost::tie(ci, c_end);
-                    boost::tie(bi, b_end) = adjacent_vertices(aux_v, g);
+                    boost::tie(bi, b_end) = adjacent_vertices(*aux, g);
 
                     for (; ai != a_end && equal; ++ai, ++bi)
                     {
@@ -544,28 +560,28 @@ int main()
                     if (equal)
                     {
                         // redirect all the in edges of aux to vertex
-                        for (auto cr : parents_of[aux_v])
+                        for (auto cr : parents_of[*aux])
                         {
                             #ifdef _DEBUG
-                            std::cout << "replacing edge [" << cr << "]-[" << aux_v;
+                            std::cout << "replacing edge [" << cr << "]-[" << *aux;
                             std::cout << "] to [" << cr << "]-[" << *vertex << "]" << std::endl;
                             std::cout << "[" << cr << "] " << netIS[cr] << " & " << netIS_bwd[cr] << std::endl;
                             #endif
-                            boost::remove_edge(cr, aux_v, g);
+                            boost::remove_edge(cr, *aux, g);
                             boost::add_edge(cr, *vertex, g);
                         }
-                        parents_of[aux_v].clear();
+                        parents_of[*aux].clear();
 
                         #ifdef _DEBUG
-                        std::cout << "[" << aux_v << "] " << netIS[aux_v] << " & " << netIS_bwd[aux_v] << std::endl;
+                        std::cout << "[" << *aux << "] " << netIS[*aux] << " & " << netIS_bwd[*aux] << std::endl;
                         std::cout << "[" << *vertex << "] " << netIS[*vertex] << " & " << netIS_bwd[*vertex] << std::endl;
-                        boost::tie(bi, b_end) = boost::adjacent_vertices(aux_v, g);
+                        boost::tie(bi, b_end) = boost::adjacent_vertices(*aux, g);
                         for (; bi != b_end; ++bi)
                             std::cout << "pointing to [" << *bi << "] " << netIS[*bi] << " & " << netIS_bwd[*bi] << std::endl;
                         #endif
 
-                        vertexes_to_remove.insert(std::make_pair(aux_v, level->first));
-                        labels[aux_v] = "";
+                        vertexes_to_remove.insert(std::make_pair(*aux, level->first));
+                        labels[*aux] = "";
                         merged++;
                         //std::cout << std::endl;
                         // rename vertex netIS/netSI ?
@@ -581,7 +597,7 @@ int main()
     }
 
     // effectively remove obsolete vertexes from the graph
-    std::cout << "deleting " << vertexes_to_remove.size() << " nodes" << std::endl << std::endl;
+    std::cout << "deleting " << vertexes_to_remove.size() << " nodes" << std::endl;
     start = std::chrono::high_resolution_clock::now();
     for (auto aux = vertexes_to_remove.rbegin(); aux != vertexes_to_remove.rend(); ++aux)
     {
@@ -590,16 +606,16 @@ int main()
         // this is not working!
         //vertexes[aux->second][dictionnary[aux->second][labels[aux->first]]].erase(aux->first);
 
-        netSI.erase(netIS[aux->first]);
-        netIS.erase(aux->first);
+        //netSI.erase(netIS[aux->first]);
+        //netIS.erase(aux->first);
         labels.erase(labels.begin() + aux->first);
 
-        boost::clear_vertex(aux->first, g);
+        //boost::clear_vertex(aux->first, g);
         boost::remove_vertex(aux->first, g);
     }
     finish = std::chrono::high_resolution_clock::now();
     elapsed = finish - start;
-    std::cout << "Elapsed time: " << elapsed.count() << " s\n";
+    std::cout << "# OPTIMISATIONS COMPLETED in " << elapsed.count() << " s\n";
 
     // print final state
     #ifdef _DEBUG

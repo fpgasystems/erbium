@@ -22,6 +22,8 @@
 #include <chrono>
 namespace pt = boost::property_tree;
 
+//#define _DEBUG true
+
 //[abr_dataset_data
 struct criterionDefinition_s
 {
@@ -265,6 +267,7 @@ std::istream& operator>>(std::istream& str, CSVRow& data)
 int main()
 {
     std::ifstream       file("../../../Documents/amadeus-share/mct_rules.csv");
+    //std::ifstream       file("../data/demo_02.csv");
     //std::ifstream       file("../data/demo_01.csv");
 
     std::cout << "# LOAD" << std::endl;
@@ -300,6 +303,8 @@ int main()
         //if (row.m_data[8] != "\"ZRH\"" && row.m_data[9] != "\"ZRH\"")
         //    continue;
         //if (row.m_data[8] != "\"CDG\"" && row.m_data[9] != "\"CDG\"")
+        //    continue;
+        //if (row.m_data[8] != "\"GRU\"" && row.m_data[9] != "\"GRU\"")
         //    continue;
         //if (row.m_data[aux+3] != "\"35\"")
         //    continue;
@@ -410,6 +415,7 @@ int main()
     std::string path_bwd;
     std::map<uint, std::string> path_bwd_db;
 
+    uint filec = 0;
     for (auto& rule : rp.m_rules)
     {
         path_fwd = "";
@@ -434,16 +440,17 @@ int main()
             criterion_s criterium = *std::next(rule.m_criteria.begin(), ord.second);
 
             path_fwd = criterium.m_value + "_" + path_fwd;
-            path_bwd = path_bwd_db[ord.second];
+            //path_bwd = path_bwd_db[ord.second];
 
             // if one of the paths already exists, use it
             // if none, them create it
             node_to_use = 0;
-            if (netSI[path_fwd] == 0 && netSI_bwd[path_bwd] == 0)
+            //if (netSI[path_fwd] == 0 && netSI_bwd[path_bwd] == 0)
+            if (netSI[path_fwd] == 0)
             {
                 node_to_use = add_vertex(g);
-                netSI_bwd[path_bwd] = node_to_use;
-                netIS_bwd[netSI_bwd[path_bwd]] = path_bwd;
+                //netSI_bwd[path_bwd] = node_to_use;
+                //netIS_bwd[netSI_bwd[path_bwd]] = path_bwd;
                 netSI[path_fwd] = node_to_use;
                 netIS[netSI[path_fwd]] = path_fwd;
                 labels.push_back(criterium.m_value);
@@ -458,7 +465,7 @@ int main()
             else
             {
                 // use backward node
-                node_to_use = netSI_bwd[path_bwd];
+                //node_to_use = netSI_bwd[path_bwd];
                 stats_bwd++;// rule.m_criteria.size() - criterium.m_index;
             }
             boost::remove_edge(prev_id, node_to_use, g);
@@ -480,6 +487,8 @@ int main()
         boost::remove_edge(prev_id, netSI[rule.m_content], g);
         boost::add_edge(prev_id, netSI[rule.m_content], g);
         parents_of[netSI[rule.m_content]].insert(prev_id);
+        //{std::ofstream maoe("automaton" + std::to_string(filec++) + ".dot");
+        //boost::write_graphviz(maoe, g, boost::make_label_writer(&labels[0]));}
     }
     finish = std::chrono::high_resolution_clock::now();
     elapsed = finish - start;
@@ -499,6 +508,7 @@ int main()
     std::cout << "total number of bwd merges: " << stats_bwd << std::endl;
     std::cout << "# GRAPH COMPLETED in " << elapsed.count() << " s\n";
 
+//========================================================================================================
     ////// OPTIMISATIONS
     std::cout << "# OPTIMISATIONS" << std::endl;
     start = std::chrono::high_resolution_clock::now();
@@ -536,6 +546,9 @@ int main()
                 for (auto aux = std::next(vertex); aux != vertexes[level->first][value_id.first].rend(); ++aux)
                 //for (auto& aux : vertexes[level->first][value_id.first])
                 {
+                    //if (aux <= vertex)
+                    //    continue;
+
                     // skip if already merged
                     if (labels[*aux] == "")
                         continue;
@@ -580,6 +593,8 @@ int main()
                         vertexes_to_remove.insert(std::make_pair(*aux, level->first));
                         labels[*aux] = "";
                         merged++;
+                        //{std::ofstream maoe("automaton" + std::to_string(filec++) + ".dot");
+                        //boost::write_graphviz(maoe, g, boost::make_label_writer(&labels[0]));}
                         //std::cout << std::endl;
                         // rename vertex netIS/netSI ?
                     }
@@ -595,17 +610,21 @@ int main()
     finish = std::chrono::high_resolution_clock::now();
     elapsed = finish - start;
     std::cout << "# OPTIMISATIONS COMPLETED in " << elapsed.count() << " s\n";
+//========================================================================================================
 
-    // effectively remove obsolete vertexes from the graph
+
+    ////// DELETION
     std::cout << "# DELETING" << std::endl;
     std::cout << "deleting " << vertexes_to_remove.size() << " nodes" << std::endl;
     start = std::chrono::high_resolution_clock::now();
 
+    // effectively remove obsolete vertexes from the graph
     boost::adjacency_list <> final_one(1);
     std::vector<std::string> final_labels;   // from node_id to node_value
     std::vector<uint> mapa;
     std::map<uint, uint> mapaa;
 
+    final_labels.push_back("o");
     auto lbl = labels.begin();
     boost::graph_traits < boost::adjacency_list <> >::vertex_iterator vi, vi_end;
     for (boost::tie(vi, vi_end) = vertices(g); vi != vi_end; ++vi)
@@ -614,7 +633,7 @@ int main()
         {
             mapa.push_back(*vi);
             mapaa[*vi] = boost::add_vertex(final_one);
-            final_labels.push_back(*lbl);
+            final_labels.push_back(*(lbl + *vi));
         }
     }
     for(boost::tie(bi, b_end) = adjacent_vertices(0, g); bi != b_end; ++bi)
@@ -626,6 +645,7 @@ int main()
 
     }
     g = final_one;
+    labels = final_labels;
     finish = std::chrono::high_resolution_clock::now();
     elapsed = finish - start;
     std::cout << "# DELETING COMPLETED in " << elapsed.count() << " s\n";
@@ -664,20 +684,6 @@ int main()
     boost::write_graphviz(dot_file, g, boost::make_label_writer(&labels[0]));
 
     ////////////////////////////////////////////////////////////////////////////////////////
-
-    return 0;
-
-    try
-    {
-        abr_dataset ds;
-        ds.load("../../../Documents/serial-NGI-biggest/test.xml");
-        ds.print("");
-        //ds.save("abr_dataset_out.xml");
-    }
-    catch (std::exception &e)
-    {
-        std::cout << "Error: " << e.what() << "\n";
-    }
 
     return 0;
 }

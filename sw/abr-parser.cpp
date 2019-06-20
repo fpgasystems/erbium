@@ -264,11 +264,21 @@ std::istream& operator>>(std::istream& str, CSVRow& data)
     return str;
 }
 
+
+
+//struct vertex_info { 
+//    uint level;
+//    std::string label;
+//    std::set<uint> parents;
+//};
+
+
+
 int main()
 {
-    std::ifstream       file("../../../Documents/amadeus-share/mct_rules.csv");
+    //std::ifstream       file("../../../Documents/amadeus-share/mct_rules.csv");
     //std::ifstream       file("../data/demo_02.csv");
-    //std::ifstream       file("../data/demo_01.csv");
+    std::ifstream       file("../data/demo_01.csv");
 
     std::cout << "# LOAD" << std::endl;
     auto start = std::chrono::high_resolution_clock::now();
@@ -305,6 +315,8 @@ int main()
         //if (row.m_data[8] != "\"CDG\"" && row.m_data[9] != "\"CDG\"")
         //    continue;
         //if (row.m_data[8] != "\"GRU\"" && row.m_data[9] != "\"GRU\"")
+        //    continue;
+        //if (row.m_data[8] != "\"ZRH\"" && row.m_data[9] != "\"ZRH\"" && row.m_data[8] != "\"CDG\"" && row.m_data[9] != "\"CDG\"" && row.m_data[8] != "\"GRU\"" && row.m_data[9] != "\"GRU\"")
         //    continue;
         //if (row.m_data[aux+3] != "\"35\"")
         //    continue;
@@ -395,78 +407,49 @@ int main()
     start = std::chrono::high_resolution_clock::now();
 
     std::map<std::string, uint> netSI;     // from node_path_fwd to node_id
-    std::map<std::string, uint> netSI_bwd; // from node_path_bwd to node_id
     std::map<uint, std::string> netIS;     // from node_id to node_path_fwd
-    std::map<uint, std::string> netIS_bwd; // from node_id to node_path_bwd
     std::vector<std::string> labels;       // from node_id to node_value
     std::map<uint, std::set<uint>> parents_of; // from node_id to parents of it (parent node_id)
     std::map<uint, std::map<uint, std::set<uint>>> vertexes; // per level -> per value -> list of nodes
 
-    labels.push_back("o");
+    labels.push_back("o"); /// origin
     parents_of[0].clear();
     boost::adjacency_list <> g(1);
 
-    uint stats_bwd = 0;
     uint stats_fwd = 0;
     uint node_to_use;
     uint prev_id;
     uint level = 0;
     std::string path_fwd;
-    std::string path_bwd;
-    std::map<uint, std::string> path_bwd_db;
 
     uint filec = 0;
     for (auto& rule : rp.m_rules)
     {
         path_fwd = "";
-        path_bwd_db.clear();
         prev_id = 0;
 
-        // build path_bwd
-        //for (auto& criterium : rule.m_criteria)
-        for (auto ord : ordered)
-        {
-            criterion_s criterium = *std::next(rule.m_criteria.begin(), ord.second);
-            for (uint i=0; i<=ord.second; ++i)
-                path_bwd_db[i] = path_bwd_db[i] + "_" + criterium.m_value;
-        }
-        for (uint i=0; i<=rule.m_criteria.size(); ++i)
-            path_bwd_db[i] = path_bwd_db[i] + "_" + rule.m_content;
-
-        //for (auto& criterium : rule.m_criteria)
         level = 0;
-        for (auto ord : ordered)
+        for (auto& ord : ordered)
         {
             criterion_s criterium = *std::next(rule.m_criteria.begin(), ord.second);
 
             path_fwd = criterium.m_value + "_" + path_fwd;
-            //path_bwd = path_bwd_db[ord.second];
 
-            // if one of the paths already exists, use it
-            // if none, them create it
             node_to_use = 0;
-            //if (netSI[path_fwd] == 0 && netSI_bwd[path_bwd] == 0)
             if (netSI[path_fwd] == 0)
             {
+                // new path
                 node_to_use = add_vertex(g);
-                //netSI_bwd[path_bwd] = node_to_use;
-                //netIS_bwd[netSI_bwd[path_bwd]] = path_bwd;
                 netSI[path_fwd] = node_to_use;
                 netIS[netSI[path_fwd]] = path_fwd;
                 labels.push_back(criterium.m_value);
                 vertexes[level][dictionnary[criterium.m_index][criterium.m_value]].insert(netSI[path_fwd]);
             }
-            else if (netSI[path_fwd] != 0)
-            {
-                // use forward node
-                node_to_use = netSI[path_fwd];
-                stats_fwd++;
-            }
             else
             {
-                // use backward node
-                //node_to_use = netSI_bwd[path_bwd];
-                stats_bwd++;// rule.m_criteria.size() - criterium.m_index;
+                // use existing path
+                node_to_use = netSI[path_fwd];
+                stats_fwd++;
             }
             boost::remove_edge(prev_id, node_to_use, g);
             boost::add_edge(prev_id, node_to_use, g);
@@ -505,7 +488,6 @@ int main()
     std::cout << "total number of nodes: " << boost::num_vertices(g) << std::endl;
     std::cout << "total number of transitions: " << boost::num_edges(g) << std::endl;
     std::cout << "total number of fwd merges: " << stats_fwd << std::endl;
-    std::cout << "total number of bwd merges: " << stats_bwd << std::endl;
     std::cout << "# GRAPH COMPLETED in " << elapsed.count() << " s\n";
 
 //========================================================================================================
@@ -575,7 +557,7 @@ int main()
                             #ifdef _DEBUG
                             std::cout << "replacing edge [" << cr << "]-[" << *aux;
                             std::cout << "] to [" << cr << "]-[" << *vertex << "]" << std::endl;
-                            std::cout << "[" << cr << "] " << netIS[cr] << " & " << netIS_bwd[cr] << std::endl;
+                            std::cout << "[" << cr << "] " << netIS[cr] << std::endl;
                             #endif
                             boost::remove_edge(cr, *aux, g);
                             boost::add_edge(cr, *vertex, g);
@@ -583,11 +565,11 @@ int main()
                         parents_of[*aux].clear();
 
                         #ifdef _DEBUG
-                        std::cout << "[" << *aux << "] " << netIS[*aux] << " & " << netIS_bwd[*aux] << std::endl;
-                        std::cout << "[" << *vertex << "] " << netIS[*vertex] << " & " << netIS_bwd[*vertex] << std::endl;
+                        std::cout << "[" << *aux << "] " << netIS[*aux] << std::endl;
+                        std::cout << "[" << *vertex << "] " << netIS[*vertex] << std::endl;
                         boost::tie(bi, b_end) = boost::adjacent_vertices(*aux, g);
                         for (; bi != b_end; ++bi)
-                            std::cout << "pointing to [" << *bi << "] " << netIS[*bi] << " & " << netIS_bwd[*bi] << std::endl;
+                            std::cout << "pointing to [" << *bi << "] " << netIS[*bi] << " & " << std::endl;
                         #endif
 
                         vertexes_to_remove.insert(std::make_pair(*aux, level->first));
@@ -624,7 +606,7 @@ int main()
     std::vector<uint> mapa;
     std::map<uint, uint> mapaa;
 
-    final_labels.push_back("o");
+    final_labels.push_back("o"); // origin
     auto lbl = labels.begin();
     boost::graph_traits < boost::adjacency_list <> >::vertex_iterator vi, vi_end;
     for (boost::tie(vi, vi_end) = vertices(g); vi != vi_end; ++vi)
@@ -668,7 +650,7 @@ int main()
 
     // print final state
     #ifdef _DEBUG
-    for (auto& level : vertexes)
+    for (auto& level : vertexes) // FALSE, vertexes is the before deletion graph
     {
         aux=0;
         for (auto& value : level.second)
@@ -687,3 +669,28 @@ int main()
 
     return 0;
 }
+
+
+typedef adjacency_list<vecS, vecS, bidirectionalS, 
+    no_property, property<edge_index_t, std::size_t> > Graph;
+
+  const int num_vertices = 9;
+  Graph G(num_vertices);
+
+  int capacity_array[] = { 10, 20, 20, 20, 40, 40, 20, 20, 20, 10 };
+  int flow_array[] = { 8, 12, 12, 12, 12, 12, 16, 16, 16, 8 };
+
+  // Add edges to the graph, and assign each edge an ID number.
+  add_edge(0, 1, 0, G);
+  // ...
+
+  typedef graph_traits<Graph>::edge_descriptor Edge;
+  typedef property_map<Graph, edge_index_t>::type EdgeID_Map;
+  EdgeID_Map edge_id = get(edge_index, G);
+
+  random_access_iterator_property_map
+    <int*, int, int&, EdgeID_Map> 
+      capacity(capacity_array, edge_id), 
+      flow(flow_array, edge_id);
+
+  print_network(G, capacity, flow);

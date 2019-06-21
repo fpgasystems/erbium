@@ -264,7 +264,11 @@ std::istream& operator>>(std::istream& str, CSVRow& data)
     return str;
 }
 
-
+struct sort_pred_inv {
+    bool operator()(const std::pair<uint,uint> &left, const std::pair<uint,uint> &right) {
+        return left.first > right.first;
+    }
+};
 
 struct vertex_info { 
     uint level;
@@ -390,7 +394,7 @@ int main()
             x.second = key++;
         ordered.push_back(std::pair<uint, uint>(aux.second.size(), aux.first));
     }
-    sort(ordered.begin(), ordered.end());
+    sort(ordered.begin(), ordered.end(), sort_pred_inv());
     dictionnary[rp.m_ruleType.m_criterionDefinition.size()] = contents;
 
     key = 0;

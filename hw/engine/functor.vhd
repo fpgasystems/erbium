@@ -23,15 +23,15 @@ use IEEE.STD_LOGIC_1164.ALL;
 use ieee.numeric_std.all;
 
 library bre;
-use bre.pkg_bre.all;
+use bre.core_pkg.all;
 
 entity functor is
-    Generic (
-        G_VALUE         : std_logic_vector(C_ENGINE_CRITERIUM_WIDTH-1 downto 0);
-        G_FUNCTION      : integer
-    );    
-    Port (
-        query_i         :  in std_logic_vector(C_ENGINE_CRITERIUM_WIDTH-1 downto 0);
+    generic (
+        G_FUNCTION      : integer;
+    );
+    port (
+        rule_i          :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH-1 downto 0);
+        query_i         :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH-1 downto 0);
         funct_o         : out std_logic
     );
 end functor;
@@ -127,28 +127,28 @@ with G_FUNCTION select funct_o <=
 process(query_i)
 begin
     -- 15 DIE BobDateInferiorityOrEqualityFunctor
-    if (G_VALUE <= query_i) then
+    if (rule_i <= query_i) then
         sig_res_die <= '1';
     else
         sig_res_die <= '0';
     end if;
 
     -- 17 DSE BobDateSuperiorityOrEqualityFunctor
-    if (G_VALUE >= query_i) then
+    if (rule_i >= query_i) then
         sig_res_dse <= '1';
     else
         sig_res_dse <= '0';
     end if;
 
     -- 40 SEQ BobStringEqualityFunctor
-    if (G_VALUE = query_i) then
+    if (rule_i = query_i) then
         sig_res_seq <= '1';
     else
         sig_res_seq <= '0';
     end if;
 
     -- [99] MME
-    if (G_VALUE = query_i) then  -- [!] FAKE, CODE NOT KNOWN
+    if (rule_i = query_i) then  -- [!] FAKE, CODE NOT KNOWN
         sig_res_mme <= '1';
     else
         sig_res_mme <= '0';

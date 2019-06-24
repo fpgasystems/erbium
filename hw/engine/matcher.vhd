@@ -22,20 +22,20 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 
 library bre;
-use bre.pkg_bre.all;
+use bre.core_pkg.all;
 
 entity matcher is
-    Generic (
+    generic (
         G_STRUCTURE         : integer;
-        G_VALUE_A           : std_logic_vector(C_ENGINE_CRITERIUM_WIDTH-1 downto 0);
-        G_VALUE_B           : std_logic_vector(C_ENGINE_CRITERIUM_WIDTH-1 downto 0) := (others=>'0');
         G_FUNCTION_A        : integer;
-        G_FUNCTION_B        : integer := 0;
-        G_FUNCTION_PAIR     : integer := 0
-    );    
-    Port (
-        query_opA_i         :  in std_logic_vector(C_ENGINE_CRITERIUM_WIDTH-1 downto 0);
-        query_opB_i         :  in std_logic_vector(C_ENGINE_CRITERIUM_WIDTH-1 downto 0) := (others=>'0');
+        G_FUNCTION_B        : integer;
+        G_FUNCTION_PAIR     : integer
+    );
+    port (
+        opA_rule_i          :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH-1 downto 0);
+        opA_query_i         :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH-1 downto 0);
+        opB_rule_i          :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH-1 downto 0);
+        opB_query_i         :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH-1 downto 0);
         match_result_o      : out std_logic
     );
 end matcher;
@@ -45,52 +45,57 @@ architecture behavioural of matcher is
     signal sig_functorA      : std_logic;
     signal sig_functorB      : std_logic;
     --
-    signal sig_res_pma       : std_logic;
-    signal sig_res_pan       : std_logic;
-    signal sig_res_pca       : std_logic; -- [!] EQUALS TO 8 PAN CROSS
+    signal sig_res_and       : std_logic;
+    signal sig_res_or        : std_logic;
+    signal sig_res_xor       : std_logic;
+    signal sig_res_nand      : std_logic;
+    signal sig_res_nor       : std_logic;
 begin
 
---  7 PMA BobPairMarketAndFunctor
-sig_res_pma <= sig_functorA and sig_functorB;
+sig_res_and  <= sig_functorA and  sig_functorB;
 
---  8 PAN BobPairAndFunctor
-sig_res_pan <= sig_functorA and sig_functorB;
+sig_res_or   <= sig_functorA or   sig_functorB;
 
---  9 PCA BobPairCrossAndFunctor
-sig_res_pca <= sig_res_pan; -- [!] EQUALS TO 8 PAN CROSS
+sig_res_xor  <= sig_functorA xor  sig_functorB;
+
+sig_res_nand <= sig_functorA nand sig_functorB;
+
+sig_res_nor  <= sig_functorA nor  sig_functorB;
 
 
 with G_FUNCTION_PAIR select sig_mux_pair <=
-    sig_res_pma when C_FNCTR_PAIR_PMA,
-    sig_res_pan when C_FNCTR_PAIR_PAN,
-    sig_res_pca when C_FNCTR_PAIR_PCA, --[!]
+    sig_res_and  when C_FNCTR_PAIR_AND,
+    sig_res_or   when C_FNCTR_PAIR_OR,
+    sig_res_xor  when C_FNCTR_PAIR_XOR,
+    sig_res_nand when C_FNCTR_PAIR_NAND,
+    sig_res_nor  when C_FNCTR_PAIR_NOR,
     'Z' when others;
 
 
-with G_STRUCTURE select match_result_o <=
+with structure_i select match_result_o <=
     sig_functorA      when C_STRCT_SIMPLE,
     sig_mux_pair      when C_STRCT_PAIR,
     'Z' when others;
 
 opA: functor generic map
 (
-    G_VALUE      => G_VALUE_A,
     G_FUNCTION   => G_FUNCTION_A
 )
 port map
 (
-    query_i      => query_opA_i,
+    rule_i       => opA_rule_i,
+    query_i      => opA_query_i,
     funct_o      => sig_functorA
 );
 
 opB: functor generic map
 (
-    G_VALUE      => G_VALUE_B,
     G_FUNCTION   => G_FUNCTION_B
 )
 port map
 (
-    query_i      => query_opB_i,
+    rule_i       => opB_rule_i,
+    query_i      => opB_query_i,
     funct_o      => sig_functorB
 );
 

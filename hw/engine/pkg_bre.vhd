@@ -29,7 +29,6 @@ constant C_FNCTR_PAIR_PMA   : integer := 7;
 constant C_FNCTR_PAIR_PAN   : integer := 8;
 constant C_FNCTR_PAIR_PCA   : integer := 9;  -- [!] EQUALS TO 8 PAN CROSS
 
-
 constant C_QUERY_RTD    : natural := 0;
 constant C_QUERY_VERS   : natural := 1;
 constant C_QUERY_OWN    : natural := 2;

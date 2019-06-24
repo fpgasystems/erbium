@@ -394,7 +394,7 @@ int main()
             x.second = key++;
         ordered.push_back(std::pair<uint, uint>(aux.second.size(), aux.first));
     }
-    sort(ordered.begin(), ordered.end(), sort_pred_inv());
+    //sort(ordered.begin(), ordered.end(), sort_pred_inv());
     dictionnary[rp.m_ruleType.m_criterionDefinition.size()] = contents;
 
     key = 0;

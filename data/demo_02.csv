@@ -1,0 +1,6 @@
+RULE_ID,WEIGHT,STATUS,VICEVERSA,TAGS,CRITERIA,AIRPORT,TERMINAL,INBOUND,OUTBOUND,CONTENT,Hour,INVALID,Minutes
+00,2,,,,,"A","A","B","B","E","1","FALSE","30"
+01,3,,,,,"A","A","C","C","E","1","FALSE","30"
+02,4,,,,,"B","B","C","C","E","1","FALSE","30"
+03,4,,,,,"A","A","C","C","F","0","FALSE","25"
+04,4,,,,,"B","B","C","C","F","0","FALSE","25"

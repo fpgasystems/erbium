@@ -22,12 +22,16 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use ieee.numeric_std.all;
 
+library tools;
+use tools.std_pkg.all;
+
 library bre;
+use bre.engine_pkg.all;
 use bre.core_pkg.all;
 
 entity functor is
     generic (
-        G_FUNCTION      : integer;
+        G_FUNCTION      : match_simp_function := FNCTR_SIMP_NOP
     );
     port (
         rule_i          :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH-1 downto 0);
@@ -37,122 +41,59 @@ entity functor is
 end functor;
 
 architecture behavioural of functor is
-    --signal res_bna : std_logic;
-    --signal res_bno : std_logic;
-    --signal res_ban : std_logic;
-    --signal res_bor : std_logic;
-    --signal res_bdi : std_logic;
-    --signal res_beq : std_logic;
-    --signal res_ddi : std_logic;
-    --signal res_deq : std_logic;
-    --signal res_din : std_logic;
+    signal sig_res_equ : std_logic;
+    signal sig_res_neq : std_logic;
+    signal sig_res_grt : std_logic;
+    signal sig_res_geq : std_logic;
+    signal sig_res_les : std_logic;
+    signal sig_res_leq : std_logic;
+    --
     signal sig_res_die : std_logic;
-    --signal res_dsu : std_logic;
     signal sig_res_dse : std_logic;
-    --signal res_tdi : std_logic;
-    --signal res_teq : std_logic;
-    --signal res_tin : std_logic;
-    --signal res_tie : std_logic;
-    --signal res_tsu : std_logic;
-    --signal res_tse : std_logic;
-    --signal res_hdi : std_logic;
-    --signal res_heq : std_logic;
-    --signal res_hin : std_logic;
-    --signal res_hie : std_logic;
-    --signal res_hsu : std_logic;
-    --signal res_hse : std_logic;
-    --signal res_sdi : std_logic;
     signal sig_res_seq : std_logic;
-    --signal res_sin : std_logic;
-    --signal res_idi : std_logic;
-    --signal res_ieq : std_logic;
-    --signal res_iin : std_logic;
-    --signal res_iie : std_logic;
-    --signal res_isu : std_logic;
-    --signal res_ise : std_logic;
-    --signal res_udi : std_logic;
-    --signal res_ueq : std_logic;
-    --signal res_uin : std_logic;
-    --signal res_uie : std_logic;
-    --signal res_usu : std_logic;
-    --signal res_use : std_logic;
-    --signal res_amf : std_logic;
-    signal sig_res_mme : std_logic; -- [!] FAKE, CODE NOT KNOWN
+    signal sig_res_mme : std_logic;
 begin
 
 with G_FUNCTION select funct_o <=
---    res_bna when "",
---    res_bno when "",
---    res_ban when "",
---    res_bor when "",
---    res_bdi when "",
---    res_beq when "",
---    res_ddi when "",
---    res_deq when "",
---    res_din when "",
-    sig_res_die when C_FNCTR_SIMP_DIE,
---    res_dsu when "",
-    sig_res_dse when C_FNCTR_SIMP_DSE,
---    res_tdi when "",
---    res_teq when "",
---    res_tin when "",
---    res_tie when "",
---    res_tsu when "",
---    res_tse when "",
---    res_hdi when "",
---    res_heq when "",
---    res_hin when "",
---    res_hie when "",
---    res_hsu when "",
---    res_hse when "",
---    res_sdi when "",
-    sig_res_seq when C_FNCTR_SIMP_SEQ,
---    res_sin when "",
---    res_idi when "",
---    res_ieq when "",
---    res_iin when "",
---    res_iie when "",
---    res_isu when "",
---    res_ise when "",
---    res_udi when "",
---    res_ueq when "",
---    res_uin when "",
---    res_uie when "",
---    res_usu when "",
---    res_use when "",
---    res_amf when "",
-    sig_res_mme when C_FNCTR_SIMP_MME, -- [!] FAKE, CODE NOT KNOWN
+    sig_res_equ when FNCTR_SIMP_EQU,
+    sig_res_neq when FNCTR_SIMP_NEQ,
+    sig_res_grt when FNCTR_SIMP_GRT,
+    sig_res_geq when FNCTR_SIMP_GEQ,
+    sig_res_les when FNCTR_SIMP_LES,
+    sig_res_leq when FNCTR_SIMP_LEQ,
     'Z' when others;
 
-process(query_i)
+sig_res_neq <= not sig_res_equ;
+
+process(query_i, rule_i)
 begin
-    -- 15 DIE BobDateInferiorityOrEqualityFunctor
-    if (rule_i <= query_i) then
-        sig_res_die <= '1';
+
+    sig_res_equ <= compare(query_i, rule_i);
+
+    if (query_i > rule_i) then
+        sig_res_grt <= '1';
     else
-        sig_res_die <= '0';
+        sig_res_grt <= '0';
     end if;
 
-    -- 17 DSE BobDateSuperiorityOrEqualityFunctor
-    if (rule_i >= query_i) then
-        sig_res_dse <= '1';
+    if (query_i >= rule_i) then
+        sig_res_geq <= '1';
     else
-        sig_res_dse <= '0';
+        sig_res_geq <= '0';
     end if;
 
-    -- 40 SEQ BobStringEqualityFunctor
-    if (rule_i = query_i) then
-        sig_res_seq <= '1';
+    if (query_i < rule_i) then
+        sig_res_les <= '1';
     else
-        sig_res_seq <= '0';
+        sig_res_les <= '0';
     end if;
 
-    -- [99] MME
-    if (rule_i = query_i) then  -- [!] FAKE, CODE NOT KNOWN
-        sig_res_mme <= '1';
+    if (query_i <= rule_i) then
+        sig_res_leq <= '1';
     else
-        sig_res_mme <= '0';
+        sig_res_leq <= '0';
     end if;
+
 end process;
 
 end behavioural;

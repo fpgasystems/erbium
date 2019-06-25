@@ -1,22 +1,25 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.all;
 
-library std;
-use std.pkg_ram.all;
+library tools;
+use tools.std_pkg.all;
 
 library bre;
-use bre.pkg_bre.all;
+use bre.engine_pkg.all;
+use bre.core_pkg.all;
 
 entity core is
     generic (
-        G_MATCH_STRCT         : integer;
-        G_MATCH_FUNCTION_A    : integer;
-        G_MATCH_FUNCTION_B    : integer;
-        G_MATCH_FUNCTION_PAIR : integer
+        G_MATCH_STRCT         : match_structure_type := STRCT_SIMPLE;
+        G_MATCH_FUNCTION_A    : match_simp_function := FNCTR_SIMP_NOP;
+        G_MATCH_FUNCTION_B    : match_simp_function := FNCTR_SIMP_NOP;
+        G_MATCH_FUNCTION_PAIR : match_pair_function := FNCTR_PAIR_NOP
     );
     port (
+        rst_i           :  in std_logic;
+        clk_i           :  in std_logic;
         -- FIFO buffer from above
-        abv_pointer_i   :  in std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        abv_data_i      :  in edge_buffer_type;
         abv_read_o      : out std_logic;
         -- current
         query_opA_i     :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH - 1 downto 0);
@@ -24,10 +27,11 @@ entity core is
         weight_filter_i :  in integer;
         -- MEMORY
         mem_edge_i      :  in edge_store_type;
-        mem_edge_o      : out mem_out_type;
+        mem_addr_o      : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        mem_en_o        : out std_logic;
         -- FIFO buffer to below
-        blw_pointer_o   : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
-        blw_write_o     : out std_logic;
+        blw_data_o      : out edge_buffer_type;
+        blw_write_o     : out std_logic
     );
 end core;
 
@@ -42,9 +46,10 @@ begin
 ----------------------------------------------------------------------------------------------------
 
 abv_read_o <= mem_edge_i.last;
-mem_edge_o.addr <= fetch_r.mem_addr;
+mem_addr_o <= fetch_r.mem_addr;
+mem_en_o   <= '1';
 
-fetch_comb: process(fetch_r, rst_i, mem_edge_i.last, abv_pointer_i)
+fetch_comb: process(fetch_r, rst_i, mem_edge_i.last, abv_data_i)
     variable v : fetch_out_type;
 begin
     v := fetch_r;
@@ -55,7 +60,7 @@ begin
 
     elsif mem_edge_i.last = '1' then
         -- from stack if there no other children from current node
-        v.mem_addr := abv_pointer_i;
+        v.mem_addr := abv_data_i.pointer;
     else
         -- PC+4 (iterate the edges)
         v.mem_addr := increment(fetch_r.mem_addr);
@@ -79,8 +84,8 @@ end process;
 -- EXECUTE                                                                                        --
 ----------------------------------------------------------------------------------------------------
 
-blw_pointer_o <= mem_edge_i.pointer;
-blw_write_o   <= execute_r.inference_res;
+blw_data_o.pointer <= mem_edge_i.pointer;
+blw_write_o        <= execute_r.inference_res;
 
 exe_matcher: matcher generic map
 (
@@ -91,9 +96,9 @@ exe_matcher: matcher generic map
 )
 port map
 (
-    opA_rule_i      => mem_edge_i.opA,
+    opA_rule_i      => mem_edge_i.operand_a,
     opA_query_i     => query_opA_i,
-    opB_rule_i      => mem_edge_i.opB,
+    opB_rule_i      => mem_edge_i.operand_b,
     opB_query_i     => query_opB_i,
     match_result_o  => sig_exe_match_result
 );
@@ -105,7 +110,11 @@ begin
     v := execute_r;
 
     -- weight_control
-    v_weight_check := mem_edge_i.weight >= weight_filter_i;
+    if mem_edge_i.weight >= weight_filter_i then
+        v_weight_check := '1';
+    else
+        v_weight_check := '0';
+    end if;
 
     -- result of EXE
     v.inference_res := sig_exe_match_result and v_weight_check;

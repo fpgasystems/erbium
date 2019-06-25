@@ -18,20 +18,9 @@ use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 
 library bre;
-use bre.config_pkg.all;
-use bre.pkg_std.all;
+use bre.engine_pkg.all;
 
 package core_pkg is
-
-    -- MAIN PARAMETERS
-    constant CFG_ENGINE_NCRITERIA         : integer := 22;
-    constant CFG_ENGINE_CRITERIUM_WIDTH   : integer := 12;
-    constant CFG_MEM_ADDR_WIDTH           : integer := 10;
-
-    constant C_8_ZEROS  : std_logic_vector ( 7 downto 0) := (others => '0');
-    constant C_16_ZEROS : std_logic_vector (15 downto 0) := (others => '0');
-    constant C_24_ZEROS : std_logic_vector (23 downto 0) := (others => '0');
-    constant C_32_ZEROS : std_logic_vector (31 downto 0) := (others => '0');
 
 ----------------------------------------------------------------------------------------------
 -- TYPES USED IN NFA-BRE
@@ -39,27 +28,9 @@ package core_pkg is
 
     type query_in_array_type is array(CFG_ENGINE_NCRITERIA-1 downto 0) of std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH-1 downto 0);
 
-    -- CONTROL CODES
-    constant C_STRCT_SIMPLE      : integer := 0;
-    constant C_STRCT_PAIR        : integer := 1;
-
-    -- PAIR FUNCTORS
-    constant C_FNCTR_PAIR_AND    : integer := 0;
-    constant C_FNCTR_PAIR_OR     : integer := 1;
-    constant C_FNCTR_PAIR_XOR    : integer := 2;
-    constant C_FNCTR_PAIR_NAND   : integer := 3;
-    constant C_FNCTR_PAIR_NOR    : integer := 4;
-
-    -- type alu_operation    is (ALU_ADD, ALU_OR, ALU_AND, ALU_XOR, ALU_SHIFT, ALU_SEXT8, ALU_SEXT16, ALU_MUL, ALU_BS);
-
-    -- type imem_in_type is record
-    --     dat_i : std_logic_vector(CFG_IMEM_WIDTH - 1 downto 0);
-    -- end record;
-
-    -- type imem_out_type is record
-    --     adr_o : std_logic_vector(CFG_IMEM_SIZE - 1 downto 0);
-    --     ena_o : std_logic;
-    -- end record;
+    type match_structure_type is (STRCT_SIMPLE, STRCT_PAIR);
+    type match_pair_function is (FNCTR_PAIR_NOP, FNCTR_PAIR_AND, FNCTR_PAIR_OR, FNCTR_PAIR_XOR, FNCTR_PAIR_NAND, FNCTR_PAIR_NOR);
+    type match_simp_function is (FNCTR_SIMP_NOP, FNCTR_SIMP_EQU, FNCTR_SIMP_NEQ, FNCTR_SIMP_GRT, FNCTR_SIMP_GEQ, FNCTR_SIMP_LES, FNCTR_SIMP_LEQ);
 
     type edge_store_type is record
         operand_a       : std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH - 1 downto 0);
@@ -69,10 +40,10 @@ package core_pkg is
         last            : std_logic;
     end record;
 
-    -- type edge_buffer_type is record
-    --     pointer         : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
-    --     -- query_id
-    -- end record;
+    type edge_buffer_type is record
+        pointer         : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        -- query_id
+    end record;
 
     type fetch_out_type is record
         mem_addr        : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
@@ -83,95 +54,105 @@ package core_pkg is
     end record;
 
     type mem_out_type is record
-        r_addr : std_logic_vector();
-        r_en   : std_logic;
-        r_data : std_logic_vector();
-        w_addr : std_logic_vector();
-        w_en   : std_logic;
-        w_data : std_logic_vector();
+        rd_addr         : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        rd_en           : std_logic;
+        wr_addr         : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        wr_en           : std_logic;
+        wr_data         : edge_store_type;
     end record;
-    
-    -- type gprf_out_type is record
-    --     dat_a_o : std_logic_vector(CFG_DMEM_WIDTH - 1 downto 0);
-    --     dat_b_o : std_logic_vector(CFG_DMEM_WIDTH - 1 downto 0);
-    --     dat_d_o : std_logic_vector(CFG_DMEM_WIDTH - 1 downto 0);
-    -- end record;
-
-
-    -- type gprf_in_type is record
-    --     adr_a_i : std_logic_vector(CFG_GPRF_SIZE - 1 downto 0);
-    --     adr_b_i : std_logic_vector(CFG_GPRF_SIZE - 1 downto 0);
-    --     adr_d_i : std_logic_vector(CFG_GPRF_SIZE - 1 downto 0);
-    --     dat_w_i : std_logic_vector(CFG_DMEM_WIDTH - 1 downto 0);
-    --     adr_w_i : std_logic_vector(CFG_GPRF_SIZE - 1 downto 0);
-    --     wre_i   : std_logic;
-    -- end record;
-
-    -- type execute_out_type is record
-    --     alu_result      : std_logic_vector(CFG_DMEM_WIDTH - 1 downto 0);
-    --     dat_d           : std_logic_vector(CFG_DMEM_WIDTH - 1 downto 0);
-    --     branch          : std_logic;
-    --     program_counter : std_logic_vector(CFG_IMEM_SIZE - 1 downto 0);
-    --     flush_id        : std_logic;
-    --     ctrl_mem        : ctrl_memory;
-    --     ctrl_wrb        : forward_type;
-    -- end record;
-
-    -- type execute_in_type is record
-    --     reg_a           : std_logic_vector(CFG_GPRF_SIZE  - 1 downto 0);
-    --     dat_a           : std_logic_vector(CFG_DMEM_WIDTH - 1 downto 0);
-    --     reg_b           : std_logic_vector(CFG_GPRF_SIZE  - 1 downto 0);
-    --     dat_b           : std_logic_vector(CFG_DMEM_WIDTH - 1 downto 0);
-    --     dat_d           : std_logic_vector(CFG_DMEM_WIDTH - 1 downto 0);
-    --     imm             : std_logic_vector(CFG_DMEM_WIDTH - 1 downto 0);
-    --     program_counter : std_logic_vector(CFG_IMEM_SIZE - 1 downto 0);
-    --     fwd_dec         : forward_type;
-    --     fwd_dec_result  : std_logic_vector(CFG_DMEM_WIDTH - 1 downto 0);
-    --     fwd_mem         : forward_type;
-    --     ctrl_ex         : ctrl_execution;
-    --     ctrl_mem        : ctrl_memory;
-    --     ctrl_wrb        : forward_type;
-    --     ctrl_mem_wrb    : ctrl_memory_writeback_type;
-    --     mem_result      : std_logic_vector(CFG_DMEM_WIDTH - 1 downto 0);
-    --     alu_result      : std_logic_vector(CFG_DMEM_WIDTH - 1 downto 0);
-    -- end record;
-
-    -- type mem_in_type is record
-    --     dat_d           : std_logic_vector(CFG_DMEM_WIDTH - 1 downto 0);
-    --     alu_result      : std_logic_vector(CFG_DMEM_WIDTH - 1 downto 0);
-    --     mem_result      : std_logic_vector(CFG_DMEM_WIDTH - 1 downto 0);
-    --     program_counter : std_logic_vector(CFG_IMEM_SIZE - 1 downto 0);
-    --     branch          : std_logic;
-    --     ctrl_mem        : ctrl_memory;
-    --     ctrl_wrb         : forward_type;
-    -- end record;
-
-    -- type mem_out_type is record
-    --     alu_result  : std_logic_vector(CFG_DMEM_WIDTH - 1 downto 0);
-    --     ctrl_wrb     : forward_type;
-    --     ctrl_mem_wrb : ctrl_memory_writeback_type;
-    -- end record;
-
-    -- type dmem_in_type is record
-    --     dat_i : std_logic_vector(CFG_DMEM_WIDTH - 1 downto 0);
-    --     ena_i : std_logic;
-    -- end record;
-
-    -- type dmem_out_type is record
-    --     dat_o : std_logic_vector(CFG_DMEM_WIDTH - 1 downto 0);
-    --     adr_o : std_logic_vector(CFG_DMEM_SIZE - 1 downto 0);
-    --     sel_o : std_logic_vector(3 downto 0);
-    --     we_o  : std_logic;
-    --     ena_o : std_logic;
-    -- end record;
-
-    -- type dmem_in_array_type is array(natural range <>) of dmem_in_type;
-    -- type dmem_out_array_type is array(natural range <>) of dmem_out_type;
 
 ----------------------------------------------------------------------------------------------
 -- COMPONENTS USED IN MB-LITE
 ----------------------------------------------------------------------------------------------
 
+    component matcher is
+        generic (
+            G_STRUCTURE         : match_structure_type;
+            G_FUNCTION_A        : match_simp_function;
+            G_FUNCTION_B        : match_simp_function;
+            G_FUNCTION_PAIR     : match_pair_function
+        );
+        port (
+            opA_rule_i          :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH-1 downto 0);
+            opA_query_i         :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH-1 downto 0);
+            opB_rule_i          :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH-1 downto 0);
+            opB_query_i         :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH-1 downto 0);
+            match_result_o      : out std_logic
+        );
+    end component;
+
+    component functor is
+        generic (
+            G_FUNCTION      : match_simp_function
+        );
+        port (
+            rule_i          :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH-1 downto 0);
+            query_i         :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH-1 downto 0);
+            funct_o         : out std_logic
+        );
+    end component;
+
+    component bram_edge_store is
+        generic (
+            RAM_DEPTH : integer := 1024;                    -- Specify RAM depth (number of entries)
+            RAM_PERFORMANCE : string := "LOW_LATENCY";      -- Select "HIGH_PERFORMANCE" or "LOW_LATENCY" 
+            INIT_FILE : string := "RAM_INIT.dat"            -- Specify name/location of RAM initialization file if using one (leave blank if not)
+        ); port (
+            clk_i        :  in std_logic;
+            rst_i        :  in std_logic;
+            ram_reg_en_i :  in std_logic; -- Output register enable
+            ram_en_i     :  in std_logic; -- RAM Enable, for additional power savings, disable port when not in use
+            addr_i       :  in std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+            wr_data_i    :  in edge_store_type;
+            wr_en_i      :  in std_logic;
+            rd_data_o    : out edge_store_type
+        );
+    end component;
+
+    component core is
+        generic (
+            G_MATCH_STRCT         : match_structure_type;
+            G_MATCH_FUNCTION_A    : match_simp_function;
+            G_MATCH_FUNCTION_B    : match_simp_function;
+            G_MATCH_FUNCTION_PAIR : match_pair_function
+        );
+        port (
+            rst_i           :  in std_logic;
+            clk_i           :  in std_logic;
+            -- FIFO buffer from above
+            abv_data_i      :  in edge_buffer_type;
+            abv_read_o      : out std_logic;
+            -- current
+            query_opA_i     :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH - 1 downto 0);
+            query_opB_i     :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH - 1 downto 0);
+            weight_filter_i :  in integer;
+            -- MEMORY
+            mem_edge_i      :  in edge_store_type;
+            mem_addr_o      : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+            mem_en_o        : out std_logic;
+            -- FIFO buffer to below
+            blw_data_o      : out edge_buffer_type;
+            blw_write_o     : out std_logic
+        );
+    end component;
+
+    component buffer_edge is
+        generic (
+            G_DEPTH : integer := 32
+        );
+        port (
+            rst_i      :  in std_logic;
+            clk_i      :  in std_logic;
+            -- FIFO Write Interface
+            wr_en_i    :  in std_logic;
+            wr_data_i  :  in edge_buffer_type;
+            full_o     : out std_logic;
+            -- FIFO Read Interface
+            rd_en_i    :  in std_logic;
+            rd_data_o  : out edge_buffer_type;
+            empty_o    : out std_logic
+        );
+    end component;
 ----------------------------------------------------------------------------------------------
 -- FUNCTIONS USED IN MB-LITE
 ----------------------------------------------------------------------------------------------

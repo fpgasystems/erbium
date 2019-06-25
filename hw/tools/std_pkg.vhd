@@ -1,7 +1,7 @@
 ----------------------------------------------------------------------------------------------
 --
---      Input file         : pkg_std.vhd
---      Design name        : pkg_std
+--      Input file         : std_pkg.vhd
+--      Design name        : std_pkg
 --      Author             : Tamar Kranenburg
 --      Company            : Delft University of Technology
 --                         : Faculty EEMCS, Department ME&CE
@@ -15,10 +15,12 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-PACKAGE pkg_std IS
+library tools;
+
+PACKAGE std_pkg IS
 
 ---------------------------------------------------------------------------------------------
--- FUNCTIONS IN pkg_std
+-- FUNCTIONS IN std_pkg
 ----------------------------------------------------------------------------------------------
 
     function v_or(d : std_logic_vector) return std_logic;
@@ -36,9 +38,9 @@ PACKAGE pkg_std IS
     function shift_left(value : std_logic_vector(31 downto 0); shamt : std_logic_vector(4 downto 0)) return std_logic_vector;
     function shift_right(value : std_logic_vector(31 downto 0); shamt : std_logic_vector(4 downto 0); padding: std_logic) return std_logic_vector;
 
-end pkg_std;
+end std_pkg;
 
-PACKAGE BODY pkg_std IS
+PACKAGE BODY std_pkg IS
 
 -- Unary OR reduction
     function v_or(d : std_logic_vector) return std_logic is
@@ -217,4 +219,4 @@ PACKAGE BODY pkg_std IS
         return x;
     end;
 
-end pkg_std;
+end std_pkg;

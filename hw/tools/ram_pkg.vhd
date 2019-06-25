@@ -2,13 +2,13 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library std;
+library tools;
 
-package pkg_ram is
+package ram_pkg is
     function clogb2 (depth: in natural) return integer;
-end pkg_ram;
+end ram_pkg;
 
-package body pkg_ram is
+package body ram_pkg is
 
 function clogb2( depth : natural) return integer is
 variable temp    : integer := depth;
@@ -26,4 +26,4 @@ begin
     return ret_val;
 end function;
 
-end package body pkg_ram;
+end package body ram_pkg;

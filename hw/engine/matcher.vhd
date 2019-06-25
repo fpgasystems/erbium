@@ -22,14 +22,15 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 
 library bre;
+use bre.engine_pkg.all;
 use bre.core_pkg.all;
 
 entity matcher is
     generic (
-        G_STRUCTURE         : integer;
-        G_FUNCTION_A        : integer;
-        G_FUNCTION_B        : integer;
-        G_FUNCTION_PAIR     : integer
+        G_STRUCTURE         : match_structure_type := STRCT_SIMPLE;
+        G_FUNCTION_A        : match_simp_function := FNCTR_SIMP_NOP;
+        G_FUNCTION_B        : match_simp_function := FNCTR_SIMP_NOP;
+        G_FUNCTION_PAIR     : match_pair_function := FNCTR_PAIR_NOP
     );
     port (
         opA_rule_i          :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH-1 downto 0);
@@ -64,17 +65,17 @@ sig_res_nor  <= sig_functorA nor  sig_functorB;
 
 
 with G_FUNCTION_PAIR select sig_mux_pair <=
-    sig_res_and  when C_FNCTR_PAIR_AND,
-    sig_res_or   when C_FNCTR_PAIR_OR,
-    sig_res_xor  when C_FNCTR_PAIR_XOR,
-    sig_res_nand when C_FNCTR_PAIR_NAND,
-    sig_res_nor  when C_FNCTR_PAIR_NOR,
+    sig_res_and  when FNCTR_PAIR_AND,
+    sig_res_or   when FNCTR_PAIR_OR,
+    sig_res_xor  when FNCTR_PAIR_XOR,
+    sig_res_nand when FNCTR_PAIR_NAND,
+    sig_res_nor  when FNCTR_PAIR_NOR,
     'Z' when others;
 
 
-with structure_i select match_result_o <=
-    sig_functorA      when C_STRCT_SIMPLE,
-    sig_mux_pair      when C_STRCT_PAIR,
+with G_STRUCTURE select match_result_o <=
+    sig_functorA      when STRCT_SIMPLE,
+    sig_mux_pair      when STRCT_PAIR,
     'Z' when others;
 
 opA: functor generic map

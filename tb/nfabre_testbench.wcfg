@@ -3,98 +3,150 @@
    <wave_state>
    </wave_state>
    <db_ref_list>
-      <db_ref path="nfabre_testbench_behav.wdb" id="1">
+      <db_ref path="testbench_behav.wdb" id="1">
          <top_modules>
-            <top_module name="nfabre_testbench" />
-            <top_module name="pkg_abr" />
+            <top_module name="core_pkg" />
+            <top_module name="engine_pkg" />
             <top_module name="ram_pkg" />
+            <top_module name="std_pkg" />
+            <top_module name="testbench" />
          </top_modules>
       </db_ref>
    </db_ref_list>
    <zoom_setting>
-      <ZoomStartTime time="0fs"></ZoomStartTime>
-      <ZoomEndTime time="2080000001fs"></ZoomEndTime>
-      <Cursor1Time time="1000000000fs"></Cursor1Time>
+      <ZoomStartTime time="6600000000fs"></ZoomStartTime>
+      <ZoomEndTime time="15480000001fs"></ZoomEndTime>
+      <Cursor1Time time="14000000000fs"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
       <NameColumnWidth column_width="235"></NameColumnWidth>
-      <ValueColumnWidth column_width="338"></ValueColumnWidth>
+      <ValueColumnWidth column_width="81"></ValueColumnWidth>
    </column_width_setting>
-   <WVObjectSize size="17" />
-   <wvobject type="logic" fp_name="/nfabre_testbench/sys_clk">
+   <WVObjectSize size="30" />
+   <wvobject type="logic" fp_name="/testbench/sys_clk">
       <obj_property name="ElementShortName">sys_clk</obj_property>
       <obj_property name="ObjectShortName">sys_clk</obj_property>
    </wvobject>
-   <wvobject type="logic" fp_name="/nfabre_testbench/sys_rst">
+   <wvobject type="logic" fp_name="/testbench/sys_rst">
       <obj_property name="ElementShortName">sys_rst</obj_property>
       <obj_property name="ObjectShortName">sys_rst</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/nfabre_testbench/queries">
-      <obj_property name="ElementShortName">queries[8:0][7:0]</obj_property>
-      <obj_property name="ObjectShortName">queries[8:0][7:0]</obj_property>
+   <wvobject type="other" fp_name="/testbench/dut/cr0_pe/fetch_r.flow_ctrl">
+      <obj_property name="ElementShortName">.flow_ctrl</obj_property>
+      <obj_property name="ObjectShortName">.flow_ctrl</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/testbench/dut/cr0_pe/fetch_r.buffer_rd_en">
+      <obj_property name="ElementShortName">.buffer_rd_en</obj_property>
+      <obj_property name="ObjectShortName">.buffer_rd_en</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/testbench/dut/cr0_pe/abv_data_i">
+      <obj_property name="ElementShortName">abv_data_i</obj_property>
+      <obj_property name="ObjectShortName">abv_data_i</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/testbench/dut/cr0_pe/blw_full_i">
+      <obj_property name="ElementShortName">blw_full_i</obj_property>
+      <obj_property name="ObjectShortName">blw_full_i</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/testbench/dut/cr0_pe/abv_empty_i">
+      <obj_property name="ElementShortName">abv_empty_i</obj_property>
+      <obj_property name="ObjectShortName">abv_empty_i</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/testbench/dut/cr0_pe/mem_edge_i.last">
+      <obj_property name="ElementShortName">.last</obj_property>
+      <obj_property name="ObjectShortName">.last</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/testbench/dut/cr0_pe/fetch_r.mem_addr">
+      <obj_property name="ElementShortName">.mem_addr[6:0]</obj_property>
+      <obj_property name="ObjectShortName">.mem_addr[6:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/testbench/dut/cr0_pe/exe_matcher/opA_rule_i">
+      <obj_property name="ElementShortName">opA_rule_i[11:0]</obj_property>
+      <obj_property name="ObjectShortName">opA_rule_i[11:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/testbench/dut/cr0_pe/exe_matcher/opA_query_i">
+      <obj_property name="ElementShortName">opA_query_i[11:0]</obj_property>
+      <obj_property name="ObjectShortName">opA_query_i[11:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/testbench/dut/cr0_pe/exe_matcher/opB_rule_i">
+      <obj_property name="ElementShortName">opB_rule_i[11:0]</obj_property>
+      <obj_property name="ObjectShortName">opB_rule_i[11:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/testbench/dut/cr0_pe/exe_matcher/opB_query_i">
+      <obj_property name="ElementShortName">opB_query_i[11:0]</obj_property>
+      <obj_property name="ObjectShortName">opB_query_i[11:0]</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/testbench/dut/cr0_pe/blw_data_o">
+      <obj_property name="ElementShortName">blw_data_o</obj_property>
+      <obj_property name="ObjectShortName">blw_data_o</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/testbench/dut/cr0_pe/sig_exe_match_result">
+      <obj_property name="ElementShortName">sig_exe_match_result</obj_property>
+      <obj_property name="ObjectShortName">sig_exe_match_result</obj_property>
+   </wvobject>
+   <wvobject type="other" fp_name="/testbench/dut/edgbuff_01/fifo_cntr_reg">
+      <obj_property name="ElementShortName">fifo_cntr_reg</obj_property>
+      <obj_property name="ObjectShortName">fifo_cntr_reg</obj_property>
+   </wvobject>
+   <wvobject type="other" fp_name="/testbench/dut/edgbuff_10/fifo_cntr_reg">
+      <obj_property name="ElementShortName">fifo_cntr_reg</obj_property>
+      <obj_property name="ObjectShortName">fifo_cntr_reg</obj_property>
+   </wvobject>
+   <wvobject type="other" fp_name="/testbench/dut/cr1_pe/fetch_r.flow_ctrl">
+      <obj_property name="ElementShortName">.flow_ctrl</obj_property>
+      <obj_property name="ObjectShortName">.flow_ctrl</obj_property>
+   </wvobject>
+   <wvobject type="logic" fp_name="/testbench/dut/cr1_pe/abv_empty_i">
+      <obj_property name="ElementShortName">abv_empty_i</obj_property>
+      <obj_property name="ObjectShortName">abv_empty_i</obj_property>
+   </wvobject>
+   <wvobject type="array" fp_name="/testbench/dut/cr1_pe/abv_data_i">
+      <obj_property name="ElementShortName">abv_data_i</obj_property>
+      <obj_property name="ObjectShortName">abv_data_i</obj_property>
       <obj_property name="isExpanded"></obj_property>
+      <wvobject type="array" fp_name="/testbench/dut/cr1_pe/abv_data_i.pointer">
+         <obj_property name="ElementShortName">.pointer[6:0]</obj_property>
+         <obj_property name="ObjectShortName">.pointer[6:0]</obj_property>
+         <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
+      </wvobject>
    </wvobject>
-   <wvobject type="array" fp_name="/nfabre_testbench/results">
-      <obj_property name="ElementShortName">results[157:0]</obj_property>
-      <obj_property name="ObjectShortName">results[157:0]</obj_property>
-      <obj_property name="Radix">HEXRADIX</obj_property>
+   <wvobject type="logic" fp_name="/testbench/dut/cr1_pe/abv_read_o">
+      <obj_property name="ElementShortName">abv_read_o</obj_property>
+      <obj_property name="ObjectShortName">abv_read_o</obj_property>
    </wvobject>
-   <wvobject type="logic" fp_name="/nfabre_testbench/dut/sig_fnc_ruleAr">
-      <obj_property name="ElementShortName">sig_fnc_ruleAr</obj_property>
-      <obj_property name="ObjectShortName">sig_fnc_ruleAr</obj_property>
+   <wvobject type="array" fp_name="/testbench/dut/cr1_pe/mem_addr_o">
+      <obj_property name="ElementShortName">mem_addr_o[6:0]</obj_property>
+      <obj_property name="ObjectShortName">mem_addr_o[6:0]</obj_property>
    </wvobject>
-   <wvobject type="logic" fp_name="/nfabre_testbench/dut/sig_fnc_ruleBr">
-      <obj_property name="ElementShortName">sig_fnc_ruleBr</obj_property>
-      <obj_property name="ObjectShortName">sig_fnc_ruleBr</obj_property>
+   <wvobject type="logic" fp_name="/testbench/dut/cr1_pe/mem_en_o">
+      <obj_property name="ElementShortName">mem_en_o</obj_property>
+      <obj_property name="ObjectShortName">mem_en_o</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/nfabre_testbench/dut/sig_ram_mrktA">
-      <obj_property name="ElementShortName">sig_ram_mrktA[3:0]</obj_property>
-      <obj_property name="ObjectShortName">sig_ram_mrktA[3:0]</obj_property>
-      <obj_property name="Radix">BINARYRADIX</obj_property>
+   <wvobject type="logic" fp_name="/testbench/dut/cr1_pe/blw_full_i">
+      <obj_property name="ElementShortName">blw_full_i</obj_property>
+      <obj_property name="ObjectShortName">blw_full_i</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/nfabre_testbench/dut/sig_ram_mrktB">
-      <obj_property name="ElementShortName">sig_ram_mrktB[3:0]</obj_property>
-      <obj_property name="ObjectShortName">sig_ram_mrktB[3:0]</obj_property>
-      <obj_property name="Radix">BINARYRADIX</obj_property>
+   <wvobject type="array" fp_name="/testbench/dut/cr1_pe/blw_data_o">
+      <obj_property name="ElementShortName">blw_data_o</obj_property>
+      <obj_property name="ObjectShortName">blw_data_o</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/nfabre_testbench/dut/sig_ram_cabin">
-      <obj_property name="ElementShortName">sig_ram_cabin[7:0]</obj_property>
-      <obj_property name="ObjectShortName">sig_ram_cabin[7:0]</obj_property>
-      <obj_property name="Radix">BINARYRADIX</obj_property>
+   <wvobject type="logic" fp_name="/testbench/dut/cr1_pe/blw_write_o">
+      <obj_property name="ElementShortName">blw_write_o</obj_property>
+      <obj_property name="ObjectShortName">blw_write_o</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/nfabre_testbench/dut/sig_ram_opair">
-      <obj_property name="ElementShortName">sig_ram_opair[2:0]</obj_property>
-      <obj_property name="ObjectShortName">sig_ram_opair[2:0]</obj_property>
-      <obj_property name="Radix">BINARYRADIX</obj_property>
+   <wvobject type="array" fp_name="/testbench/dut/cr1_pe/exe_matcher/opA_rule_i">
+      <obj_property name="ElementShortName">opA_rule_i[11:0]</obj_property>
+      <obj_property name="ObjectShortName">opA_rule_i[11:0]</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/nfabre_testbench/dut/sig_ram_flgrp">
-      <obj_property name="ElementShortName">sig_ram_flgrp[13:0]</obj_property>
-      <obj_property name="ObjectShortName">sig_ram_flgrp[13:0]</obj_property>
-      <obj_property name="Radix">BINARYRADIX</obj_property>
+   <wvobject type="array" fp_name="/testbench/dut/cr1_pe/exe_matcher/opA_query_i">
+      <obj_property name="ElementShortName">opA_query_i[11:0]</obj_property>
+      <obj_property name="ObjectShortName">opA_query_i[11:0]</obj_property>
    </wvobject>
-   <wvobject type="array" fp_name="/nfabre_testbench/dut/sig_ram_bkg">
-      <obj_property name="ElementShortName">sig_ram_bkg[25:0]</obj_property>
-      <obj_property name="ObjectShortName">sig_ram_bkg[25:0]</obj_property>
-      <obj_property name="Radix">BINARYRADIX</obj_property>
+   <wvobject type="array" fp_name="/testbench/dut/cr1_pe/exe_matcher/opB_rule_i">
+      <obj_property name="ElementShortName">opB_rule_i[11:0]</obj_property>
+      <obj_property name="ObjectShortName">opB_rule_i[11:0]</obj_property>
    </wvobject>
-   <wvobject type="logic" fp_name="/nfabre_testbench/dut/sig_fnc_04MAY200701JAN9999">
-      <obj_property name="ElementShortName">sig_fnc_04MAY200701JAN9999</obj_property>
-      <obj_property name="ObjectShortName">sig_fnc_04MAY200701JAN9999</obj_property>
-   </wvobject>
-   <wvobject type="logic" fp_name="/nfabre_testbench/dut/sig_fnc_15MAY200801JAN9999">
-      <obj_property name="ElementShortName">sig_fnc_15MAY200801JAN9999</obj_property>
-      <obj_property name="ObjectShortName">sig_fnc_15MAY200801JAN9999</obj_property>
-   </wvobject>
-   <wvobject type="logic" fp_name="/nfabre_testbench/dut/sig_fnc_07JUL200901JAN9999">
-      <obj_property name="ElementShortName">sig_fnc_07JUL200901JAN9999</obj_property>
-      <obj_property name="ObjectShortName">sig_fnc_07JUL200901JAN9999</obj_property>
-   </wvobject>
-   <wvobject type="logic" fp_name="/nfabre_testbench/dut/sig_fnc_08JUL200901JAN9999">
-      <obj_property name="ElementShortName">sig_fnc_08JUL200901JAN9999</obj_property>
-      <obj_property name="ObjectShortName">sig_fnc_08JUL200901JAN9999</obj_property>
-   </wvobject>
-   <wvobject type="logic" fp_name="/nfabre_testbench/dut/sig_fnc_18APR201501JAN9999">
-      <obj_property name="ElementShortName">sig_fnc_18APR201501JAN9999</obj_property>
-      <obj_property name="ObjectShortName">sig_fnc_18APR201501JAN9999</obj_property>
+   <wvobject type="array" fp_name="/testbench/dut/cr1_pe/exe_matcher/opB_query_i">
+      <obj_property name="ElementShortName">opB_query_i[11:0]</obj_property>
+      <obj_property name="ObjectShortName">opB_query_i[11:0]</obj_property>
    </wvobject>
 </wave_config>

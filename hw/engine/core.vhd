@@ -1,5 +1,5 @@
-library IEEE;
-use IEEE.STD_LOGIC_1164.all;
+library ieee;
+use ieee.std_logic_1164.all;
 
 library tools;
 use tools.std_pkg.all;
@@ -11,14 +11,15 @@ use bre.core_pkg.all;
 entity core is
     generic (
         G_MATCH_STRCT         : match_structure_type := STRCT_SIMPLE;
-        G_MATCH_FUNCTION_A    : match_simp_function := FNCTR_SIMP_NOP;
-        G_MATCH_FUNCTION_B    : match_simp_function := FNCTR_SIMP_NOP;
-        G_MATCH_FUNCTION_PAIR : match_pair_function := FNCTR_PAIR_NOP
+        G_MATCH_FUNCTION_A    : match_simp_function  := FNCTR_SIMP_NOP;
+        G_MATCH_FUNCTION_B    : match_simp_function  := FNCTR_SIMP_NOP;
+        G_MATCH_FUNCTION_PAIR : match_pair_function  := FNCTR_PAIR_NOP
     );
     port (
         rst_i           :  in std_logic;
         clk_i           :  in std_logic;
         -- FIFO buffer from above
+        abv_empty_i     :  in std_logic;
         abv_data_i      :  in edge_buffer_type;
         abv_read_o      : out std_logic;
         -- current
@@ -30,6 +31,7 @@ entity core is
         mem_addr_o      : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
         mem_en_o        : out std_logic;
         -- FIFO buffer to below
+        blw_full_i      :  in std_logic;
         blw_data_o      : out edge_buffer_type;
         blw_write_o     : out std_logic
     );
@@ -45,26 +47,48 @@ begin
 -- FETCH                                                                                          --
 ----------------------------------------------------------------------------------------------------
 
-abv_read_o <= mem_edge_i.last;
-mem_addr_o <= fetch_r.mem_addr;
-mem_en_o   <= '1';
+abv_read_o <= fetch_r.buffer_rd_en;
+mem_addr_o <= fetch_r.mem_addr when fetch_r.flow_ctrl = FLW_CTRL_MEM else
+              (others => 'Z');
+mem_en_o   <= '1' when fetch_r.flow_ctrl = FLW_CTRL_MEM else
+              '0';
 
-fetch_comb: process(fetch_r, rst_i, mem_edge_i.last, abv_data_i)
+fetch_comb: process(fetch_r, rst_i, mem_edge_i.last, abv_data_i, abv_empty_i, blw_full_i)
     variable v : fetch_out_type;
 begin
     v := fetch_r;
 
-    if rst_i = '1' then
-        -- reset
-        v.mem_addr := (others => '0');
+    -- default
+    v.buffer_rd_en := '0';
 
-    elsif mem_edge_i.last = '1' then
-        -- from stack if there no other children from current node
-        v.mem_addr := abv_data_i.pointer;
-    else
-        -- PC+4 (iterate the edges)
-        v.mem_addr := increment(fetch_r.mem_addr);
-    end if;
+    -- state machine
+    case fetch_r.flow_ctrl is
+
+    when FLW_CTRL_BUFFER =>
+
+            if abv_empty_i = '0' and blw_full_i = '0' then
+                v.buffer_rd_en := '1';
+                v.flow_ctrl := FLW_CTRL_MEM;
+                v.mem_addr := abv_data_i.pointer;
+            end if;
+
+    when FLW_CTRL_MEM =>
+
+            if mem_edge_i.last = '1' then
+
+                if abv_empty_i = '0' and blw_full_i = '0' then
+                    v.buffer_rd_en := '1';
+                    v.flow_ctrl := FLW_CTRL_MEM;
+                    v.mem_addr := abv_data_i.pointer;
+                else
+                    v.flow_ctrl := FLW_CTRL_BUFFER;
+                end if;
+
+            elsif blw_full_i = '0' then
+                v.mem_addr := increment(fetch_r.mem_addr);
+            end if;
+
+    end case;
     
     fetch_rin <= v;
 end process;
@@ -73,7 +97,9 @@ fetch_seq: process(clk_i)
 begin
     if rising_edge(clk_i) then
         if rst_i = '1' then
-            fetch_r.mem_addr <= (others => '0');
+            fetch_r.mem_addr  <= (others => '0');
+            fetch_r.flow_ctrl <= FLW_CTRL_BUFFER; -- FLW_CTRL_MEM;
+            fetch_r.buffer_rd_en <= '0';
         else
             fetch_r <= fetch_rin;
         end if;
@@ -84,9 +110,9 @@ end process;
 -- EXECUTE                                                                                        --
 ----------------------------------------------------------------------------------------------------
 
-blw_data_o.pointer <= mem_edge_i.pointer;
-blw_write_o        <= execute_r.inference_res;
-
+blw_data_o  <= execute_r.writing_edge;
+blw_write_o <= '1' when execute_r.inference_res = '1' and blw_full_i = '0' else
+               '0';
 exe_matcher: matcher generic map
 (
     G_STRUCTURE     => G_MATCH_STRCT,
@@ -120,6 +146,8 @@ begin
     v.inference_res := sig_exe_match_result and v_weight_check;
     -- TODO check if it's not a NOP!!!!!!!!!!!
 
+    v.writing_edge.pointer := mem_edge_i.pointer;
+
     execute_rin <= v;
 end process;
 
@@ -128,6 +156,7 @@ begin
     if rising_edge(clk_i) then
         if rst_i = '1' then
             execute_r.inference_res <= '0';
+            execute_r.writing_edge.pointer <= (others => '0');
         else
             execute_r <= execute_rin;
         end if;

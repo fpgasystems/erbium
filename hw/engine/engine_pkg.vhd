@@ -20,13 +20,14 @@ use ieee.std_logic_unsigned.all;
 package engine_pkg is
 
     -- MAIN PARAMETERS
-    constant CFG_ENGINE_NCRITERIA         : integer := 22;
-    constant CFG_ENGINE_CRITERIUM_WIDTH   : integer := 12;
+    constant CFG_ENGINE_NCRITERIA         : integer := 22; -- Number of criteria
+    constant CFG_ENGINE_CRITERIUM_WIDTH   : integer := 12; -- Number of bits of each criterium value
+    constant CFG_WEIGHT_WIDTH             : integer := 19; -- integer from 0 to 2^CFG_WEIGHT_WIDTH-1
     --
-    constant CFG_MEM_ADDR_WIDTH           : integer := 7;
+    constant CFG_MEM_ADDR_WIDTH           : integer := 3;
     --
     constant CFG_EDGE_BUFFERS_DEPTH       : integer := 5;
-    constant CFG_EDGE_BRAM_DEPTH          : integer := 128;
+    constant CFG_EDGE_BRAM_DEPTH          : integer := 8;
 
 end engine_pkg;
 

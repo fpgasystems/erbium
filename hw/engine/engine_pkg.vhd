@@ -28,7 +28,15 @@ package engine_pkg is
     --
     constant CFG_EDGE_BUFFERS_DEPTH       : integer := 5;
     constant CFG_EDGE_BRAM_DEPTH          : integer := 8;
+    constant CFG_EDGE_BRAM_WIDTH          : integer := 64;
 
+
+    -- MEMORY DATA SLICE RANGES
+    subtype RNG_BRAM_EDGE_STORE_OPERAND_A is Natural range CFG_ENGINE_CRITERIUM_WIDTH - 1 downto 0;
+    subtype RNG_BRAM_EDGE_STORE_OPERAND_B is Natural range CFG_ENGINE_CRITERIUM_WIDTH*2 - 1 downto CFG_ENGINE_CRITERIUM_WIDTH;
+    subtype RNG_BRAM_EDGE_STORE_POINTER   is Natural range CFG_ENGINE_CRITERIUM_WIDTH*2 + CFG_MEM_ADDR_WIDTH - 1 downto CFG_ENGINE_CRITERIUM_WIDTH*2;
+    subtype RNG_BRAM_EDGE_STORE_WEIGHT    is Natural range CFG_ENGINE_CRITERIUM_WIDTH*2 + CFG_MEM_ADDR_WIDTH + CFG_WEIGHT_WIDTH - 1 downto CFG_ENGINE_CRITERIUM_WIDTH*2 + CFG_MEM_ADDR_WIDTH;
+    subtype RNG_BRAM_EDGE_STORE_LAST      is Natural range CFG_ENGINE_CRITERIUM_WIDTH*2 + CFG_MEM_ADDR_WIDTH + CFG_WEIGHT_WIDTH downto CFG_ENGINE_CRITERIUM_WIDTH*2 + CFG_MEM_ADDR_WIDTH + CFG_WEIGHT_WIDTH;
 end engine_pkg;
 
 package body engine_pkg is

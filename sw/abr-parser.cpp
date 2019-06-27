@@ -19,7 +19,9 @@
 #include <map>
 #include <exception>
 #include <iostream>
+#include <fstream>
 #include <chrono>
+#include <math.h>
 namespace pt = boost::property_tree;
 
 //#define _DEBUG true
@@ -275,15 +277,31 @@ struct vertex_info {
     std::string label;
     std::string path;
     std::set<uint> parents;
+    uint dump_pointer;
 };
 typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, vertex_info> graph_t;
 
+std::string toBinary(uint padding, uint n)
+{
+    std::string r;
+    while(n!=0) {
+        r = (n%2==0 ? "0":"1") + r;
+        n/=2;
+    }
+    padding = padding - r.length();
+    while(padding != 0)
+    {
+        r = "0" + r;
+        padding--;
+    }
+    return r;
+}
 
 int main()
 {
-    std::ifstream       file("../../../Documents/amadeus-share/mct_rules.csv");
+    //std::ifstream       file("../../../Documents/amadeus-share/mct_rules.csv");
     //std::ifstream       file("../data/demo_02.csv");
-    //std::ifstream       file("../data/demo_01.csv");
+    std::ifstream       file("../data/demo_01.csv");
 
     ////////////////////////////////////////////////////////////////////////////////////////
     std::cout << "# LOAD" << std::endl;
@@ -386,7 +404,9 @@ int main()
     }
 
     // indexes
-    uint key;
+    uint key = 0;
+    for(auto& aux : contents)
+        aux.second = key++;
     for(auto& aux : dictionnary)
     {
         key = 0;
@@ -394,7 +414,7 @@ int main()
             x.second = key++;
         ordered.push_back(std::pair<uint, uint>(aux.second.size(), aux.first));
     }
-    //sort(ordered.begin(), ordered.end(), sort_pred_inv());
+    sort(ordered.begin(), ordered.end(), sort_pred_inv());
     dictionnary[rp.m_ruleType.m_criterionDefinition.size()] = contents;
 
     key = 0;
@@ -618,10 +638,11 @@ int main()
 
     ////////////////////////////////////////////////////////////////////////////////////////
 
-    // FINAL STATS
+    ////// FINAL STATS
     uint n_nodes;
     uint n_edges;
     uint n_edges_max = 0;
+    uint n_bram_edges_max = 0;
     for (auto& level : vertexes)
     {
         n_nodes = 0;
@@ -641,6 +662,7 @@ int main()
             }
         }
         std::cout << "level " << level.first << ": " << n_nodes << " nodes; " << n_edges << " edges; " << n_edges_max << " max edges\n";
+        n_bram_edges_max = (n_edges > n_bram_edges_max) ? n_edges : n_bram_edges_max;
     }
 
     std::cout << "total number of nodes: " << boost::num_vertices(g) << std::endl;
@@ -648,9 +670,118 @@ int main()
 
     ////////////////////////////////////////////////////////////////////////////////////////
 
-    // EXPORT FILE
+    ////// EXPORT FILE
     std::ofstream dot_file("automaton.dot");
     boost::write_graphviz(dot_file, g, boost::make_label_writer(get(&vertex_info::label, g)));
+
+    ////////////////////////////////////////////////////////////////////////////////////////
+
+    ////// MEMORY DUMP
+    std::cout << "# MEMORY DUMP" << std::endl;
+    std::ofstream myfile;
+    start = std::chrono::high_resolution_clock::now();
+
+    const uint CFG_ENGINE_NCRITERIA       = rp.m_ruleType.m_criterionDefinition.size();
+    const uint CFG_ENGINE_CRITERIUM_WIDTH = 12;
+    const uint CFG_WEIGHT_WIDTH           = 19;
+    const uint CFG_MEM_ADDR_WIDTH         = ceil(log2(n_bram_edges_max));
+    const uint CFG_EDGE_BUFFERS_DEPTH     = 5;
+    const uint CFG_EDGE_BRAM_DEPTH        = n_bram_edges_max;
+    const uint CFG_EDGE_BRAM_WIDTH        = 64;
+    const uint ZERO_PADDING               = CFG_EDGE_BRAM_WIDTH - (CFG_WEIGHT_WIDTH + CFG_MEM_ADDR_WIDTH + CFG_ENGINE_CRITERIUM_WIDTH + CFG_ENGINE_CRITERIUM_WIDTH + 1);
+
+    std::map<std::string, uint> dic = dictionnary[dictionnary.size()-1];
+    for (auto level = vertexes.rbegin(); level != vertexes.rend(); ++level)
+    {
+        std::cout << "doing " << level->first+1 << std::endl;
+        myfile.open("bram_cr" + std::to_string(level->first+1) + ".mem");
+        n_edges = 0;
+
+        for (auto& value : vertexes[level->first])
+        {
+            for (auto& vert : vertexes[level->first][value.first])
+            {
+                if(g[mapaa[vert]].parents.size() != 0)
+                {
+
+                    g[mapaa[vert]].dump_pointer = n_edges;
+                    n_edges_max = out_degree(mapaa[vert], g);
+
+                    if (n_edges_max == 0)
+                    {
+                        n_edges++;
+                        myfile << toBinary(ZERO_PADDING, 0);        // padding
+                        myfile << "1";                              // last
+                        myfile << toBinary(CFG_WEIGHT_WIDTH, 0);    // weight
+                        myfile << toBinary(CFG_MEM_ADDR_WIDTH, 0);  // pointer
+                        myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dic[g[mapaa[vert]].label]); // op_b
+                        myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dic[g[mapaa[vert]].label]); // op_a
+                        myfile << "\n";
+                        //myfile << std::bitset<ZERO_PADDING>(0).to_string(); // padding
+                        //myfile << "1";         // last
+                        //myfile << std::bitset<CFG_WEIGHT_WIDTH>(0).to_string(); // weight
+                        //myfile << std::bitset<CFG_MEM_ADDR_WIDTH>(0).to_string(); // pointer
+                        //myfile << std::bitset<CFG_ENGINE_CRITERIUM_WIDTH>(contents[g[mapaa[vert]].label]).to_string(); // op_b
+                        //myfile << std::bitset<CFG_ENGINE_CRITERIUM_WIDTH>(contents[g[mapaa[vert]].label]).to_string(); // op_a
+                        //myfile << "\n";
+                    }
+                    else
+                    {
+                        n_edges += n_edges_max;
+                        boost::tie(ai, a_end) = adjacent_vertices(mapaa[vert], g);
+                        for (aux=1; ai != a_end; ++ai, ++aux)
+                        {
+                            myfile << toBinary(ZERO_PADDING, 0); // padding
+                            myfile << (aux == n_edges_max) ? "1" : "0";         // last
+                            myfile << toBinary(CFG_WEIGHT_WIDTH, 100); // weight TODO
+                            myfile << toBinary(CFG_MEM_ADDR_WIDTH, g[*ai].dump_pointer); // pointer
+                            myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dic[g[*ai].label]); // op_b
+                            myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dic[g[*ai].label]); // op_a
+                            myfile << "\n";
+                            //myfile << std::bitset<ZERO_PADDING>(0).to_string(); // padding
+                            //myfile << (aux == n_edges_max) ? "1" : "0";         // last
+                            //myfile << std::bitset<CFG_WEIGHT_WIDTH>(100).to_string(); // weight TODO
+                            //myfile << std::bitset<CFG_MEM_ADDR_WIDTH>(g[*ai].dump_pointer).to_string(); // pointer
+                            //myfile << std::bitset<CFG_ENGINE_CRITERIUM_WIDTH>(dictionnary[level->first][g[mapaa[vert]]]).to_string(); // op_b
+                            //myfile << std::bitset<CFG_ENGINE_CRITERIUM_WIDTH>(dictionnary[level->first][g[mapaa[vert]]]).to_string(); // op_a
+                            //myfile << "\n";
+                        }
+                    }
+                }
+            }
+        }
+        myfile.close();
+        if(level != vertexes.rbegin())
+            dic = dictionnary[ordered[level->first].second];
+    }
+    // origin
+    myfile.open("bram_cr0.mem");
+    boost::tie(ai, a_end) = adjacent_vertices(0, g);
+    for (aux=0; ai != a_end; ++ai, ++aux)
+    {
+        myfile << toBinary(ZERO_PADDING, 0); // padding
+        myfile << (aux == n_edges_max) ? "1" : "0";         // last
+        myfile << toBinary(CFG_WEIGHT_WIDTH, 100); // weight TODO
+        myfile << toBinary(CFG_MEM_ADDR_WIDTH, g[*ai].dump_pointer); // pointer
+        myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dictionnary[ordered[0].second][g[*ai].label]); // op_b
+        myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dictionnary[ordered[0].second][g[*ai].label]); // op_a
+        myfile << "\n";
+    }
+    myfile.close();
+
+    finish = std::chrono::high_resolution_clock::now();
+    std::cout << "constant CFG_ENGINE_NCRITERIA         : integer := " << CFG_ENGINE_NCRITERIA << "; -- Number of criteria\n";
+    std::cout << "constant CFG_ENGINE_CRITERIUM_WIDTH   : integer := " << CFG_ENGINE_CRITERIUM_WIDTH << "; -- Number of bits of each criterium value\n";
+    std::cout << "constant CFG_WEIGHT_WIDTH             : integer := " << CFG_WEIGHT_WIDTH << "; -- integer from 0 to 2^CFG_WEIGHT_WIDTH-1\n";
+    std::cout << "--\n";
+    std::cout << "constant CFG_MEM_ADDR_WIDTH           : integer := " << CFG_MEM_ADDR_WIDTH << ";\n";
+    std::cout << "--\n";
+    std::cout << "constant CFG_EDGE_BUFFERS_DEPTH       : integer := " << CFG_EDGE_BUFFERS_DEPTH << ";\n";
+    std::cout << "constant CFG_EDGE_BRAM_DEPTH          : integer := " << CFG_EDGE_BRAM_DEPTH << ";\n";
+    std::cout << "constant CFG_EDGE_BRAM_WIDTH          : integer := " << CFG_EDGE_BRAM_WIDTH << ";\n";
+
+    elapsed = finish - start;
+    std::cout << "# MEMORY DUMP COMPLETED in " << elapsed.count() << " s\n";
 
     ////////////////////////////////////////////////////////////////////////////////////////
 

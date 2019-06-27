@@ -157,6 +157,7 @@ sig_bram1_addr <= mem_addr_i when mem_wren_i(1) = '1' else
 
 bram_cr0 : bram_edge_store generic map
 (
+    G_RAM_WIDTH       => CFG_MEM_DATA_WIDTH,
     G_RAM_DEPTH       => CFG_EDGE_BRAM_DEPTH,
     G_RAM_PERFORMANCE => "LOW_LATENCY",
     G_INIT_FILE       => "bram_cr0.mem"
@@ -175,6 +176,7 @@ port map
 
 bram_cr1 : bram_edge_store generic map
 (
+    G_RAM_WIDTH       => CFG_MEM_DATA_WIDTH,
     G_RAM_DEPTH       => CFG_EDGE_BRAM_DEPTH,
     G_RAM_PERFORMANCE => "LOW_LATENCY",
     G_INIT_FILE       => "bram_cr1.mem"

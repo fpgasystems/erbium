@@ -9,6 +9,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.std_logic_textio.all;
 
 library std;
 use std.textio.all;
@@ -55,7 +56,7 @@ impure function init_from_file(ramfilename : in string) return ram_type is
     file ramfile            : text is in ramfilename;
     variable ramfileline    : line;
     variable ram_name       : ram_type;
-    variable bitvec         : bit_vector(C_RAM_WIDTH-1 downto 0);
+    variable bitvec         : std_logic_vector(C_RAM_WIDTH-1 downto 0);
 begin
     for i in ram_type'range loop
         readline (ramfile, ramfileline);

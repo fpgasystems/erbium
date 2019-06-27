@@ -169,7 +169,7 @@ package core_pkg is
 ----------------------------------------------------------------------------------------------------
 -- FUNCTIONS
 ----------------------------------------------------------------------------------------------------
-    function deserialise_edge_store(vecin : bit_vector) return edge_store_type;
+    function deserialise_edge_store(vec : std_logic_vector) return edge_store_type;
 
 end core_pkg;
 
@@ -194,20 +194,18 @@ begin
   return res_v;
 end function;
 
-function deserialise_edge_store(vecin : bit_vector) return edge_store_type is
+function deserialise_edge_store(vec : std_logic_vector) return edge_store_type is
     variable res : edge_store_type;
-    variable vec : std_logic_vector(vecin'length - 1 downto 0);
     variable line_v   : line;
     file     out_file : text open append_mode is "out.txt";
   begin
-    vec := to_stdlogicvector(vecin);
-    write(line_v, to_bstring(vec));
-    writeline(out_file, line_v);
-    res.weight    := 500;--to_integer(unsigned(vec(CFG_WEIGHT_WIDTH downto 0)));
-    res.operand_a := vec(res.operand_a'range);
-    res.operand_b := vec(res.operand_b'range);
-    res.pointer   := vec(res.pointer'range);
-    res.last      := vec(vec'left);
+    --write(line_v, to_bstring(vec));
+    --writeline(out_file, line_v);
+    res.operand_a := vec(RNG_BRAM_EDGE_STORE_OPERAND_A);
+    res.operand_b := vec(RNG_BRAM_EDGE_STORE_OPERAND_B);
+    res.pointer   := vec(RNG_BRAM_EDGE_STORE_POINTER);
+    res.weight    := to_integer(unsigned(vec(RNG_BRAM_EDGE_STORE_WEIGHT)));
+    res.last      := vec(RNG_BRAM_EDGE_STORE_LAST'left);
 
     return res;
 end deserialise_edge_store;

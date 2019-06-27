@@ -17,180 +17,136 @@ entity top is
 end top;
 
 architecture behavioural of top is
+    -- GENERICS
+    type MATCH_STRCT_ARRAY          is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of match_structure_type;
+    type MATCH_SIMP_FUNCTION_ARRAY  is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of match_simp_function;
+    type MATCH_PAIR_FUNCTION_ARRAY  is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of match_pair_function;
     --
-    signal sig_edgbuff01_wr_en   : std_logic;
-    signal sig_edgbuff01_wr_data : edge_buffer_type;
-    signal sig_edgbuff01_full    : std_logic;
-    signal sig_edgbuff01_rd_en   : std_logic;
-    signal sig_edgbuff01_rd_data : edge_buffer_type;
-    signal sig_edgbuff01_empty   : std_logic;
+    constant ary_match_struct        : MATCH_STRCT_ARRAY := (,,);
+    constant ary_match_function_a    : MATCH_SIMP_FUNCTION_ARRAY := (,);
+    constant ary_match_function_b    : MATCH_SIMP_FUNCTION_ARRAY := (,);
+    constant ary_match_function_pair : MATCH_PAIR_FUNCTION_ARRAY := (,);
     --
-    signal sig_edgbuff10_wr_en   : std_logic;
-    signal sig_edgbuff10_wr_data : edge_buffer_type;
-    signal sig_edgbuff10_full    : std_logic;
-    signal sig_edgbuff10_rd_en   : std_logic;
-    signal sig_edgbuff10_rd_data : edge_buffer_type;
-    signal sig_edgbuff10_empty   : std_logic;
+    -- CORE INTERFACE ARRAYS
+    type edge_buffer_array  is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of edge_buffer_type;
+    type edge_store_array   is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of edge_store_type;
+    type query_array        is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH - 1 downto 0);
+    type weight_array       is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of integer;
+    type mem_addr_array     is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
     --
-    signal sig_cr0mem_en   : std_logic;
-    signal sig_cr0mem_addr : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
-    signal sig_cr1mem_en   : std_logic;
-    signal sig_cr1mem_addr : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+    signal abv_empty     : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
+    signal abv_read      : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
+    signal abv_data      : edge_buffer_array;
+    signal query_opA     : query_array;
+    signal query_opB     : query_array;
+    signal weight_filter : weight_array;
+    signal mem_edge      : edge_store_array;
+    signal mem_addr      : mem_addr_array;
+    signal mem_en        : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
+    signal blw_full      : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
+    signal blw_data      : edge_buffer_array;
+    signal blw_write     : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
     --
-    signal sig_bram0_en   : std_logic;
-    signal sig_bram0_addr : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
-    signal sig_bram0_rd   : edge_store_type;
-    signal sig_bram1_en   : std_logic;
-    signal sig_bram1_addr : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
-    signal sig_bram1_rd   : edge_store_type;
+    -- BRAM INTERFACE ARRAYS
+    signal bram_en       : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
+    signal bram_addr     : mem_addr_array;
     --
+    -- CORNER CASE SIGNALS
     signal sig_origin_node : edge_buffer_type;
 begin
 
---------------------------------------------------------------
 
-sig_origin_node.pointer <= (others => '0');
+stages_i:
+for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
+    
+    bram_en(I) <= mem_wren_i(I) or mem_en(I);
+    bram_addr(I) <= mem_addr_i when mem_wren_i(I) = '1' else
+                    mem_addr(I);
 
-cr0_pe : core generic map
-(
-    G_MATCH_STRCT         => STRCT_PAIR,
-    G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
-    G_MATCH_FUNCTION_B    => FNCTR_SIMP_EQU,
-    G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_OR
-)
-port map
-(
-    rst_i           => rst_i,
-    clk_i           => clk_i,
-    -- FIFO buffer from above
-    abv_empty_i     => '0',
-    abv_data_i      => sig_origin_node,
-    abv_read_o      => open,
-    -- current
-    query_opA_i     => query_i(0),
-    query_opB_i     => query_i(1),
-    weight_filter_i => 0,
-    -- MEMORY
-    mem_edge_i      => sig_bram0_rd,
-    mem_addr_o      => sig_cr0mem_addr,
-    mem_en_o        => sig_cr0mem_en,
-    -- FIFO buffer to below
-    blw_full_i      => sig_edgbuff01_full,
-    blw_data_o      => sig_edgbuff01_wr_data,
-    blw_write_o     => sig_edgbuff01_wr_en
-);
-
-edgbuff_01 : buffer_edge generic map
-(
-    G_DEPTH         => CFG_EDGE_BUFFERS_DEPTH
-)
-port map
-(
-    rst_i           => rst_i,
-    clk_i           => clk_i,
-    --
-    wr_en_i         => sig_edgbuff01_wr_en,
-    wr_data_i       => sig_edgbuff01_wr_data,
-    full_o          => sig_edgbuff01_full,
-    --
-    rd_en_i         => sig_edgbuff01_rd_en,
-    rd_data_o       => sig_edgbuff01_rd_data,
-    empty_o         => sig_edgbuff01_empty
-);
-
-cr1_pe : core generic map
-(
-    G_MATCH_STRCT         => STRCT_PAIR,
-    G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
-    G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
-    G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND
-)
-port map
-(
-    rst_i           => rst_i,
-    clk_i           => clk_i,
-    abv_empty_i     => sig_edgbuff01_empty,
-    abv_data_i      => sig_edgbuff01_rd_data,
-    abv_read_o      => sig_edgbuff01_rd_en,
-    -- current
-    query_opA_i     => query_i(2),
-    query_opB_i     => query_i(2),
-    weight_filter_i => 0,
-    -- MEMORY
-    mem_edge_i      => sig_bram1_rd,
-    mem_addr_o      => sig_cr1mem_addr,
-    mem_en_o        => sig_cr1mem_en,
-    -- FIFO buffer to below
-    blw_full_i      => sig_edgbuff10_full,
-    blw_data_o      => sig_edgbuff10_wr_data,
-    blw_write_o     => sig_edgbuff10_wr_en
-);
-
-edgbuff_10 : buffer_edge generic map
-(
-    G_DEPTH         => CFG_EDGE_BUFFERS_DEPTH
-)
-port map
-(
-    rst_i           => rst_i,
-    clk_i           => clk_i,
-    --
-    wr_en_i         => sig_edgbuff10_wr_en,
-    wr_data_i       => sig_edgbuff10_wr_data,
-    full_o          => sig_edgbuff10_full,
-    --
-    rd_en_i         => sig_edgbuff10_rd_en,
-    rd_data_o       => sig_edgbuff10_rd_data,
-    empty_o         => sig_edgbuff10_empty
-);
-
-----------------------------------------------------------------------
-
-sig_bram0_en   <= mem_wren_i(0) or sig_cr0mem_en;
-sig_bram0_addr <= mem_addr_i when mem_wren_i(0) = '1' else
-                  sig_cr0mem_addr;
-
-sig_bram1_en   <= mem_wren_i(1) or sig_cr1mem_en;
-sig_bram1_addr <= mem_addr_i when mem_wren_i(1) = '1' else
+    sig_bram1_addr <= mem_addr_i when mem_wren_i(1) = '1' else
                   sig_cr1mem_addr;
 
+    pe_i : core generic map
+    (
+        G_MATCH_STRCT         => ary_match_struct(I),
+        G_MATCH_FUNCTION_A    => ary_match_function_a(I),
+        G_MATCH_FUNCTION_B    => ary_match_function_b(I),
+        G_MATCH_FUNCTION_PAIR => ary_match_function_pair(I)
+    )
+    port map
+    (
+        rst_i           => rst_i,
+        clk_i           => clk_i,
+        -- FIFO buffer from above
+        abv_empty_i     => abv_empty(I),
+        abv_data_i      => abv_data(I),
+        abv_read_o      => abv_read(I),
+        -- current
+        query_opA_i     => query_opA(I),
+        query_opB_i     => query_opB(I),
+        weight_filter_i => weight_filter(I),
+        -- MEMORY
+        mem_edge_i      => mem_edge(I),
+        mem_addr_o      => mem_addr(I),
+        mem_en_o        => mem_en(I),
+        -- FIFO buffer to below
+        blw_full_i      => blw_full(I),
+        blw_data_o      => blw_data(I),
+        blw_write_o     => blw_write(I)
+    );
 
-bram_cr0 : bram_edge_store generic map
-(
-    G_RAM_WIDTH       => CFG_MEM_DATA_WIDTH,
-    G_RAM_DEPTH       => CFG_EDGE_BRAM_DEPTH,
-    G_RAM_PERFORMANCE => "LOW_LATENCY",
-    G_INIT_FILE       => "bram_cr0.mem"
-)
-port map
-(
-    clk_i        => clk_i,
-    rst_i        => rst_i,
-    ram_reg_en_i => '1',
-    ram_en_i     => sig_bram0_en,
-    addr_i       => sig_bram0_addr,
-    wr_data_i    => mem_i,
-    wr_en_i      => mem_wren_i(0),
-    rd_data_o    => sig_bram0_rd
-);
+    bram_i : bram_edge_store generic map
+    (
+        G_RAM_WIDTH       => CFG_EDGE_BRAM_WIDTH,
+        G_RAM_DEPTH       => CFG_EDGE_BRAM_DEPTH,
+        G_RAM_PERFORMANCE => "LOW_LATENCY",
+        G_INIT_FILE       => "bram_cr" & I & ".mem"
+    )
+    port map
+    (
+        clk_i        => clk_i,
+        rst_i        => rst_i,
+        ram_reg_en_i => '1',
+        ram_en_i     => bram_en,
+        addr_i       => bram_addr,
+        wr_data_i    => mem_i,
+        wr_en_i      => mem_wren_i(I),
+        rd_data_o    => mem_edge(I)
+    );
+    
+    fwd_gen : if I =/ CFG_ENGINE_NCRITERIA - 1 generate -- from I to I+1
 
-bram_cr1 : bram_edge_store generic map
-(
-    G_RAM_WIDTH       => CFG_MEM_DATA_WIDTH,
-    G_RAM_DEPTH       => CFG_EDGE_BRAM_DEPTH,
-    G_RAM_PERFORMANCE => "LOW_LATENCY",
-    G_INIT_FILE       => "bram_cr1.mem"
-)
-port map
-(
-    clk_i        => clk_i,
-    rst_i        => rst_i,
-    ram_reg_en_i => '1',
-    ram_en_i     => sig_bram1_en,
-    addr_i       => sig_bram1_addr,
-    wr_data_i    => mem_i,
-    wr_en_i      => mem_wren_i(1),
-    rd_data_o    => sig_bram1_rd
-);
+        buff_edge_i : buffer_edge generic map
+        (
+            G_DEPTH         => CFG_EDGE_BUFFERS_DEPTH
+        )
+        port map
+        (
+            rst_i           => rst_i,
+            clk_i           => clk_i,
+            --
+            wr_en_i         => blw_write(I),
+            wr_data_i       => blw_data(I),
+            full_o          => blw_full(I),
+            --
+            rd_en_i         => abv_read(I+1),
+            rd_data_o       => abv_data(I+1),
+            empty_o         => abv_empty(I+1)
+        );
+    end generate fwd_gen;
+
+end generate stages_i;
+
+-- TODO last stage (content)
+-- TODO fwd_gen for last stage
+
+
+-- ORIGIN
+sig_origin_node.pointer <= (others => '0');
+abv_empty(0) <= '0';
+abv_data(0)  <= sig_origin_node;
+abv_read(0)  <= open;
+
+
 
 end architecture behavioural;

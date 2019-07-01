@@ -21,10 +21,10 @@ namespace pt = boost::property_tree;
 void abr_dataset::load(const std::string &filename)
 {
     // Create empty property tree object
-    pt::ptree tree;
+    boost::property_tree::ptree tree;
 
     // Parse the XML into the property tree.
-    pt::read_xml(filename, tree);
+    boost::property_tree::read_xml(filename, tree);
 
     m_organization = tree.get<std::string>("ABR.<xmlattr>.organization");
     m_application = tree.get<std::string>("ABR.<xmlattr>.application");

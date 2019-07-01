@@ -1,14 +1,3 @@
-// ----------------------------------------------------------------------------
-// Copyright (C) 2002-2006 Marcin Kalicinski
-//
-// Distributed under the Boost Software License, Version 1.0. 
-// (See accompanying file LICENSE_1_0.txt or copy at 
-// http://www.boost.org/LICENSE_1_0.txt)
-//
-// For more information, see www.boost.org
-// ----------------------------------------------------------------------------
-
-//[abr_dataset_includes
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/graphviz.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -22,116 +11,13 @@
 #include <fstream>
 #include <chrono>
 #include <math.h>
+
+#include "definitions.h"
+
 namespace pt = boost::property_tree;
 
 //#define _DEBUG true
 
-//[abr_dataset_data
-struct criterionDefinition_s
-{
-    int m_index;
-    std::string m_code;
-    bool m_isMandatory;
-    std::string m_supertag;
-    int m_weight;
-    int m_used;
-    bool operator < (const criterionDefinition_s &other) const { return m_index < other.m_index; }
-    void print(const std::string &level) const
-    {
-        printf("%s[Criterion] index=%d code=%s isMandatory=%s supertag=%s weight=%d used=%d\n", level.c_str(),
-                                     m_index,
-                                     m_code.c_str(),
-                                     (m_isMandatory)?"true":"false",
-                                     m_supertag.c_str(),
-                                     m_weight,
-                                     m_used);
-    }
-};
-struct ruleType_s
-{
-    std::string m_organization;
-    std::string m_code;
-    int m_release;
-    std::vector<criterionDefinition_s> m_criterionDefinition;
-
-    void print(const std::string &level) const
-    {
-        printf("%s[RuleType] org=%s app=%s v=%d\n",
-            level.c_str(),
-            m_organization.c_str(),
-            m_code.c_str(),
-            m_release);
-        for (auto& aux : m_criterionDefinition)
-            aux.print(level + "\t");
-    }
-
-};
-struct criterion_s
-{
-    int m_index;
-    std::string m_code;
-    std::string m_value;
-    bool operator < (const criterion_s &other) const { return m_index < other.m_index; }
-    void print(const std::string &level) const
-    {
-        printf("%s[Criterion] id=%d code=%s value=%s\n",
-            level.c_str(),
-            m_index,
-            m_code.c_str(),
-            m_value.c_str());
-    }
-};
-struct rule_s
-{
-    int m_ruleId;
-    int m_weight;
-    std::set<criterion_s> m_criteria;
-    std::string m_content;
-    bool operator < (const rule_s &other) const { return m_ruleId < other.m_ruleId; }
-    void print(const std::string &level) const
-    {
-        printf("%s[Rule] id=%d weight=%d\n", 
-            level.c_str(),
-            m_ruleId,
-            m_weight);
-        for (auto& aux : m_criteria)
-            aux.print(level + "\t");
-    }
-};
-struct rulePack_s
-{
-    ruleType_s m_ruleType;
-    std::set<rule_s> m_rules;
-
-    bool operator < (const rulePack_s &other) const { return true; }
-    void print(const std::string &level) const
-    {
-        m_ruleType.print(level);
-        for (auto& aux : m_rules)
-            aux.print(level + "\t");
-    }
-};
-struct abr_dataset
-{
-    std::string m_organization;
-    std::string m_application;
-    std::set<rulePack_s> m_rulePacks;
-
-    void load(const std::string &filename);
-    void save(const std::string &filename);
-
-    //[abr_dataset_print
-    void print(const std::string &level) const
-    {
-        printf("%sorg: %s\n", level.c_str(), m_organization.c_str());
-        printf("%sapp: %s\n", level.c_str(), m_application.c_str());
-        for (auto& aux : m_rulePacks)
-            aux.print(level + "\t");
-    }
-    //]
-};
-//]
-//[abr_dataset_load
 void abr_dataset::load(const std::string &filename)
 {
     // Create empty property tree object
@@ -206,20 +92,6 @@ void abr_dataset::load(const std::string &filename)
         }
     }
 }
-//]
-//[abr_dataset_save
-void abr_dataset::save(const std::string &filename)
-{
-    // TODO
-    pt::ptree tree;
-
-    //BOOST_FOREACH(const std::string &name, m_modules)
-        //tree.add("debug.modules.module", name);
-
-    // Write property tree to XML file
-    pt::write_xml(filename, tree);
-}
-//]
 
 
 class CSVRow
@@ -320,11 +192,18 @@ void write_longlongint(std::ofstream* outfile, unsigned long long int value)
 
 int main()
 {
+    uint key = 0;
+
+
+
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////
+
     //std::ifstream       file("../../../Documents/amadeus-share/mct_rules.csv");
     //std::ifstream       file("../data/demo_02.csv");
     std::ifstream       file("../data/demo_01.csv");
 
-    ////////////////////////////////////////////////////////////////////////////////////////
     std::cout << "# LOAD" << std::endl;
     auto start = std::chrono::high_resolution_clock::now();
     CSVRow              row;
@@ -409,119 +288,39 @@ int main()
     std::cout << rp.m_rules.size() << " rules loaded" << std::endl;
     std::cout << "# LOAD COMPLETED in " << elapsed.count() << " s\n";
 
-    ////////////////////////////////////////////////////////////////////////////////////////
-
-    //####### DICTIONNARY
-    start = std::chrono::high_resolution_clock::now();
-    std::cout << "# DICTIONNARY" << std::endl;
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// DICTIONNARY                                                                                    //
+////////////////////////////////////////////////////////////////////////////////////////////////////
     
-    std::map<uint, std::map<std::string, uint>> dictionnary; // per criteira -> per value -> ID
-    std::map<std::string, uint> contents;                    // per value -> ID
-    std::vector<std::pair<uint, uint>> ordered;              // list of pair < (#diff values) & (level)>
-
-    // create it
-    for (auto& rule : rp.m_rules)
-    {
-        for (auto& aux : rule.m_criteria)
-            dictionnary[aux.m_index][aux.m_value]=0;
-        contents[rule.m_content] = 0;
-    }
-
-    // indexes
-    uint key = 0;
-    for (auto& aux : contents)
-        aux.second = key++;
-    for (auto& aux : dictionnary)
-    {
-        key = 0;
-        for (auto& x : aux.second)
-            x.second = key++;
-        ordered.push_back(std::pair<uint, uint>(aux.second.size(), aux.first));
-    }
-    sort(ordered.begin(), ordered.end(), sort_pred_inv()); //  DESC
-    //sort(ordered.begin(), ordered.end()); // ASC
-    dictionnary[rp.m_ruleType.m_criterionDefinition.size()] = contents;
-
-    key = 0;
-    for (auto& aux : ordered)
-    {
-        std::cout << "[" << key << "] " << rp.m_ruleType.m_criterionDefinition[aux.second].m_code << " #" << aux.first << std::endl;
-        key++;
-    }
-
+    std::cout << "# DICTIONNARY" << std::endl;
+    start = std::chrono::high_resolution_clock::now();
+    
+    Dictionnary the_dictionnary(rp);
+    the_dictionnary.sort_by_n_of_values(SortOrder::Descending);
+    
     finish = std::chrono::high_resolution_clock::now();
+
+    for (auto& aux : the_dictionnary.m_sorting_map)
+    {
+        std::cout << "[" << key++ << "] " << rp.m_ruleType.m_criterionDefinition[aux].m_code;
+        std::cout <<  " #" << the_dictionnary.m_dic_criteria[aux].size() << std::endl;
+    }
+
     elapsed = finish - start;
     std::cout << "# DICTIONNARY COMPLETED in " << elapsed.count() << " s\n";
 
-    ////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// NFA                                                                                            //
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    //####### GRAPH
-    std::cout << "# GRAPH" << std::endl;
+    std::cout << "# NFA" << std::endl;
     start = std::chrono::high_resolution_clock::now();
+    
+    NFAHandler the_nfa(rp, the_dictionnary.m_dic_criteria);
 
-    std::map<std::string, uint> netSI; // from node_path to node_id
-    std::map<uint, std::map<uint, std::set<uint>>> vertexes; // per level -> per value -> list of nodes
-
-    graph_t g(1);
-
-    uint stats_fwd = 0;
-    uint node_to_use;
-    uint prev_id;
-    uint level = 0;
-    std::string path_fwd;
-
-    for (auto& rule : rp.m_rules)
-    {
-        path_fwd = "";
-        prev_id = 0;
-
-        level = 0;
-        for (auto& ord : ordered)
-        {
-            criterion_s criterium = *std::next(rule.m_criteria.begin(), ord.second);
-
-            path_fwd = criterium.m_value + "_" + path_fwd;
-
-            node_to_use = 0;
-            if (netSI[path_fwd] == 0)
-            {
-                // new path
-                node_to_use = add_vertex(g);
-                netSI[path_fwd] = node_to_use;
-                g[node_to_use].label = criterium.m_value;
-                g[node_to_use].level = level;
-                g[node_to_use].path = path_fwd;
-                vertexes[level][dictionnary[criterium.m_index][criterium.m_value]].insert(node_to_use);
-            }
-            else
-            {
-                // use existing path
-                node_to_use = netSI[path_fwd];
-                stats_fwd++;
-            }
-            g[node_to_use].parents.insert(prev_id);
-            g[prev_id].children.insert(node_to_use);
-            prev_id = node_to_use;
-            level++;
-        }
-        // Add content
-        if (netSI[rule.m_content] == 0)
-        {
-            // It does not exist
-            node_to_use = add_vertex(g);
-            netSI[rule.m_content] = node_to_use;
-            g[node_to_use].label = rule.m_content;
-            g[node_to_use].level = level;
-            g[node_to_use].path  = rule.m_content;
-            vertexes[level][dictionnary[rule.m_criteria.size()][rule.m_content]].insert(node_to_use);
-        }
-        else
-            node_to_use = netSI[rule.m_content];
-        g[node_to_use].parents.insert(prev_id);
-        g[prev_id].children.insert(node_to_use);
-    }
     finish = std::chrono::high_resolution_clock::now();
     elapsed = finish - start;
+    
     #ifdef _DEBUG
     for (auto& level : vertexes)
     {

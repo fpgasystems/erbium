@@ -23,9 +23,9 @@ entity core is
         abv_data_i      :  in edge_buffer_type;
         abv_read_o      : out std_logic;
         -- current
-        query_opA_i     :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH - 1 downto 0);
-        query_opB_i     :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH - 1 downto 0);
+        query_i         :  in query_buffer_type;
         weight_filter_i :  in integer;
+        weight_filter_o :  in integer; -- only used in last level
         -- MEMORY
         mem_edge_i      :  in edge_store_type;
         mem_addr_o      : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
@@ -64,7 +64,7 @@ begin
     -- state machine
     case fetch_r.flow_ctrl is
 
-    when FLW_CTRL_BUFFER =>
+      when FLW_CTRL_BUFFER =>
 
             if abv_empty_i = '0' and blw_full_i = '0' then
                 v.buffer_rd_en := '1';
@@ -72,7 +72,7 @@ begin
                 v.mem_addr := abv_data_i.pointer;
             end if;
 
-    when FLW_CTRL_MEM =>
+      when FLW_CTRL_MEM =>
 
             if mem_edge_i.last = '1' then
 
@@ -123,9 +123,9 @@ exe_matcher: matcher generic map
 port map
 (
     opA_rule_i      => mem_edge_i.operand_a,
-    opA_query_i     => query_opA_i,
+    opA_query_i     => query_i.operand_a,
     opB_rule_i      => mem_edge_i.operand_b,
-    opB_query_i     => query_opB_i,
+    opB_query_i     => query_i.operand_b,
     match_result_o  => sig_exe_match_result
 );
 
@@ -147,6 +147,12 @@ begin
     -- TODO check if it's not a NOP!!!!!!!!!!!
 
     v.writing_edge.pointer := mem_edge_i.pointer;
+    v.writing_edge.query_id := mem_edge_i.query_id;
+
+    -- effectively used only in the last level instance
+    if v.inference_res = '1' then
+        v.weight_filter := mem_edge_i.weight;
+    end if;
 
     execute_rin <= v;
 end process;
@@ -155,8 +161,10 @@ execute_seq: process(clk_i)
 begin
     if rising_edge(clk_i) then
         if rst_i = '1' then
-            execute_r.inference_res <= '0';
-            execute_r.writing_edge.pointer <= (others => '0');
+            execute_r.inference_res         <= '0';
+            execute_r.writing_edge.pointer  <= (others => '0');
+            execute_r.writing_edge.query_id <= (others => '0');
+            execute_r.weight_filter         <= 0;
         else
             execute_r <= execute_rin;
         end if;

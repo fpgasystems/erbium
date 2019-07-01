@@ -40,6 +40,7 @@ architecture behavioural of top is
     signal query_opA     : query_array;
     signal query_opB     : query_array;
     signal weight_filter : weight_array;
+    signal weight_driver : weight_array;
     signal mem_edge      : edge_store_array;
     signal mem_addr      : mem_addr_array;
     signal mem_en        : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
@@ -66,6 +67,24 @@ for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
     sig_bram1_addr <= mem_addr_i when mem_wren_i(1) = '1' else
                   sig_cr1mem_addr;
 
+    buff_query_i : buffer_query generic map
+    (
+        G_DEPTH         => CFG_EDGE_BUFFERS_DEPTH
+    )
+    port map
+    (
+        rst_i           => rst_i,
+        clk_i           => clk_i,
+        --
+        wr_en_i         => ,
+        wr_data_i       => ,
+        full_o          => ,
+        --
+        rd_en_i         => ,
+        rd_data_o       => ,
+        empty_o         => 
+    );
+
     pe_i : core generic map
     (
         G_MATCH_STRCT         => ary_match_struct(I),
@@ -85,6 +104,7 @@ for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
         query_opA_i     => query_opA(I),
         query_opB_i     => query_opB(I),
         weight_filter_i => weight_filter(I),
+        weight_filter_o => weight_driver(I),
         -- MEMORY
         mem_edge_i      => mem_edge(I),
         mem_addr_o      => mem_addr(I),
@@ -115,6 +135,9 @@ for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
     );
     
     fwd_gen : if I =/ CFG_ENGINE_NCRITERIA - 1 generate -- from I to I+1
+
+        weight_filter(I) <= weight_driver(CFG_ENGINE_NCRITERIA - 1);
+        weight_driver(I) <= open;
 
         buff_edge_i : buffer_edge generic map
         (
@@ -147,6 +170,7 @@ abv_empty(0) <= '0';
 abv_data(0)  <= sig_origin_node;
 abv_read(0)  <= open;
 
-
+-- LAST
+blw_full(CFG_ENGINE_NCRITERIA - 1) <= '0';
 
 end architecture behavioural;

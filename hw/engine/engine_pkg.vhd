@@ -26,6 +26,8 @@ package engine_pkg is
     --
     constant CFG_MEM_ADDR_WIDTH           : integer := 3;
     --
+    constant CFG_QUERY_BUFFER_DEPTH       : integer := 5;
+    --
     constant CFG_EDGE_BUFFERS_DEPTH       : integer := 5;
     constant CFG_EDGE_BRAM_DEPTH          : integer := 8;
     constant CFG_EDGE_BRAM_WIDTH          : integer := 64;

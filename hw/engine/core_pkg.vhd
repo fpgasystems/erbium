@@ -48,7 +48,14 @@ package core_pkg is
 
     type edge_buffer_type is record
         pointer         : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
-        -- query_id
+        query_id        : integer;
+        -- computed weight
+    end record;
+
+    type query_buffer_type is record
+        operand_a       : std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH - 1 downto 0);
+        operand_b       : std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH - 1 downto 0);
+        query_id        : integer;
     end record;
 
     type fetch_out_type is record
@@ -60,6 +67,7 @@ package core_pkg is
     type execute_out_type is record
         inference_res   : std_logic;
         writing_edge    : edge_buffer_type;
+        weight_filter   : integer;
     end record;
 
     type mem_out_type is record
@@ -138,6 +146,7 @@ package core_pkg is
             query_opA_i         :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH - 1 downto 0);
             query_opB_i         :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH - 1 downto 0);
             weight_filter_i     :  in integer;
+            weight_filter_o     :  in integer; -- only used in last level
             -- MEMORY
             mem_edge_i          :  in edge_store_type;
             mem_addr_o          : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);

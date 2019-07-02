@@ -266,20 +266,32 @@ std::istream& operator>>(std::istream& str, CSVRow& data)
     return str;
 }
 
+struct vertex_info { 
+    uint level;
+    std::string label;
+    std::string path;
+    std::set<uint> parents;
+    std::set<uint> children;
+    uint dump_pointer;
+};
+
+typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, vertex_info> graph_t;
+
+void print_parents(const uint node, const graph_t g, std::string level = "")
+{
+    for(auto& aux : g[node].parents)
+    {
+        std::cout << level << g[node].label << std::endl;
+        print_parents(aux, g, level + "\t");
+    }
+}
+
 struct sort_pred_inv {
     bool operator()(const std::pair<uint,uint> &left, const std::pair<uint,uint> &right) {
         return left.first > right.first;
     }
 };
 
-struct vertex_info { 
-    uint level;
-    std::string label;
-    std::string path;
-    std::set<uint> parents;
-    uint dump_pointer;
-};
-typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, vertex_info> graph_t;
 
 std::string toBinary(uint padding, uint n)
 {
@@ -288,7 +300,9 @@ std::string toBinary(uint padding, uint n)
         r = (n%2==0 ? "0":"1") + r;
         n/=2;
     }
-    padding = padding - r.length();
+
+    padding = (padding > r.length()) ? padding - r.length() : 0;
+
     while(padding != 0)
     {
         r = "0" + r;
@@ -299,9 +313,9 @@ std::string toBinary(uint padding, uint n)
 
 int main()
 {
-    //std::ifstream       file("../../../Documents/amadeus-share/mct_rules.csv");
+    std::ifstream       file("../../../Documents/amadeus-share/mct_rules.csv");
     //std::ifstream       file("../data/demo_02.csv");
-    std::ifstream       file("../data/demo_01.csv");
+    //std::ifstream       file("../data/demo_01.csv");
 
     ////////////////////////////////////////////////////////////////////////////////////////
     std::cout << "# LOAD" << std::endl;
@@ -344,6 +358,8 @@ int main()
         //    continue;
         //if (row.m_data[aux+3] != "\"35\"")
         //    continue;
+        //if (row.m_data[8] != "\"FIR\"" && row.m_data[9] != "\"FIR\"" && row.m_data[8] != "\"IBT\"" && row.m_data[9] != "\"IBT\"")
+        //    continue;
 
         rule_s rl;
         rl.m_ruleId = std::stoi(row.m_data[0].substr(1));
@@ -375,6 +391,7 @@ int main()
         else
             rl.m_content = std::to_string(std::stoi(row.get_value(aux+1))*60 + 
                                           std::stoi(row.get_value(aux+3)));
+
         rp.m_rules.insert(rl);
     }
     //rp.m_ruleType.print("");
@@ -415,6 +432,7 @@ int main()
         ordered.push_back(std::pair<uint, uint>(aux.second.size(), aux.first));
     }
     sort(ordered.begin(), ordered.end(), sort_pred_inv());
+    //sort(ordered.begin(), ordered.end());
     dictionnary[rp.m_ruleType.m_criterionDefinition.size()] = contents;
 
     key = 0;
@@ -474,9 +492,8 @@ int main()
                 node_to_use = netSI[path_fwd];
                 stats_fwd++;
             }
-            boost::remove_edge(prev_id, node_to_use, g);
-            boost::add_edge(prev_id, node_to_use, g);
             g[node_to_use].parents.insert(prev_id);
+            g[prev_id].children.insert(node_to_use);
             prev_id = node_to_use;
             level++;
         }
@@ -493,9 +510,8 @@ int main()
         }
         else
             node_to_use = netSI[rule.m_content];
-        boost::remove_edge(prev_id, node_to_use, g);
-        boost::add_edge(prev_id, node_to_use, g);
         g[node_to_use].parents.insert(prev_id);
+        g[prev_id].children.insert(node_to_use);
     }
     finish = std::chrono::high_resolution_clock::now();
     elapsed = finish - start;
@@ -510,7 +526,7 @@ int main()
     #endif
     // Stats
     std::cout << "total number of nodes: " << boost::num_vertices(g) << std::endl;
-    std::cout << "total number of transitions: " << boost::num_edges(g) << std::endl;
+    std::cout << "total number of transitions: " << boost::num_edges(g) << std::endl; // TODO fix it
     std::cout << "total number of fwd merges: " << stats_fwd << std::endl;
     std::cout << "# GRAPH COMPLETED in " << elapsed.count() << " s\n";
 
@@ -522,10 +538,6 @@ int main()
     // stats
     uint merged_total = 0;
     uint merged_level = 0;
-
-    boost::graph_traits < graph_t >::adjacency_iterator ai, a_end;
-    boost::graph_traits < graph_t >::adjacency_iterator bi, b_end;
-    boost::graph_traits < graph_t >::adjacency_iterator ci, c_end;
     
     // iterates all the levels (one level per criterium)
     for (auto level = ++(vertexes.rbegin()); level != vertexes.rend(); ++level)
@@ -536,54 +548,37 @@ int main()
         #endif
         merged_level = 0;
         // iterates all the values
-        for (auto value_id : vertexes[level->first])
+        for (auto& value_id : vertexes[level->first])
         {
-            // TODO: check why using the "auto" form misses some merges! (227 instead of 234)
             // iterates all the nodes with this value within this level
-            for (auto vertex = vertexes[level->first][value_id.first].rbegin(); vertex != vertexes[level->first][value_id.first].rend(); ++vertex)
-            //for (auto& vertex : vertexes[level->first][value_id.first])
+            for (auto& vertex : vertexes[level->first][value_id.first])
             {
                 // skip if already merged
-                if (g[*vertex].label == "")
+                if (g[vertex].label == "")
                     continue;
 
-                boost::tie(ci, c_end) = adjacent_vertices(*vertex, g);
-                // for (auto& aux : vertexes[level->first][value_id.first])
                 // compare to all the other nodes with same value (within same level)
-                for (auto aux = std::next(vertex); aux != vertexes[level->first][value_id.first].rend(); ++aux)
-                //for (auto& aux : vertexes[level->first][value_id.first])
+                for (auto& aux : vertexes[level->first][value_id.first])
                 {
-                    //if (aux <= vertex)
-                    //    continue;
-
-                    // skip if already merged
-                    if (g[*aux].label == "")
+                    if (aux <= vertex)
                         continue;
 
-                    bool equal = true;
+                    // skip if already merged
+                    if (g[aux].label == "")
+                        continue;
 
                     // Check if both nodes point to the same nodes
-                    boost::tie(ai, a_end) = boost::tie(ci, c_end);
-                    boost::tie(bi, b_end) = adjacent_vertices(*aux, g);
-
-                    for (; ai != a_end && equal; ++ai, ++bi)
-                    {
-                        if (*ai != *bi)
-                            equal = false;
-                    }
-                    if (ai != a_end || bi != b_end)
-                        equal = false;
-
-                    if (equal)
+                    if (g[aux].children == g[vertex].children)
                     {
                         // redirect all the in edges of aux to vertex
-                        for (auto cr : g[*aux].parents)
+                        for (auto& cr : g[aux].parents)
                         {
-                            boost::remove_edge(cr, *aux, g);
-                            boost::add_edge(cr, *vertex, g);
+                            g[cr].children.erase(aux);
+                            g[cr].children.insert(vertex);
+                            g[vertex].parents.insert(cr);
                         }
-                        g[*aux].parents.clear();
-                        g[*aux].label = "";
+                        g[aux].parents.clear();
+                        g[aux].label = "";
                         merged_level++;
                         merged_total++;
                     }
@@ -621,14 +616,25 @@ int main()
             mapa.push_back(*vi);
             mapaa[*vi] = boost::add_vertex(final_one);
             final_one[mapaa[*vi]] = g[*vi];
+            final_one[mapaa[*vi]].parents.clear();
+            final_one[mapaa[*vi]].children.clear();
         }
     }
-    for(boost::tie(bi, b_end) = adjacent_vertices(0, g); bi != b_end; ++bi)
-        boost::add_edge(0, mapaa[*bi], final_one);
-    for (auto itr : mapa)
+    for (auto& vert : g[0].children)
     {
-        for(boost::tie(bi, b_end) = adjacent_vertices(itr, g); bi != b_end; ++bi)
-            boost::add_edge(mapaa[itr], mapaa[*bi], final_one);
+        boost::add_edge(0, mapaa[vert], final_one);
+        final_one[mapaa[vert]].parents.insert(0);
+        final_one[0].children.insert(mapaa[vert]);
+    }
+
+    for (auto& itr : mapa)
+    {
+        for (auto& vert : g[itr].children)
+        {
+            boost::add_edge(mapaa[itr], mapaa[vert], final_one);
+            final_one[mapaa[vert]].parents.insert(mapaa[itr]);
+            final_one[mapaa[itr]].children.insert(mapaa[vert]);
+        }
 
     }
     g = final_one;
@@ -654,7 +660,7 @@ int main()
             {
                 if(g[mapaa[vert]].parents.size() != 0)
                 {
-                    aux = out_degree(mapaa[vert], g);
+                    aux = g[mapaa[vert]].children.size();
                     n_nodes++;
                     n_edges += aux;
                     n_edges_max = (aux > n_edges_max) ? aux : n_edges_max;
@@ -665,8 +671,36 @@ int main()
         n_bram_edges_max = (n_edges > n_bram_edges_max) ? n_edges : n_bram_edges_max;
     }
 
+    ////////////////////////////////////////////////////////////////////////////////////////
+    ////// CONFLICT TEST
+    /*n_nodes = 0;
+    n_edges = 0;
+    n_edges_max = 0;
+    for (auto& value : vertexes[vertexes.size()-2])
+    {
+        for (auto& vert : vertexes[vertexes.size()-2][value.first])
+        {
+            if(g[mapaa[vert]].parents.size() != 0)
+            {
+                aux = g[mapaa[vert]].children.size()
+                n_nodes++;
+                n_edges += aux;
+                n_edges_max = (aux > n_edges_max) ? aux : n_edges_max;
+                if (aux > 1)
+                {
+                    for (auto& aux : g[mapaa[vert]].children)
+                        std::cout << "POINTING TO " << g[aux].label << std::endl;
+
+                    std::cout << "FOUND " << g[mapaa[vert]].label << std::endl;
+                    print_parents(mapaa[vert], g);
+                }
+            }
+        }
+    }*/
+    
+
     std::cout << "total number of nodes: " << boost::num_vertices(g) << std::endl;
-    std::cout << "total number of transitions: " << boost::num_edges(g) << std::endl;
+    std::cout << "total number of transitions: " << boost::num_edges(g) << std::endl; // TODO fix it
 
     ////////////////////////////////////////////////////////////////////////////////////////
 
@@ -682,7 +716,7 @@ int main()
     start = std::chrono::high_resolution_clock::now();
 
     const uint CFG_ENGINE_NCRITERIA       = rp.m_ruleType.m_criterionDefinition.size();
-    const uint CFG_ENGINE_CRITERIUM_WIDTH = 12;
+    const uint CFG_ENGINE_CRITERIUM_WIDTH = 20;
     const uint CFG_WEIGHT_WIDTH           = 19;
     const uint CFG_MEM_ADDR_WIDTH         = ceil(log2(n_bram_edges_max));
     const uint CFG_EDGE_BUFFERS_DEPTH     = 5;
@@ -693,7 +727,6 @@ int main()
     std::map<std::string, uint> dic = dictionnary[dictionnary.size()-1];
     for (auto level = vertexes.rbegin(); level != vertexes.rend(); ++level)
     {
-        std::cout << "doing " << level->first+1 << std::endl;
         myfile.open("bram_cr" + std::to_string(level->first+1) + ".mem");
         n_edges = 0;
 
@@ -705,7 +738,7 @@ int main()
                 {
 
                     g[mapaa[vert]].dump_pointer = n_edges;
-                    n_edges_max = out_degree(mapaa[vert], g);
+                    n_edges_max = g[mapaa[vert]].children.size();
 
                     if (n_edges_max == 0)
                     {
@@ -717,34 +750,21 @@ int main()
                         myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dic[g[mapaa[vert]].label]); // op_b
                         myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dic[g[mapaa[vert]].label]); // op_a
                         myfile << "\n";
-                        //myfile << std::bitset<ZERO_PADDING>(0).to_string(); // padding
-                        //myfile << "1";         // last
-                        //myfile << std::bitset<CFG_WEIGHT_WIDTH>(0).to_string(); // weight
-                        //myfile << std::bitset<CFG_MEM_ADDR_WIDTH>(0).to_string(); // pointer
-                        //myfile << std::bitset<CFG_ENGINE_CRITERIUM_WIDTH>(contents[g[mapaa[vert]].label]).to_string(); // op_b
-                        //myfile << std::bitset<CFG_ENGINE_CRITERIUM_WIDTH>(contents[g[mapaa[vert]].label]).to_string(); // op_a
-                        //myfile << "\n";
                     }
                     else
                     {
                         n_edges += n_edges_max;
-                        boost::tie(ai, a_end) = adjacent_vertices(mapaa[vert], g);
-                        for (aux=1; ai != a_end; ++ai, ++aux)
+                        aux=1;
+                        for (auto& itr : g[mapaa[vert]].children)
                         {
-                            myfile << toBinary(ZERO_PADDING, 0); // padding
-                            myfile << (aux == n_edges_max) ? "1" : "0";         // last
-                            myfile << toBinary(CFG_WEIGHT_WIDTH, 100); // weight TODO
-                            myfile << toBinary(CFG_MEM_ADDR_WIDTH, g[*ai].dump_pointer); // pointer
-                            myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dic[g[*ai].label]); // op_b
-                            myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dic[g[*ai].label]); // op_a
+                            myfile << toBinary(ZERO_PADDING, 0);                                // padding
+                            myfile << (aux == n_edges_max) ? "1" : "0";                         // last
+                            myfile << toBinary(CFG_WEIGHT_WIDTH, 100);                          // weight TODO
+                            myfile << toBinary(CFG_MEM_ADDR_WIDTH, g[itr].dump_pointer);        // pointer
+                            myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dic[g[itr].label]);  // op_b
+                            myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dic[g[itr].label]);  // op_a
                             myfile << "\n";
-                            //myfile << std::bitset<ZERO_PADDING>(0).to_string(); // padding
-                            //myfile << (aux == n_edges_max) ? "1" : "0";         // last
-                            //myfile << std::bitset<CFG_WEIGHT_WIDTH>(100).to_string(); // weight TODO
-                            //myfile << std::bitset<CFG_MEM_ADDR_WIDTH>(g[*ai].dump_pointer).to_string(); // pointer
-                            //myfile << std::bitset<CFG_ENGINE_CRITERIUM_WIDTH>(dictionnary[level->first][g[mapaa[vert]]]).to_string(); // op_b
-                            //myfile << std::bitset<CFG_ENGINE_CRITERIUM_WIDTH>(dictionnary[level->first][g[mapaa[vert]]]).to_string(); // op_a
-                            //myfile << "\n";
+                            aux++;
                         }
                     }
                 }
@@ -756,16 +776,17 @@ int main()
     }
     // origin
     myfile.open("bram_cr0.mem");
-    boost::tie(ai, a_end) = adjacent_vertices(0, g);
-    for (aux=0; ai != a_end; ++ai, ++aux)
+    aux=0;
+    for (auto& vert : g[0].children)
     {
-        myfile << toBinary(ZERO_PADDING, 0); // padding
-        myfile << (aux == n_edges_max) ? "1" : "0";         // last
-        myfile << toBinary(CFG_WEIGHT_WIDTH, 100); // weight TODO
-        myfile << toBinary(CFG_MEM_ADDR_WIDTH, g[*ai].dump_pointer); // pointer
-        myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dictionnary[ordered[0].second][g[*ai].label]); // op_b
-        myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dictionnary[ordered[0].second][g[*ai].label]); // op_a
+        myfile << toBinary(ZERO_PADDING, 0);                                                            // padding
+        myfile << (aux == n_edges_max) ? "1" : "0";                                                     // last
+        myfile << toBinary(CFG_WEIGHT_WIDTH, 100);                                                      // weight TODO
+        myfile << toBinary(CFG_MEM_ADDR_WIDTH, g[vert].dump_pointer);                                   // pointer
+        myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dictionnary[ordered[0].second][g[vert].label]); // op_b
+        myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dictionnary[ordered[0].second][g[vert].label]); // op_a
         myfile << "\n";
+        aux++;
     }
     myfile.close();
 
@@ -787,28 +808,3 @@ int main()
 
     return 0;
 }
-
-/*
-typedef adjacency_list<vecS, vecS, bidirectionalS, 
-    no_property, property<edge_index_t, std::size_t> > Graph;
-
-  const int num_vertices = 9;
-  Graph G(num_vertices);
-
-  int capacity_array[] = { 10, 20, 20, 20, 40, 40, 20, 20, 20, 10 };
-  int flow_array[] = { 8, 12, 12, 12, 12, 12, 16, 16, 16, 8 };
-
-  // Add edges to the graph, and assign each edge an ID number.
-  add_edge(0, 1, 0, G);
-  // ...
-
-  typedef graph_traits<Graph>::edge_descriptor Edge;
-  typedef property_map<Graph, edge_index_t>::type EdgeID_Map;
-  EdgeID_Map edge_id = get(edge_index, G);
-
-  random_access_iterator_property_map
-    <int*, int, int&, EdgeID_Map> 
-      capacity(capacity_array, edge_id), 
-      flow(flow_array, edge_id);
-
-  print_network(G, capacity, flow);*/

@@ -43,7 +43,7 @@ architecture rtl of bram_edge_store is
 
 constant C_RAM_WIDTH : integer := G_RAM_WIDTH;
 constant C_RAM_DEPTH : integer := G_RAM_DEPTH;
-constant C_INIT_FILE : string := G_INIT_FILE;
+constant C_INIT_FILE : string  := G_INIT_FILE;
 
 type ram_type is array (0 to G_RAM_DEPTH-1) of edge_store_type;          -- 2D Array Declaration for RAM signal
 signal ram_data : edge_store_type;

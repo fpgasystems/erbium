@@ -24,12 +24,12 @@ package engine_pkg is
     constant CFG_ENGINE_CRITERIUM_WIDTH   : integer := 12; -- Number of bits of each criterium value
     constant CFG_WEIGHT_WIDTH             : integer := 19; -- integer from 0 to 2^CFG_WEIGHT_WIDTH-1
     --
-    constant CFG_MEM_ADDR_WIDTH           : integer := 3;
+    constant CFG_MEM_ADDR_WIDTH           : integer := 15;
     --
     constant CFG_QUERY_BUFFER_DEPTH       : integer := 5;
     --
     constant CFG_EDGE_BUFFERS_DEPTH       : integer := 5;
-    constant CFG_EDGE_BRAM_DEPTH          : integer := 8;
+    constant CFG_EDGE_BRAM_DEPTH          : integer := 32768;--30690;
     constant CFG_EDGE_BRAM_WIDTH          : integer := 64;
 
 

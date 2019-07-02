@@ -30,7 +30,7 @@ package core_pkg is
 -- TYPES                                                                                          --
 ----------------------------------------------------------------------------------------------------
 
-    type query_in_array_type is array(CFG_ENGINE_NCRITERIA-1 downto 0) of std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH-1 downto 0);
+    type query_in_array_type is array(2*CFG_ENGINE_NCRITERIA-1 downto 0) of std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH-1 downto 0);
 
     type match_structure_type is (STRCT_SIMPLE, STRCT_PAIR);
     type match_pair_function is (FNCTR_PAIR_NOP, FNCTR_PAIR_AND, FNCTR_PAIR_OR, FNCTR_PAIR_XOR, FNCTR_PAIR_NAND, FNCTR_PAIR_NOR);
@@ -130,31 +130,30 @@ package core_pkg is
 
     component core is
         generic (
-            G_MATCH_STRCT         : match_structure_type;
-            G_MATCH_FUNCTION_A    : match_simp_function;
-            G_MATCH_FUNCTION_B    : match_simp_function;
-            G_MATCH_FUNCTION_PAIR : match_pair_function
+            G_MATCH_STRCT         : match_structure_type := STRCT_SIMPLE;
+            G_MATCH_FUNCTION_A    : match_simp_function  := FNCTR_SIMP_NOP;
+            G_MATCH_FUNCTION_B    : match_simp_function  := FNCTR_SIMP_NOP;
+            G_MATCH_FUNCTION_PAIR : match_pair_function  := FNCTR_PAIR_NOP
         );
         port (
-            rst_i               :  in std_logic;
-            clk_i               :  in std_logic;
+            rst_i           :  in std_logic;
+            clk_i           :  in std_logic;
             -- FIFO buffer from above
-            abv_empty_i         :  in std_logic;
-            abv_data_i          :  in edge_buffer_type;
-            abv_read_o          : out std_logic;
+            abv_empty_i     :  in std_logic;
+            abv_data_i      :  in edge_buffer_type;
+            abv_read_o      : out std_logic;
             -- current
-            query_opA_i         :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH - 1 downto 0);
-            query_opB_i         :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH - 1 downto 0);
-            weight_filter_i     :  in integer;
-            weight_filter_o     :  in integer; -- only used in last level
+            query_i         :  in query_buffer_type;
+            weight_filter_i :  in integer;
+            weight_filter_o :  in integer; -- only used in last level
             -- MEMORY
-            mem_edge_i          :  in edge_store_type;
-            mem_addr_o          : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
-            mem_en_o            : out std_logic;
+            mem_edge_i      :  in edge_store_type;
+            mem_addr_o      : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+            mem_en_o        : out std_logic;
             -- FIFO buffer to below
-            blw_full_i          :  in std_logic;
-            blw_data_o          : out edge_buffer_type;
-            blw_write_o         : out std_logic
+            blw_full_i      :  in std_logic;
+            blw_data_o      : out edge_buffer_type;
+            blw_write_o     : out std_logic
         );
     end component;
 
@@ -172,6 +171,24 @@ package core_pkg is
             -- FIFO Read Interface
             rd_en_i    :  in std_logic;
             rd_data_o  : out edge_buffer_type;
+            empty_o    : out std_logic
+        );
+    end component;
+
+    component buffer_query is
+        generic (
+            G_DEPTH : integer := 32
+        );
+        port (
+            rst_i      :  in std_logic;
+            clk_i      :  in std_logic;
+            -- FIFO Write Interface
+            wr_en_i    :  in std_logic;
+            wr_data_i  :  in query_buffer_type;
+            full_o     : out std_logic;
+            -- FIFO Read Interface
+            rd_en_i    :  in std_logic;
+            rd_data_o  : out query_buffer_type;
             empty_o    : out std_logic
         );
     end component;

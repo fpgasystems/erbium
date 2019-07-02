@@ -98,7 +98,7 @@ begin
     if rising_edge(clk_i) then
         if rst_i = '1' then
             fetch_r.mem_addr  <= (others => '0');
-            fetch_r.flow_ctrl <= FLW_CTRL_BUFFER; -- FLW_CTRL_MEM;
+            fetch_r.flow_ctrl <= FLW_CTRL_BUFFER;
             fetch_r.buffer_rd_en <= '0';
         else
             fetch_r <= fetch_rin;
@@ -129,7 +129,7 @@ port map
     match_result_o  => sig_exe_match_result
 );
 
-execute_comb : process(execute_r, mem_edge_i.weight, weight_filter_i, sig_exe_match_result)
+execute_comb : process(execute_r, mem_edge_i.weight, weight_filter_i, sig_exe_match_result, abv_data_i.query_id, fetch_r.flow_ctrl)
     variable v : execute_out_type;
     variable v_weight_check : std_logic;
 begin
@@ -143,11 +143,16 @@ begin
     end if;
 
     -- result of EXE
-    v.inference_res := sig_exe_match_result and v_weight_check;
+    if (fetch_r.flow_ctrl = FLW_CTRL_MEM) then
+        v.inference_res := sig_exe_match_result and v_weight_check;
+    else
+        v.inference_res := '0';
+    end if;
+
     -- TODO check if it's not a NOP!!!!!!!!!!!
 
     v.writing_edge.pointer := mem_edge_i.pointer;
-    v.writing_edge.query_id := mem_edge_i.query_id;
+    v.writing_edge.query_id := abv_data_i.query_id; -- is it the right one or should it be registered?
 
     -- effectively used only in the last level instance
     if v.inference_res = '1' then
@@ -163,7 +168,7 @@ begin
         if rst_i = '1' then
             execute_r.inference_res         <= '0';
             execute_r.writing_edge.pointer  <= (others => '0');
-            execute_r.writing_edge.query_id <= (others => '0');
+            execute_r.writing_edge.query_id <= 0;
             execute_r.weight_filter         <= 0;
         else
             execute_r <= execute_rin;

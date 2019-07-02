@@ -47,7 +47,7 @@ architecture rtl of buffer_edge is
 
     -- # Words in FIFO, has extra range to allow for assert conditions
     signal fifo_cntr_reg : integer range -1 to G_DEPTH+1 := 0;
-    signal fifo_data_reg : fifo_data_type := (others => (others => (others => '0')));
+    signal fifo_data_reg : fifo_data_type;-- := (others => (others => (others => '0')));
 
     signal wr_index_reg  : integer range 0 to G_DEPTH-1 := 0;
     signal rd_index_reg  : integer range 0 to G_DEPTH-1 := 0;

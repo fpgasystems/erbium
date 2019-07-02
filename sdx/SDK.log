@@ -1,0 +1,11 @@
+11:10:20 INFO  : Launching XSCT server: xsct -n -sdx -interactive /home/mowaidah/gits/nfa-bre/sdx/temp_xsdb_launch_script.tcl
+11:10:23 INFO  : XSCT server has started successfully.
+11:10:23 INFO  : plnx-install-location is set to ''
+11:10:23 INFO  : Successfully done setting XSCT server connection channel  
+11:10:23 INFO  : Successfully done setting SDK workspace  
+11:10:23 INFO  : Registering command handlers for SDx TCF services
+11:10:23 INFO  : Registering command handlers for SDK TCF services
+11:10:26 INFO  : Validating SDSoC License...
+11:10:26 INFO  : License for SDSoC is unavailable
+11:10:26 INFO  : Validating SDAccel License...
+11:10:26 INFO  : License available for SDAccel

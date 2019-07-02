@@ -1,0 +1,31 @@
+#-----------------------------------------------------------
+# Vivado v2018.2 (64-bit)
+# SW Build 2258646 on Thu Jun 14 20:02:38 MDT 2018
+# IP Build 2256618 on Thu Jun 14 22:10:49 MDT 2018
+# Start of session at: Tue Jul  2 11:12:45 2019
+# Process ID: 28160
+# Current directory: /home/mowaidah/gits/nfa-bre/sdx/mct-nfa/vivado_rtl_kernel
+# Command line: vivado -mode batch -source /tmp/sdx2992402389011923225.tmp -notrace
+# Log file: /home/mowaidah/gits/nfa-bre/sdx/mct-nfa/vivado_rtl_kernel/vivado.log
+# Journal file: /home/mowaidah/gits/nfa-bre/sdx/mct-nfa/vivado_rtl_kernel/vivado.jou
+#-----------------------------------------------------------
+source /tmp/sdx2992402389011923225.tmp -notrace
+INFO: [IP_Flow 19-234] Refreshing IP repositories
+INFO: [IP_Flow 19-1704] No user IP repositories specified
+INFO: [IP_Flow 19-2313] Loaded Vivado IP repository '/opt/Xilinx/Vivado/2018.2/data/ip'.
+create_ip -name sdx_kernel_wizard -vendor xilinx.com -library ip -version 1.0 -module_name mct
+set_property -dict [list CONFIG.Component_Name {mct} CONFIG.KERNEL_NAME {mct} CONFIG.KERNEL_VENDOR {ethz} CONFIG.KERNEL_LIBRARY {abr} CONFIG.NUM_RESETS {1} CONFIG.NUM_INPUT_ARGS {6} CONFIG.ARG00_NAME {numCriteria} CONFIG.ARG00_TYPE {uchar} CONFIG.ARG01_NAME {queriesNumCLs} CONFIG.ARG02_NAME {edgesNumCLs} CONFIG.ARG03_NAME {resultNumCLs} CONFIG.ARG04_NAME {extraParam1} CONFIG.ARG05_NAME {extraParam2} CONFIG.NUM_M_AXI {1} CONFIG.M00_AXI_NUM_ARGS {3} CONFIG.M00_AXI_ARG00_NAME {nfaPtr} CONFIG.M00_AXI_ARG01_NAME {queryPtr} CONFIG.M00_AXI_ARG02_NAME {resultPtr}] [get_ips mct]
+WARNING: [Vivado 12-3523] Attempt to change 'Component_Name' from 'mct' to 'mct' is not allowed and is ignored.
+generate_target {instantiation_template} [get_files /home/mowaidah/gits/nfa-bre/sdx/mct-nfa/vivado_rtl_kernel/vivado_rtl_kernel.srcs/sources_1/ip/mct/mct.xci]
+INFO: [IP_Flow 19-1686] Generating 'Instantiation Template' target for IP 'mct'...
+set_property generate_synth_checkpoint false [get_files /home/mowaidah/gits/nfa-bre/sdx/mct-nfa/vivado_rtl_kernel/vivado_rtl_kernel.srcs/sources_1/ip/mct/mct.xci]
+generate_target all [get_files /home/mowaidah/gits/nfa-bre/sdx/mct-nfa/vivado_rtl_kernel/vivado_rtl_kernel.srcs/sources_1/ip/mct/mct.xci]
+INFO: [IP_Flow 19-1686] Generating 'Instantiation Template' target for IP 'mct'...
+INFO: [IP_Flow 19-1686] Generating 'Synthesis' target for IP 'mct'...
+export_ip_user_files -of_objects [get_files /home/mowaidah/gits/nfa-bre/sdx/mct-nfa/vivado_rtl_kernel/vivado_rtl_kernel.srcs/sources_1/ip/mct/mct.xci] -no_script -sync -force -quiet
+start_gui
+open_example_project -force -dir /home/mowaidah/gits/nfa-bre/sdx/mct-nfa/vivado_rtl_kernel [get_ips mct]
+INFO: [IP_Flow 19-1686] Generating 'Examples' target for IP 'mct'...
+open_example_project: Time (s): cpu = 00:00:00.71 ; elapsed = 00:00:46 . Memory (MB): peak = 6556.133 ; gain = 0.004 ; free physical = 4447 ; free virtual = 28877
+exit
+INFO: [Common 17-206] Exiting Vivado at Tue Jul  2 11:22:29 2019...

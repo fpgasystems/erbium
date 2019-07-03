@@ -30,7 +30,7 @@ package core_pkg is
 -- TYPES                                                                                          --
 ----------------------------------------------------------------------------------------------------
 
-    type query_in_array_type is array(2*CFG_ENGINE_NCRITERIA-1 downto 0) of std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH-1 downto 0);
+    -- TODO define range of integer QUERY_ID as a subtype ;)
 
     type match_structure_type is (STRCT_SIMPLE, STRCT_PAIR);
     type match_pair_function is (FNCTR_PAIR_NOP, FNCTR_PAIR_AND, FNCTR_PAIR_OR, FNCTR_PAIR_XOR, FNCTR_PAIR_NAND, FNCTR_PAIR_NOR);
@@ -57,11 +57,19 @@ package core_pkg is
         operand_b       : std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH - 1 downto 0);
         query_id        : integer;
     end record;
+    type query_in_array_type is array(0 to CFG_ENGINE_NCRITERIA - 1) of query_buffer_type;
+
+    type query_flow_type is record
+        flow_ctrl       : core_flow_control;
+        query           : query_buffer_type;
+        read_en         : std_logic;
+    end record;
 
     type fetch_out_type is record
         buffer_rd_en    : std_logic;
         mem_addr        : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
         flow_ctrl       : core_flow_control;
+        query_id        : integer;
     end record;
 
     type execute_out_type is record
@@ -138,22 +146,25 @@ package core_pkg is
         port (
             rst_i           :  in std_logic;
             clk_i           :  in std_logic;
-            -- FIFO buffer from above
-            abv_empty_i     :  in std_logic;
-            abv_data_i      :  in edge_buffer_type;
-            abv_read_o      : out std_logic;
-            -- current
+            -- FIFO edge buffer from previous level
+            prev_empty_i    :  in std_logic;
+            prev_data_i     :  in edge_buffer_type;
+            prev_read_o     : out std_logic;
+            -- FIFO query buffer
             query_i         :  in query_buffer_type;
+            query_empty_i   :  in std_logic;
+            query_read_o    : out std_logic;
+            --
             weight_filter_i :  in integer;
             weight_filter_o :  in integer; -- only used in last level
             -- MEMORY
             mem_edge_i      :  in edge_store_type;
             mem_addr_o      : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
             mem_en_o        : out std_logic;
-            -- FIFO buffer to below
-            blw_full_i      :  in std_logic;
-            blw_data_o      : out edge_buffer_type;
-            blw_write_o     : out std_logic
+            -- FIFO edge buffer to next level
+            next_full_i     :  in std_logic;
+            next_data_o     : out edge_buffer_type;
+            next_write_o    : out std_logic
         );
     end component;
 

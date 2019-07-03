@@ -7,13 +7,17 @@ use bre.core_pkg.all;
 
 entity top is
     port (
-        clk_i      :  in std_logic;
-        rst_i      :  in std_logic;
-        query_i    :  in query_in_array_type;
-        mem_i      :  in edge_store_type;
-        mem_wren_i :  in std_logic_vector(CFG_ENGINE_NCRITERIA - 1 downto 0);
-        mem_addr_i :  in std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
-        result_o   : out std_logic
+        clk_i          :  in std_logic;
+        rst_i          :  in std_logic;
+        query_i        :  in query_in_array_type;
+        query_wren_i   :  in std_logic;
+        query_full_o   : out std_logic;
+        mem_i          :  in edge_store_type;
+        mem_wren_i     :  in std_logic_vector(CFG_ENGINE_NCRITERIA - 1 downto 0);
+        mem_addr_i     :  in std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        result_ready_o : out std_logic;
+        result_value_o : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        result_query_o : out integer
     );
 end top;
 
@@ -120,18 +124,21 @@ architecture behavioural of top is
     --
     type query_buffer_array is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of query_buffer_type;
     --
-    signal abv_empty     : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
-    signal abv_read      : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
-    signal abv_data      : edge_buffer_array;
+    signal prev_empty    : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
+    signal prev_read     : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
+    signal prev_data     : edge_buffer_array;
     signal query         : query_buffer_array;
+    signal query_full    : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
+    signal query_empty   : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
+    signal query_read    : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
     signal weight_filter : weight_array;
     signal weight_driver : weight_array;
     signal mem_edge      : edge_store_array;
     signal mem_addr      : mem_addr_array;
     signal mem_en        : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
-    signal blw_full      : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
-    signal blw_data      : edge_buffer_array;
-    signal blw_write     : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
+    signal next_full     : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
+    signal next_data     : edge_buffer_array;
+    signal next_write    : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
     --
     -- BRAM INTERFACE ARRAYS
     signal bram_en       : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
@@ -148,26 +155,23 @@ gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
     bram_addr(I) <= mem_addr_i when mem_wren_i(I) = '1' else
                     mem_addr(I);
 
-    query(I).operand_a <= query_i((I*2));
-    query(I).operand_b <= query_i((I*2)+1);
-
-    -- buff_query_g : buffer_query generic map
-    -- (
-    --     G_DEPTH         => CFG_EDGE_BUFFERS_DEPTH
-    -- )
-    -- port map
-    -- (
-    --     rst_i           => rst_i,
-    --     clk_i           => clk_i,
-    --     --
-    --     wr_en_i         => ,
-    --     wr_data_i       => ,
-    --     full_o          => ,
-    --     --
-    --     rd_en_i         => ,
-    --     rd_data_o       => ,
-    --     empty_o         => 
-    -- );
+    buff_query_g : buffer_query generic map
+    (
+        G_DEPTH         => CFG_EDGE_BUFFERS_DEPTH
+    )
+    port map
+    (
+        rst_i           => rst_i,
+        clk_i           => clk_i,
+        --
+        wr_en_i         => query_wren_i,
+        wr_data_i       => query_i(I),
+        full_o          => query_full(I),
+        --
+        rd_en_i         => query_read(I),
+        rd_data_o       => query(I),
+        empty_o         => query_empty(I)
+    );
 
     pe_g : core generic map
     (
@@ -181,11 +185,14 @@ gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
         rst_i           => rst_i,
         clk_i           => clk_i,
         -- FIFO buffer from above
-        abv_empty_i     => abv_empty(I),
-        abv_data_i      => abv_data(I),
-        abv_read_o      => abv_read(I),
-        -- current
+        prev_empty_i    => prev_empty(I),
+        prev_data_i     => prev_data(I),
+        prev_read_o     => prev_read(I),
+        -- FIFO query buffer
         query_i         => query(I),
+        query_empty_i   => query_empty(I),
+        query_read_o    => query_read(I),
+        --
         weight_filter_i => weight_filter(I),
         weight_filter_o => weight_driver(I),
         -- MEMORY
@@ -193,9 +200,9 @@ gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
         mem_addr_o      => mem_addr(I),
         mem_en_o        => mem_en(I),
         -- FIFO buffer to below
-        blw_full_i      => blw_full(I),
-        blw_data_o      => blw_data(I),
-        blw_write_o     => blw_write(I)
+        next_full_i      => next_full(I),
+        next_data_o      => next_data(I),
+        next_write_o     => next_write(I)
     );
 
     bram_g : bram_edge_store generic map
@@ -220,7 +227,6 @@ gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
     gen_fwd : if I /= CFG_ENGINE_NCRITERIA - 1 generate -- from I to I+1
 
         weight_filter(I) <= weight_driver(CFG_ENGINE_NCRITERIA - 1);
-        -- weight_driver(I) <= open;
 
         buff_edge_g : buffer_edge generic map
         (
@@ -231,30 +237,29 @@ gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
             rst_i           => rst_i,
             clk_i           => clk_i,
             --
-            wr_en_i         => blw_write(I),
-            wr_data_i       => blw_data(I),
-            full_o          => blw_full(I),
+            wr_en_i         => next_write(I),
+            wr_data_i       => next_data(I),
+            full_o          => next_full(I),
             --
-            rd_en_i         => abv_read(I+1),
-            rd_data_o       => abv_data(I+1),
-            empty_o         => abv_empty(I+1)
+            rd_en_i         => prev_read(I+1),
+            rd_data_o       => prev_data(I+1),
+            empty_o         => prev_empty(I+1)
         );
     end generate gen_fwd;
 
 end generate gen_stages;
 
--- TODO last stage (content)
--- TODO gen_fwd for last stage
-
-
 -- ORIGIN
 sig_origin_node.pointer <= (others => '0');
-abv_empty(0) <= '0';
-abv_data(0)  <= sig_origin_node;
--- abv_read(0)  <= open;
+prev_empty(0) <= '0';
+prev_data(0)  <= sig_origin_node;
 
 -- LAST
-blw_full(CFG_ENGINE_NCRITERIA - 1) <= '0';
-result_o <= blw_write(CFG_ENGINE_NCRITERIA - 1);
+query_full_o   <= query_full(CFG_ENGINE_NCRITERIA - 1);
+result_value_o <= next_data(CFG_ENGINE_NCRITERIA - 1).pointer;
+result_query_o <= next_data(CFG_ENGINE_NCRITERIA - 1).query_id;
+result_ready_o <= next_write(CFG_ENGINE_NCRITERIA - 1);
+next_full(CFG_ENGINE_NCRITERIA - 1) <= '0';
+
 
 end architecture behavioural;

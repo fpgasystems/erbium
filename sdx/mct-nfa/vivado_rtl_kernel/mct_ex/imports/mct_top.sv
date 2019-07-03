@@ -69,15 +69,15 @@ logic                                ap_done_r                      = 1'b0;
 logic [32-1:0]                       ctrl_xfer_size_in_bytes        = LP_DEFAULT_LENGTH_IN_BYTES;
 logic [32-1:0]                       ctrl_constant                  = 32'd1;
 
-wire                              wr_tvalid;
-wire                              wr_tready;
-wire [C_M00_AXI_DATA_WIDTH-1:0]   wr_tdata;
+wire                                 wr_tvalid;
+wire                                 wr_tready;
+wire   [C_M00_AXI_DATA_WIDTH-1:0]    wr_tdata;
 
-wire                              rd_tvalid;
-wire                              rd_ttype;
-wire                              rd_tlast;
-wire                              rd_tready;
-wire [C_M00_AXI_DATA_WIDTH-1:0]   rd_tdata;
+wire                                 rd_tvalid;
+wire                                 rd_ttype;
+wire                                 rd_tlast;
+wire                                 rd_tready;
+wire   [C_M00_AXI_DATA_WIDTH-1:0]    rd_tdata;
 
 
 logic [16-1:0]                     num_words_per_tuple;
@@ -171,15 +171,20 @@ inst_InputChannel (
 
 mct_wrapper mct_wrapper(
   .clk                            (ap_clk),
-  .rst_n                          (rst_n),
-  .start_core                     (ap_start_pulse_d1),
+  .rst                            (~rst_n),
   
   // parameters
-  
+  .numCriteria                    (numCriteria),
   // input
-  
+  .rd_data                        (rd_tdata),
+  .rd_valid                       (rd_tvalid),
+  .rd_last                        (rd_tlast),
+  .rd_stype                       (rd_ttype),
+  .rd_ready                       (rd_tready),
   // output 
-  
+  .wr_data                        (wr_tdata),
+  .wr_valid                       (wr_tvalid),
+  .wr_ready                       (wr_tready)
 );
 
 

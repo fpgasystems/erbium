@@ -9,13 +9,17 @@ entity top is
     port (
         clk_i          :  in std_logic;
         rst_i          :  in std_logic;
+        --
         query_i        :  in query_in_array_type;
-        query_wren_i   :  in std_logic;
-        query_full_o   : out std_logic;
+        query_wr_en_i  :  in std_logic;
+        query_ready_o  : out std_logic;
+        --
         mem_i          :  in edge_store_type;
         mem_wren_i     :  in std_logic_vector(CFG_ENGINE_NCRITERIA - 1 downto 0);
         mem_addr_i     :  in std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
-        result_ready_o : out std_logic;
+        --
+        result_ready_i :  in std_logic;
+        result_valid_o : out std_logic;
         result_value_o : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
         result_query_o : out integer
     );
@@ -151,7 +155,7 @@ begin
 
 gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
     
-    bram_en(I) <= mem_wren_i(I) or mem_en(I);
+    bram_en(I)   <= mem_wren_i(I) or mem_en(I);
     bram_addr(I) <= mem_addr_i when mem_wren_i(I) = '1' else
                     mem_addr(I);
 
@@ -200,9 +204,9 @@ gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
         mem_addr_o      => mem_addr(I),
         mem_en_o        => mem_en(I),
         -- FIFO buffer to below
-        next_full_i      => next_full(I),
-        next_data_o      => next_data(I),
-        next_write_o     => next_write(I)
+        next_full_i     => next_full(I),
+        next_data_o     => next_data(I),
+        next_write_o    => next_write(I)
     );
 
     bram_g : bram_edge_store generic map
@@ -245,6 +249,7 @@ gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
             rd_data_o       => prev_data(I+1),
             empty_o         => prev_empty(I+1)
         );
+
     end generate gen_fwd;
 
 end generate gen_stages;
@@ -255,11 +260,11 @@ prev_empty(0) <= '0';
 prev_data(0)  <= sig_origin_node;
 
 -- LAST
-query_full_o   <= query_full(CFG_ENGINE_NCRITERIA - 1);
+query_ready_o  <= not query_full(CFG_ENGINE_NCRITERIA - 1);
 result_value_o <= next_data(CFG_ENGINE_NCRITERIA - 1).pointer;
 result_query_o <= next_data(CFG_ENGINE_NCRITERIA - 1).query_id;
-result_ready_o <= next_write(CFG_ENGINE_NCRITERIA - 1);
-next_full(CFG_ENGINE_NCRITERIA - 1) <= '0';
-
+result_valid_o <= next_write(CFG_ENGINE_NCRITERIA - 1);
+next_full(CFG_ENGINE_NCRITERIA - 1) <= not result_ready_i;
+-- if hosts is often not ready, deploy a fifo so the last level is less often blocked
 
 end architecture behavioural;

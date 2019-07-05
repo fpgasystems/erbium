@@ -21,8 +21,8 @@ use ieee.numeric_std.all;
 library std;
 use std.textio.all;
 
-library bre;
-use bre.engine_pkg.all;
+library xil_defaultlib;
+use xil_defaultlib.engine_pkg.all;
 
 package core_pkg is
 

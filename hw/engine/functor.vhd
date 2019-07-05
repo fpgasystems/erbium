@@ -22,12 +22,10 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use ieee.numeric_std.all;
 
-library tools;
-use tools.std_pkg.all;
-
-library bre;
-use bre.engine_pkg.all;
-use bre.core_pkg.all;
+library xil_defaultlib;
+use xil_defaultlib.std_pkg.all;
+use xil_defaultlib.engine_pkg.all;
+use xil_defaultlib.core_pkg.all;
 
 entity functor is
     generic (

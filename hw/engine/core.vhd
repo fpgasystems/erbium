@@ -1,12 +1,10 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library tools;
-use tools.std_pkg.all;
-
-library bre;
-use bre.engine_pkg.all;
-use bre.core_pkg.all;
+library xil_defaultlib;
+use xil_defaultlib.std_pkg.all;
+use xil_defaultlib.engine_pkg.all;
+use xil_defaultlib.core_pkg.all;
 
 entity core is
     generic (

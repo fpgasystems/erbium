@@ -10,9 +10,9 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library std;
-use std.pkg_ram.all;
-use std.textio.all;
+library xil_defaultlib;
+use xil_defaultlib.ram_pkg.all;
+use xil_defaultlib.textio.all;
 
 entity xilinx_single_port_ram_no_change is
 generic (

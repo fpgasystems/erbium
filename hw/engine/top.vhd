@@ -1,9 +1,10 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.all;
 
-library bre;
-use bre.engine_pkg.all;
-use bre.core_pkg.all;
+library xil_defaultlib;
+use xil_defaultlib.engine_pkg.all;
+use xil_defaultlib.core_pkg.all;
+use xil_defaultlib.core_pkg.all;
 
 entity top is
     port (

@@ -20,8 +20,8 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library bre;
-use bre.core_pkg.all;
+library xil_defaultlib;
+use xil_defaultlib.core_pkg.all;
 
 entity buffer_query is
     generic (

@@ -14,11 +14,9 @@ use ieee.std_logic_textio.all;
 library std;
 use std.textio.all;
 
-library tools;
-use tools.ram_pkg.all;
-
-library bre;
-use bre.core_pkg.all;
+library xil_defaultlib;
+use xil_defaultlib.ram_pkg.all;
+use xil_defaultlib.core_pkg.all;
 
 entity bram_edge_store is
     generic (

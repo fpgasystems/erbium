@@ -112,53 +112,49 @@ begin
 
       when FLW_CTRL_READ =>
 
-            v.ready := '1';
             v.wr_en := '0';
 
+            if rd_valid_i = '1' then
+                v.ready := '1';
 
-            -- v.counter := query_r.counter + 1;
-            -- if v.counter /= C_SLICES_REM then
-            --     -- read C_QUERY_PARTITIONS criteria
-            -- else
-            --     -- read C_SLICES_MOD criteria
-            --     -- last cicle
-            -- end if;
-
-
-            remaining := CFG_ENGINE_NCRITERIA - query_r.counter;
-            if (remaining > C_QUERY_PARTITIONS) then
-                useful := C_QUERY_PARTITIONS;
-                -- full slices
-                for idx in 0 to C_QUERY_PARTITIONS loop
-                    v.query_array(query_r.counter + idx).operand_a := rd_data_i(
+                remaining := CFG_ENGINE_NCRITERIA - query_r.counter;
+                if (remaining > C_QUERY_PARTITIONS) then
+                    useful := C_QUERY_PARTITIONS;
+                    -- full slices
+                    for idx in 0 to C_QUERY_PARTITIONS loop
+                        v.query_array(query_r.counter + idx).operand_a := rd_data_i(
                                             CFG_DATA_BUS_WIDTH-(idx*2*CFG_ENGINE_CRITERIUM_WIDTH)-1
                                             downto
                                             CFG_DATA_BUS_WIDTH-(idx*2*CFG_ENGINE_CRITERIUM_WIDTH)-CFG_ENGINE_CRITERIUM_WIDTH);
-                    v.query_array(query_r.counter + idx).operand_b := rd_data_i(
+                        v.query_array(query_r.counter + idx).operand_b := rd_data_i(
                                             CFG_DATA_BUS_WIDTH-(idx*2*CFG_ENGINE_CRITERIUM_WIDTH)-CFG_ENGINE_CRITERIUM_WIDTH-1
                                             downto
                                             CFG_DATA_BUS_WIDTH-((idx+1)*2*CFG_ENGINE_CRITERIUM_WIDTH));
-                    --v.query_array(idx).query_id  := ; -- TODO query_id
-                end loop;
+                    end loop;
+                else
+                    useful := remaining;
+                    -- total mod piece slices
+                    for idx in 0 to C_SLICES_MOD - 1 loop
+                        v.query_array(query_r.counter + idx).operand_a := rd_data_i(
+                                                CFG_DATA_BUS_WIDTH-(idx*2*CFG_ENGINE_CRITERIUM_WIDTH)-1
+                                                downto
+                                                CFG_DATA_BUS_WIDTH-(idx*2*CFG_ENGINE_CRITERIUM_WIDTH)-CFG_ENGINE_CRITERIUM_WIDTH);
+                        v.query_array(query_r.counter + idx).operand_b := rd_data_i(
+                                                CFG_DATA_BUS_WIDTH-(idx*2*CFG_ENGINE_CRITERIUM_WIDTH)-CFG_ENGINE_CRITERIUM_WIDTH-1
+                                                downto
+                                                CFG_DATA_BUS_WIDTH-((idx+1)*2*CFG_ENGINE_CRITERIUM_WIDTH));
+                    end loop;
+                end if;
+                
+                --v.query_array(idx).query_id  := ; -- TODO query_id
+                
+                v.counter := query_r.counter + useful;
+                if (v.counter = CFG_ENGINE_NCRITERIA) then
+                    v.flow_ctrl := FLW_CTRL_WRITE;
+                    v.ready := '0';
+                end if;
+
             else
-                useful := remaining;
-                -- total mod piece slices
-                for idx in 0 to C_SLICES_MOD - 1 loop
-                    v.query_array(query_r.counter + idx).operand_a := rd_data_i(
-                                            CFG_DATA_BUS_WIDTH-(idx*2*CFG_ENGINE_CRITERIUM_WIDTH)-1
-                                            downto
-                                            CFG_DATA_BUS_WIDTH-(idx*2*CFG_ENGINE_CRITERIUM_WIDTH)-CFG_ENGINE_CRITERIUM_WIDTH);
-                    v.query_array(query_r.counter + idx).operand_b := rd_data_i(
-                                            CFG_DATA_BUS_WIDTH-(idx*2*CFG_ENGINE_CRITERIUM_WIDTH)-CFG_ENGINE_CRITERIUM_WIDTH-1
-                                            downto
-                                            CFG_DATA_BUS_WIDTH-((idx+1)*2*CFG_ENGINE_CRITERIUM_WIDTH));
-                    --v.query_array(idx).query_id  := ; -- TODO query_id
-                end loop;
-            end if;
-            
-            v.counter := query_r.counter + useful;
-            if (v.counter = CFG_ENGINE_NCRITERIA) then
-                v.flow_ctrl := FLW_CTRL_WRITE;
                 v.ready := '0';
             end if;
 
@@ -205,13 +201,16 @@ nfa_comb : process(nfa_r, rd_stype_i, rd_valid_i, rd_data_i)
 begin
     v := nfa_r;
 
+    -- default
+    v.mem_wren   := (others => '0');
+    v.engine_rst := '0';
+    v.ready      := '0';
+
     case nfa_r.flow_ctrl is
 
       when FLW_CTRL_WAIT =>
 
             v.ready      := '0';
-            v.mem_wren   := (others => '0');
-            v.engine_rst := '0';
             if rd_stype_i = CFG_RD_TYPE_NFA and rd_valid_i = '1' then
                 v.flow_ctrl     := FLW_CTRL_READ;
                 v.ready         := '0';
@@ -221,50 +220,53 @@ begin
 
       when FLW_CTRL_READ =>
 
-            -- Once per criterium
-            v.ready     := '0';
-            v.flow_ctrl := FLW_CTRL_WRITE;
-            v.mem_wren  := (others => '0');
-            v.mem_addr  := (others => '0');
-            v.mem_data  := deserialise_edge_store(rd_data_i(
+            if rd_valid_i = '1' then
+                -- Once per criterium
+                v.ready     := '0';
+                v.flow_ctrl := FLW_CTRL_WRITE;
+                v.mem_wren  := (others => '0');
+                v.mem_addr  := (others => '0');
+                v.mem_data  := deserialise_edge_store(rd_data_i(
                                             CFG_DATA_BUS_WIDTH-CFG_EDGE_BRAM_WIDTH-1
                                             downto
                                             CFG_DATA_BUS_WIDTH-(2*CFG_EDGE_BRAM_WIDTH)));
-            v.cnt_edge  := rd_data_i(CFG_DATA_BUS_WIDTH-(CFG_EDGE_BRAM_WIDTH-CFG_MEM_ADDR_WIDTH)-1
+                v.cnt_edge  := rd_data_i(CFG_DATA_BUS_WIDTH-(CFG_EDGE_BRAM_WIDTH-CFG_MEM_ADDR_WIDTH)-1
                                      downto
                                      CFG_DATA_BUS_WIDTH-CFG_EDGE_BRAM_WIDTH);
 
-            v.cnt_slice := 2;
+                v.cnt_slice := 2;
 
-            if nfa_r.cnt_criterium = CFG_ENGINE_NCRITERIA then
-                v.flow_ctrl  := FLW_CTRL_WAIT;
-                v.mem_wren   := (others => '0');
-                v.engine_rst := '0';
-            else
-                v.mem_wren(nfa_r.cnt_criterium) := '1';
+                if nfa_r.cnt_criterium = CFG_ENGINE_NCRITERIA then
+                    v.flow_ctrl  := FLW_CTRL_WAIT;
+                    v.mem_wren   := (others => '0');
+                else
+                    v.mem_wren(nfa_r.cnt_criterium) := '1';
+                end if;
             end if;
 
       when FLW_CTRL_WRITE =>
 
-            -- Once per edge
-            v.ready     := '0';
-            v.mem_addr  := increment(nfa_r.mem_addr);
-            v.mem_data  := deserialise_edge_store(rd_data_i(
+            if rd_valid_i = '1' then
+                -- Once per edge
+                v.ready     := '0';
+                v.mem_addr  := increment(nfa_r.mem_addr);
+                v.mem_data  := deserialise_edge_store(rd_data_i(
                                         CFG_DATA_BUS_WIDTH-(nfa_r.cnt_slice*CFG_EDGE_BRAM_WIDTH)-1
                                         downto
                                         CFG_DATA_BUS_WIDTH-((nfa_r.cnt_slice+1)*CFG_EDGE_BRAM_WIDTH)));
-            v.cnt_slice := nfa_r.cnt_slice + 1;
+                v.cnt_slice := nfa_r.cnt_slice + 1;
 
-            if v.cnt_slice = C_QUERY_PARTITIONS-1 then
-                v.cnt_slice := 0;
-                v.ready     := '1';
-            end if;
+                if v.cnt_slice = C_QUERY_PARTITIONS-1 then
+                    v.cnt_slice := 0;
+                    v.ready     := '1';
+                end if;
 
-            if v.mem_addr = nfa_r.cnt_edge then
-                v.flow_ctrl     := FLW_CTRL_READ;
-                v.cnt_criterium := nfa_r.cnt_criterium + 1;
-                v.mem_wren      := (others => '0');
-                v.ready         := '0';
+                if v.mem_addr = nfa_r.cnt_edge then
+                    v.flow_ctrl     := FLW_CTRL_READ;
+                    v.cnt_criterium := nfa_r.cnt_criterium + 1;
+                    v.mem_wren      := (others => '0');
+                    v.ready         := '0';
+                end if;
             end if;
 
     end case;
@@ -278,8 +280,8 @@ begin
         if rst_i = '1' then
             nfa_r.flow_ctrl       <= FLW_CTRL_WAIT;
             nfa_r.ready           <= '0';
-            nfa_r.cnt_criterium   <= 0;
-            nfa_r.cnt_slice       <= 0;
+            nfa_r.cnt_criterium   <=  0;
+            nfa_r.cnt_slice       <=  0;
             nfa_r.cnt_edge        <= (others => '0');
             nfa_r.mem_addr        <= (others => '0');
             nfa_r.mem_wren        <= (others => '0');

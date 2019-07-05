@@ -170,21 +170,19 @@ inst_InputChannel (
 
 
 mct_wrapper mct_wrapper(
-  .clk                            (ap_clk),
-  .rst                            (~rst_n),
+  .clk_i                          (ap_clk),
+  .rst_i                          (~rst_n),
   
-  // parameters
-  .numCriteria                    (numCriteria),
   // input
-  .rd_data                        (rd_tdata),
-  .rd_valid                       (rd_tvalid),
-  .rd_last                        (rd_tlast),
-  .rd_stype                       (rd_ttype),
-  .rd_ready                       (rd_tready),
+  .rd_data_i                      (rd_tdata),
+  .rd_valid_i                     (rd_tvalid),
+  .rd_last_i                      (rd_tlast),
+  .rd_stype_i                     (rd_ttype),
+  .rd_ready_o                     (rd_tready),
   // output 
-  .wr_data                        (wr_tdata),
-  .wr_valid                       (wr_tvalid),
-  .wr_ready                       (wr_tready)
+  .wr_data_o                      (wr_tdata),
+  .wr_valid_o                     (wr_tvalid),
+  .wr_ready_i                     (wr_tready)
 );
 
 

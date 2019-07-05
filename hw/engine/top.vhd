@@ -20,8 +20,7 @@ entity top is
         --
         result_ready_i :  in std_logic;
         result_valid_o : out std_logic;
-        result_value_o : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
-        result_query_o : out integer
+        result_value_o : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0)
     );
 end top;
 
@@ -262,7 +261,6 @@ prev_data(0)  <= sig_origin_node;
 -- LAST
 query_ready_o  <= not query_full(CFG_ENGINE_NCRITERIA - 1);
 result_value_o <= next_data(CFG_ENGINE_NCRITERIA - 1).pointer;
-result_query_o <= next_data(CFG_ENGINE_NCRITERIA - 1).query_id;
 result_valid_o <= next_write(CFG_ENGINE_NCRITERIA - 1);
 next_full(CFG_ENGINE_NCRITERIA - 1) <= not result_ready_i;
 -- if hosts is often not ready, deploy a fifo so the last level is less often blocked

@@ -29,7 +29,7 @@ entity bram_edge_store is
     );
     port (
         clk_i        :  in std_logic;
-        rst_i        :  in std_logic;
+        rst_i        :  in std_logic; -- NOT IN USE (otherwise, must be diff from engine_rst)
         ram_reg_en_i :  in std_logic; -- Output register enable
         ram_en_i     :  in std_logic; -- RAM Enable, for additional power savings, disable port when not in use
         addr_i       :  in std_logic_vector((clogb2(G_RAM_DEPTH)-1) downto 0);
@@ -116,7 +116,7 @@ end generate;
 -- process(clk_i)
 -- begin
 --     if rising_edge(clk_i) then
---         if(rst_i = '1') then
+--         if(rst_i = '1') then -- RST_I NOT IN USE, OTHERWISE MUST BE DIFF FROM ENGINE_RST
 --             rd_data_reg <= (others => (others => '0'));
 --         elsif(ram_reg_en_i = '1') then
 --             rd_data_reg <= ram_data;

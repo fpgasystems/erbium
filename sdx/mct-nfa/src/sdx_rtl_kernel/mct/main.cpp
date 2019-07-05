@@ -726,105 +726,71 @@ void initQueries(void* queries, uint numCriteria, uint numQueries)
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void runQueries(cl_command_queue queue1, cl_command_queue queue2,
-                xcl_world world, cl_program program, cl_kernel kernel[2], void* trees,
-                std::vector<float,aligned_allocator<float>>* data[4],
-                std::vector<float,aligned_allocator<float>>* results[4],
-                uint numQueries, uint data_size, uint results_size,
-                uint ensemble_size, unsigned short nfeatures, unsigned char tdepth, unsigned char putrees,
-                uint treesNumCLs, uint dataNumCLs, uint outputNumCLs, short lastOutLineMask)
+void runMCT(cl_command_queue queue, xcl_world world, cl_program program, cl_kernel kernel, 
+			    void* nfa, void* queries, void* results, 
+                unsigned char numCriteria, uint queries_size, uint results_size, uint nfa_size, 
+                uint nfaNumCLs, uint queriesNumCLs, uint resultNumCLs)
 {
   int err;
   printf("Start Run Queries\n"); fflush(stdout);
   //
   //
-  array<cl_event, 2> kernel_events;
-  array<cl_event, 2> read_events;
-  array<cl_event, 2> write_events;
-  cl_mem buffer_data[2], buffer_trees, buffer_results[2];
+  cl_mem buffer_queries, buffer_nfa, buffer_results;
 
   size_t global = 1, local = 1;
 
 
   // write trees
-  buffer_trees = clCreateBuffer(world.context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, ensemble_size, trees, NULL);
+  buffer_nfa = clCreateBuffer(world.context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, nfa_size, nfa, NULL);
 
-  printf("trees buffer created, %p\n", buffer_trees); fflush(stdout);
+  printf("nfa buffer created, %p\n", buffer_nfa); fflush(stdout);
 
   OCL_CHECK(clEnqueueMigrateMemObjects(
-        queue1, 1, &buffer_trees,
+        queue, 1, &buffer_nfa,
         0 /* flags, 0 means from host */,
         0, NULL,
         NULL));
-  printf("migrate trees to queue1\n"); fflush(stdout);
-  OCL_CHECK(clEnqueueMigrateMemObjects(
-        queue2, 1, &buffer_trees,
-        0 /* flags, 0 means from host */,
-        0, NULL,
-        NULL));
-  printf("migrate trees to queue2\n"); fflush(stdout);
-  clFinish(queue1);
-  clFinish(queue2);
+  printf("migrate nfa to queue\n"); fflush(stdout);
+  clFinish(queue);
 
   printf("migrate trees done\n"); fflush(stdout);
 
   // create data/ results buffers
-  for (int i = 0; i < 2; ++i)
-  {
-    buffer_data[i]    = clCreateBuffer(world.context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,  data_size, data[i]->data(), NULL);
-    buffer_results[i] = clCreateBuffer(world.context, CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR, results_size, results[i]->data(), NULL);
+  buffer_queries = clCreateBuffer(world.context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,  queries_size, queries, NULL);
+  buffer_results = clCreateBuffer(world.context, CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR, results_size, results, NULL);
 
-    //Set the Kernel Arguments
-    xcl_set_kernel_arg(kernel[i], 0, 2, &nfeatures);
-    xcl_set_kernel_arg(kernel[i], 1, 1, &tdepth);              // tree Depth
-    xcl_set_kernel_arg(kernel[i], 2, 1, &putrees);              // pu trees
-    xcl_set_kernel_arg(kernel[i], 3, 4, &treesNumCLs);
-    xcl_set_kernel_arg(kernel[i], 4, 4, &dataNumCLs);
-    xcl_set_kernel_arg(kernel[i], 5, 4, &outputNumCLs);
-    xcl_set_kernel_arg(kernel[i], 6, 2, &lastOutLineMask);
-    xcl_set_kernel_arg(kernel[i], 7, sizeof(cl_mem), &buffer_trees);
-    xcl_set_kernel_arg(kernel[i], 8, sizeof(cl_mem), &buffer_data[i]);
-    xcl_set_kernel_arg(kernel[i], 9, sizeof(cl_mem), &buffer_results[i]);
-  }
+  //Set the Kernel Arguments
+  uint extraParam = 0;
+  xcl_set_kernel_arg(kernel, 0, 1, &numCriteria);
+  xcl_set_kernel_arg(kernel, 1, 4, &queriesNumCLs);
+  xcl_set_kernel_arg(kernel, 2, 4, &nfaNumCLs);
+  xcl_set_kernel_arg(kernel, 3, 4, &resultNumCLs);
+  xcl_set_kernel_arg(kernel, 4, 4, &extraParam);
+  xcl_set_kernel_arg(kernel, 5, 4, &extraParam);
+  xcl_set_kernel_arg(kernel, 6, sizeof(cl_mem), &buffer_nfa);
+  xcl_set_kernel_arg(kernel, 7, sizeof(cl_mem), &buffer_queries);
+  xcl_set_kernel_arg(kernel, 8, sizeof(cl_mem), &buffer_results);
+  
 
-  printf("Start processing %d Queries\n", numQueries); fflush(stdout);
+  printf("Start processing \n"); fflush(stdout);
   double stamp00 = get_time();
 
-  for (size_t qid = 0; qid < numQueries; qid+=2)
-  {
-    OCL_CHECK(clEnqueueMigrateMemObjects(
-        queue1, 1, &buffer_data[0],
+  OCL_CHECK(clEnqueueMigrateMemObjects(
+        queue, 1, &buffer_queries,
         0 /* flags, 0 means from host */,
         0, NULL,
         NULL));
 
-    OCL_CHECK(clEnqueueMigrateMemObjects(
-        queue2, 1, &buffer_data[1],
-        0 /* flags, 0 means from host */,
-        0, NULL,
-        NULL));
-
-    OCL_CHECK(clEnqueueNDRangeKernel(queue1, kernel[0], 1, nullptr,
+  OCL_CHECK(clEnqueueNDRangeKernel(queue, kernel, 1, nullptr,
                                      &global, &local, 0 , NULL,
                                      NULL));
 
-    OCL_CHECK(clEnqueueNDRangeKernel(queue2, kernel[1], 1, nullptr,
-                                     &global, &local, 0 , NULL,
-                                     NULL));
-
-    OCL_CHECK( clEnqueueMigrateMemObjects(queue1, 1, &buffer_results[0],
+  OCL_CHECK( clEnqueueMigrateMemObjects(queue, 1, &buffer_results,
                 CL_MIGRATE_MEM_OBJECT_HOST, 0, NULL, NULL));
-
-    OCL_CHECK( clEnqueueMigrateMemObjects(queue2, 1, &buffer_results[1],
-                CL_MIGRATE_MEM_OBJECT_HOST, 0, NULL, NULL));
-  }
-
 
  // printf("Waiting...\n");
-  clFlush(queue1);
-  clFlush(queue2);
-  clFinish(queue1);
-  clFinish(queue2);
+  clFlush(queue);
+  clFinish(queue);
 
   double stamp01 = get_time();
 
@@ -832,17 +798,10 @@ void runQueries(cl_command_queue queue1, cl_command_queue queue2,
 
 
   //Releasing mem objects and events
-  OCL_CHECK(clReleaseMemObject(buffer_trees));
+  OCL_CHECK(clReleaseMemObject(buffer_nfa));
 
-  OCL_CHECK(clReleaseMemObject(buffer_data[0]));
-  OCL_CHECK(clReleaseMemObject(buffer_results[0]));
-
-
-  for (int i = 1; i < 2; ++i)
-  {
-      OCL_CHECK(clReleaseMemObject(buffer_data[i]));
-      OCL_CHECK(clReleaseMemObject(buffer_results[i]));
-  }
+  OCL_CHECK(clReleaseMemObject(buffer_queries));
+  OCL_CHECK(clReleaseMemObject(buffer_results));
 
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -870,10 +829,9 @@ int main(int argc, char** argv)
     printf("Time to program FPGA: %.8f Seconds\n", stamp_p1-stamp_p0);
 
     //
-    cl_kernel kernel[2];
-    kernel[0] = xcl_get_kernel(program, "mct");
+    cl_kernel kernel = xcl_get_kernel(program, "mct");
     //
-    cl_command_queue ordered_queue1 = world.command_queue;
+    cl_command_queue queue = world.command_queue;
 
     // parameters
     int  numQueries          = 1024; //atoi(argv[1]);// atoi(argv[1]);
@@ -901,35 +859,30 @@ int main(int argc, char** argv)
 
     memcpy(nfa_m.data(), nfa);
 
-  	//-------------------------------------------------------------------------------------//
-  	//-------------------------------------------------------------------------------------//
-  	//-------------------------------------------------------------------------------------//
-  	// Init Data and Trees
-  
-    double stamp1 = get_time();
-    //-------------------------------------------------------------------------------------//
-    //-------------------------------------------------------------------------------------//
-    //-------------------------------------------------------------------------------------//
-    runQueries();
+    uint nfaNumCLs = nfa_size/64 + ((nfa_size%64 > 0)? 1 : 0);
 
-    double stamp4 = get_time();
+    delete [] nfa;
 
-    printf("Total Time to run %d queries for = %.8f Seconds\n", numQueries, stamp4-stamp1);
+  	//-------------------------------------------------------------------------------------//
+  	//-------------------------------------------------------------------------------------//
+  	//-------------------------------------------------------------------------------------//
+
+    runMCT(queue, world, program, kernel, nfa_m->data(), queries.data(), results.data(), 
+           numCriteria, data_size, res_size, nfa_size, nfaNumCLs, dataNumCLs, outputNumCLs);
+
   	// write results to file
   	std::ofstream file;
-  	file.open("/home/mowaidah/gits/MySquare/SDxF1/dtengine/Emulation-HW/results.txt");
+  	file.open("results.txt");
 
-  	for (int i = 0; i < NUM_TUPLES; ++i)
+  	for (int i = 0; i < numQueries; ++i)
 	{
-		file << (results[0]->data())[i] << "\n";
+		file << (results.data())[i] << "\n";
 	}
 
+  	OCL_CHECK(clReleaseKernel(kernel));
+  	OCL_CHECK(clReleaseProgram(program));
+  	xcl_release_world(world);
 
-  OCL_CHECK(clReleaseKernel(kernel[0]));
-  OCL_CHECK(clReleaseKernel(kernel[1]));
-  OCL_CHECK(clReleaseProgram(program));
-  xcl_release_world(world);
-
-  return 0;
+  	return 0;
 
 } // end of main

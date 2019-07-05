@@ -213,10 +213,10 @@ assign query_read_done  = query_rd_tvalid  && query_rd_tready  && (query_num_cls
 // AXI4 Read Master, output format is an AXI4-Stream master, one stream per thread.
 mct_axi_read_master #(
   .C_M_AXI_ADDR_WIDTH  ( C_M_AXI_ADDR_WIDTH    ) ,
-  .C_M_AXI_query_WIDTH  ( C_M_AXI_query_WIDTH    ) ,
+  .C_M_AXI_DATA_WIDTH  ( C_M_AXI_query_WIDTH    ) ,
   .C_XFER_SIZE_WIDTH   ( 32                      ) ,
   .C_MAX_OUTSTANDING   ( LP_RD_MAX_OUTSTANDING   ) ,
-  .C_INCLUDE_query_FIFO ( 1                       )
+  .C_INCLUDE_DATA_FIFO ( 1                       )
 )
 nfa_axi_read_master (
   .aclk                    ( clk                      ) ,
@@ -244,10 +244,10 @@ nfa_axi_read_master (
 
 mct_axi_read_master #(
   .C_M_AXI_ADDR_WIDTH  ( C_M_AXI_ADDR_WIDTH    ) ,
-  .C_M_AXI_query_WIDTH  ( C_M_AXI_query_WIDTH    ) ,
+  .C_M_AXI_DATA_WIDTH  ( C_M_AXI_query_WIDTH    ) ,
   .C_XFER_SIZE_WIDTH   ( 32     ) ,
   .C_MAX_OUTSTANDING   ( LP_RD_MAX_OUTSTANDING ) ,
-  .C_INCLUDE_query_FIFO ( 1                     )
+  .C_INCLUDE_DATA_FIFO ( 1                     )
 )
 query_axi_read_master (
   .aclk                    ( clk                     ) ,

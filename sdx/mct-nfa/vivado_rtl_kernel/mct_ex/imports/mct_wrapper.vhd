@@ -51,10 +51,11 @@ architecture rtl of mct_wrapper is
 
 
     type flow_ctrl_type is (FLW_CTRL_WAIT, FLW_CTRL_READ, FLW_CTRL_WRITE);
+    
     type query_reg_type is record
         flow_ctrl       : flow_ctrl_type;
         query_array     : query_in_array_type;
-        counter         : integer range 1 to CFG_ENGINE_NCRITERIA;
+        counter         : integer range 0 to CFG_ENGINE_NCRITERIA;
         ready           : std_logic;
         wr_en           : std_logic;
     end record;
@@ -63,7 +64,7 @@ architecture rtl of mct_wrapper is
         flow_ctrl       : flow_ctrl_type;
         ready           : std_logic;
         cnt_criterium   : integer range 0 to CFG_ENGINE_NCRITERIA;
-        cnt_edge        : std_logic_vector(RNG_BRAM_EDGE_STORE_POINTER - 1 downto 0);
+        cnt_edge        : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
         cnt_slice       : integer range 0 to C_QUERY_PARTITIONS-1;
         mem_addr        : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
         mem_data        : edge_store_type;
@@ -72,6 +73,7 @@ architecture rtl of mct_wrapper is
     end record;
 
     signal query_r, query_rin : query_reg_type;
+    signal nfa_r, nfa_rin     : nfa_reg_type;
 
 begin
 
@@ -84,6 +86,9 @@ rd_ready_o <= query_r.ready or nfa_r.ready;
 -- and each criterium has two operands of CFG_ENGINE_CRITERIUM_WIDTH width
 
 query_comb : process(query_r, rd_stype_i, rd_valid_i, rd_data_i, sig_query_ready)
+    constant C_SLICES_REM     : integer := CFG_ENGINE_NCRITERIA rem C_QUERY_PARTITIONS;
+    constant C_SLICES_MOD     : integer := CFG_ENGINE_NCRITERIA mod C_QUERY_PARTITIONS;
+    --
     variable v : query_reg_type;
     --
     variable useful    : integer range 1 to C_QUERY_PARTITIONS;
@@ -110,11 +115,45 @@ begin
             v.ready := '1';
             v.wr_en := '0';
 
+
+            -- v.counter := query_r.counter + 1;
+            -- if v.counter /= C_SLICES_REM then
+            --     -- read C_QUERY_PARTITIONS criteria
+            -- else
+            --     -- read C_SLICES_MOD criteria
+            --     -- last cicle
+            -- end if;
+
+
             remaining := CFG_ENGINE_NCRITERIA - query_r.counter;
             if (remaining > C_QUERY_PARTITIONS) then
                 useful := C_QUERY_PARTITIONS;
+                -- full slices
+                for idx in 0 to C_QUERY_PARTITIONS loop
+                    v.query_array(query_r.counter + idx).operand_a := rd_data_i(
+                                            CFG_DATA_BUS_WIDTH-(idx*2*CFG_ENGINE_CRITERIUM_WIDTH)-1
+                                            downto
+                                            CFG_DATA_BUS_WIDTH-(idx*2*CFG_ENGINE_CRITERIUM_WIDTH)-CFG_ENGINE_CRITERIUM_WIDTH);
+                    v.query_array(query_r.counter + idx).operand_b := rd_data_i(
+                                            CFG_DATA_BUS_WIDTH-(idx*2*CFG_ENGINE_CRITERIUM_WIDTH)-CFG_ENGINE_CRITERIUM_WIDTH-1
+                                            downto
+                                            CFG_DATA_BUS_WIDTH-((idx+1)*2*CFG_ENGINE_CRITERIUM_WIDTH));
+                    --v.query_array(idx).query_id  := ; -- TODO query_id
+                end loop;
             else
                 useful := remaining;
+                -- total mod piece slices
+                for idx in 0 to C_SLICES_MOD - 1 loop
+                    v.query_array(query_r.counter + idx).operand_a := rd_data_i(
+                                            CFG_DATA_BUS_WIDTH-(idx*2*CFG_ENGINE_CRITERIUM_WIDTH)-1
+                                            downto
+                                            CFG_DATA_BUS_WIDTH-(idx*2*CFG_ENGINE_CRITERIUM_WIDTH)-CFG_ENGINE_CRITERIUM_WIDTH);
+                    v.query_array(query_r.counter + idx).operand_b := rd_data_i(
+                                            CFG_DATA_BUS_WIDTH-(idx*2*CFG_ENGINE_CRITERIUM_WIDTH)-CFG_ENGINE_CRITERIUM_WIDTH-1
+                                            downto
+                                            CFG_DATA_BUS_WIDTH-((idx+1)*2*CFG_ENGINE_CRITERIUM_WIDTH));
+                    --v.query_array(idx).query_id  := ; -- TODO query_id
+                end loop;
             end if;
             
             v.counter := query_r.counter + useful;
@@ -123,17 +162,6 @@ begin
                 v.ready := '0';
             end if;
 
-            for idx in 0 to useful loop
-                v.query_array(idx).operand_a := rd_data_i(
-                                            CFG_DATA_BUS_WIDTH-(idx*2*CFG_ENGINE_CRITERIUM_WIDTH)-1
-                                            downto
-                                            CFG_DATA_BUS_WIDTH-(idx*2*CFG_ENGINE_CRITERIUM_WIDTH)-CFG_ENGINE_CRITERIUM_WIDTH);
-                v.query_array(idx).operand_b := rd_data_i(
-                                            CFG_DATA_BUS_WIDTH-(idx*2*CFG_ENGINE_CRITERIUM_WIDTH)-CFG_ENGINE_CRITERIUM_WIDTH-1
-                                            downto
-                                            CFG_DATA_BUS_WIDTH-((idx+1)*2*CFG_ENGINE_CRITERIUM_WIDTH));
-                --v.query_array(idx).query_id  := ; -- TODO query_id
-            end loop;
 
       when FLW_CTRL_WRITE => 
 
@@ -173,6 +201,7 @@ end process;
 -- cache line boundaries.
 
 nfa_comb : process(nfa_r, rd_stype_i, rd_valid_i, rd_data_i)
+    variable v : nfa_reg_type;
 begin
     v := nfa_r;
 
@@ -186,7 +215,7 @@ begin
             if rd_stype_i = CFG_RD_TYPE_NFA and rd_valid_i = '1' then
                 v.flow_ctrl     := FLW_CTRL_READ;
                 v.ready         := '0';
-                v.cnt_criterium := 0;
+                v.cnt_criterium :=  0;
                 v.engine_rst    := '1';
             end if;
 
@@ -200,8 +229,11 @@ begin
             v.mem_data  := deserialise_edge_store(rd_data_i(
                                             CFG_DATA_BUS_WIDTH-CFG_EDGE_BRAM_WIDTH-1
                                             downto
-                                            CFG_DATA_BUS_WIDTH-2*CFG_EDGE_BRAM_WIDTH));
-            v.cnt_edge  := rd_data_i(CFG_DATA_BUS_WIDTH-1 downto CFG_DATA_BUS_WIDTH-CFG_EDGE_BRAM_WIDTH);
+                                            CFG_DATA_BUS_WIDTH-(2*CFG_EDGE_BRAM_WIDTH)));
+            v.cnt_edge  := rd_data_i(CFG_DATA_BUS_WIDTH-(CFG_EDGE_BRAM_WIDTH-CFG_MEM_ADDR_WIDTH)-1
+                                     downto
+                                     CFG_DATA_BUS_WIDTH-CFG_EDGE_BRAM_WIDTH);
+
             v.cnt_slice := 2;
 
             if nfa_r.cnt_criterium = CFG_ENGINE_NCRITERIA then
@@ -218,9 +250,9 @@ begin
             v.ready     := '0';
             v.mem_addr  := increment(nfa_r.mem_addr);
             v.mem_data  := deserialise_edge_store(rd_data_i(
-                                        CFG_DATA_BUS_WIDTH-nfa_r.cnt_slice*CFG_EDGE_BRAM_WIDTH-1
+                                        CFG_DATA_BUS_WIDTH-(nfa_r.cnt_slice*CFG_EDGE_BRAM_WIDTH)-1
                                         downto
-                                        CFG_DATA_BUS_WIDTH-(nfa_r.cnt_slice+1)*CFG_EDGE_BRAM_WIDTH));
+                                        CFG_DATA_BUS_WIDTH-((nfa_r.cnt_slice+1)*CFG_EDGE_BRAM_WIDTH)));
             v.cnt_slice := nfa_r.cnt_slice + 1;
 
             if v.cnt_slice = C_QUERY_PARTITIONS-1 then
@@ -244,14 +276,14 @@ nfa_seq : process(clk_i)
 begin
     if rising_edge(clk_i) then
         if rst_i = '1' then
-            flow_ctrl       <= FLW_CTRL_WAIT;
-            ready           <= '0';
-            cnt_criterium   <= 0;
-            cnt_slice       <= 0;
-            cnt_edge        <= (others => '0');
-            mem_addr        <= (others => '0');
-            mem_wren        <= (others => '0');
-            engine_rst      <= '1';
+            nfa_r.flow_ctrl       <= FLW_CTRL_WAIT;
+            nfa_r.ready           <= '0';
+            nfa_r.cnt_criterium   <= 0;
+            nfa_r.cnt_slice       <= 0;
+            nfa_r.cnt_edge        <= (others => '0');
+            nfa_r.mem_addr        <= (others => '0');
+            nfa_r.mem_wren        <= (others => '0');
+            nfa_r.engine_rst      <= '1';
         else
             nfa_r <= nfa_rin;
         end if;
@@ -265,12 +297,12 @@ end process;
 -- A query result consists of the index of the content it points to. This result value occupies
 -- CFG_MEM_ADDR_WIDTH bits
 
-wr_data_o <= sig_result_value & (others => '0');
+wr_data_o <= sig_result_value & (CFG_DATA_BUS_WIDTH - CFG_MEM_ADDR_WIDTH -1 downto 0 => '0');
 
 ----------------------------------------------------------------------------------------------------
 -- NFA-BRE ENGINE TOP                                                                             --
 ----------------------------------------------------------------------------------------------------
-mct_engine_top: top port map 
+mct_engine_top: entity bre.top port map 
 (
     clk_i           => clk_i,
     rst_i           => nfa_r.engine_rst,

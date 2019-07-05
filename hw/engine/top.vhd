@@ -167,7 +167,7 @@ gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
         rst_i           => rst_i,
         clk_i           => clk_i,
         --
-        wr_en_i         => query_wren_i,
+        wr_en_i         => query_wr_en_i,
         wr_data_i       => query_i(I),
         full_o          => query_full(I),
         --

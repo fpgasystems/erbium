@@ -80,6 +80,6 @@ always @(posedge clk) begin
 end
 
 
-endmodule : dtengine_counter
+endmodule : mct_counter
 `default_nettype wire
 

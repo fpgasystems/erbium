@@ -130,11 +130,11 @@ assign ap_done = ap_done_r;
 
 // AXI4 Read Master, output format is an AXI4-Stream master, one stream per thread.
 InputChannel #(
-  .C_M_AXI_ADDR_WIDTH  ( C_M00_AXI_ADDR_WIDTH    ) ,
-  .C_M_AXI_DATA_WIDTH  ( C_M00_AXI_DATA_WIDTH    ) ,
-  .C_XFER_SIZE_WIDTH   ( 32     ) ,
-  .C_MAX_OUTSTANDING   ( LP_RD_MAX_OUTSTANDING ) ,
-  .C_INCLUDE_DATA_FIFO ( 1                     )
+  .C_M_AXI_ADDR_WIDTH   ( C_M00_AXI_ADDR_WIDTH    ) ,
+  .C_M_AXI_query_WIDTH  ( C_M00_AXI_DATA_WIDTH    ) ,
+  .C_XFER_SIZE_WIDTH    ( 32                      ) ,
+  .C_MAX_OUTSTANDING    ( 16                      ) ,
+  .C_INCLUDE_query_FIFO ( 1                       )
 )
 inst_InputChannel (
   .clk                     ( ap_clk                  ) ,
@@ -199,9 +199,9 @@ mct_wrapper mct_wrapper(
 mct_axi_write_master #(
   .C_M_AXI_ADDR_WIDTH  ( C_M00_AXI_ADDR_WIDTH    ) ,
   .C_M_AXI_DATA_WIDTH  ( C_M00_AXI_DATA_WIDTH    ) ,
-  .C_XFER_SIZE_WIDTH   ( 32     ) ,
-  .C_MAX_OUTSTANDING   ( LP_WR_MAX_OUTSTANDING ) ,
-  .C_INCLUDE_DATA_FIFO ( 1                     )
+  .C_XFER_SIZE_WIDTH   ( 32                      ) ,
+  .C_MAX_OUTSTANDING   ( 16                      ) ,
+  .C_INCLUDE_DATA_FIFO ( 1                       )
 )
 inst_axi_write_master (
   .aclk                    ( ap_clk                  ) ,

@@ -61,7 +61,7 @@ struct ruleType_s
             m_organization.c_str(),
             m_code.c_str(),
             m_release);
-        for(auto& aux : m_criterionDefinition)
+        for (auto& aux : m_criterionDefinition)
             aux.print(level + "\t");
     }
 
@@ -94,7 +94,7 @@ struct rule_s
             level.c_str(),
             m_ruleId,
             m_weight);
-        for(auto& aux : m_criteria)
+        for (auto& aux : m_criteria)
             aux.print(level + "\t");
     }
 };
@@ -107,7 +107,7 @@ struct rulePack_s
     void print(const std::string &level) const
     {
         m_ruleType.print(level);
-        for(auto& aux : m_rules)
+        for (auto& aux : m_rules)
             aux.print(level + "\t");
     }
 };
@@ -125,7 +125,7 @@ struct abr_dataset
     {
         printf("%sorg: %s\n", level.c_str(), m_organization.c_str());
         printf("%sapp: %s\n", level.c_str(), m_application.c_str());
-        for(auto& aux : m_rulePacks)
+        for (auto& aux : m_rulePacks)
             aux.print(level + "\t");
     }
     //]
@@ -279,7 +279,7 @@ typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, vertex
 
 void print_parents(const uint node, const graph_t g, std::string level = "")
 {
-    for(auto& aux : g[node].parents)
+    for (auto& aux : g[node].parents)
     {
         std::cout << level << g[node].label << std::endl;
         print_parents(aux, g, level + "\t");
@@ -311,11 +311,18 @@ std::string toBinary(uint padding, uint n)
     return r;
 }
 
+void write_longlongint(std::ofstream* outfile, unsigned long long int value)
+{
+    uintptr_t addr = (uintptr_t)&value;
+    for (short i = sizeof(value)-1; i >= 0; i--)
+        outfile->write((char*)(addr + i), 1);
+}
+
 int main()
 {
-    std::ifstream       file("../../../Documents/amadeus-share/mct_rules.csv");
+    //std::ifstream       file("../../../Documents/amadeus-share/mct_rules.csv");
     //std::ifstream       file("../data/demo_02.csv");
-    //std::ifstream       file("../data/demo_01.csv");
+    std::ifstream       file("../data/demo_01.csv");
 
     ////////////////////////////////////////////////////////////////////////////////////////
     std::cout << "# LOAD" << std::endl;
@@ -366,7 +373,7 @@ int main()
         rl.m_weight = std::stoi(row.m_data[1]);
         for (int i=6; i<aux; i++)
         {
-            if(!row.m_data[i].empty())
+            if (!row.m_data[i].empty())
             {
                 criterion_s ct;
                 ct.m_index = i-6;
@@ -422,17 +429,17 @@ int main()
 
     // indexes
     uint key = 0;
-    for(auto& aux : contents)
+    for (auto& aux : contents)
         aux.second = key++;
-    for(auto& aux : dictionnary)
+    for (auto& aux : dictionnary)
     {
         key = 0;
-        for(auto& x : aux.second)
+        for (auto& x : aux.second)
             x.second = key++;
         ordered.push_back(std::pair<uint, uint>(aux.second.size(), aux.first));
     }
-    sort(ordered.begin(), ordered.end(), sort_pred_inv());
-    //sort(ordered.begin(), ordered.end());
+    sort(ordered.begin(), ordered.end(), sort_pred_inv()); //  DESC
+    //sort(ordered.begin(), ordered.end()); // ASC
     dictionnary[rp.m_ruleType.m_criterionDefinition.size()] = contents;
 
     key = 0;
@@ -658,7 +665,7 @@ int main()
         {
             for (auto& vert : vertexes[level.first][value.first])
             {
-                if(g[mapaa[vert]].parents.size() != 0)
+                if (g[mapaa[vert]].parents.size() != 0)
                 {
                     aux = g[mapaa[vert]].children.size();
                     n_nodes++;
@@ -680,7 +687,7 @@ int main()
     {
         for (auto& vert : vertexes[vertexes.size()-2][value.first])
         {
-            if(g[mapaa[vert]].parents.size() != 0)
+            if (g[mapaa[vert]].parents.size() != 0)
             {
                 aux = g[mapaa[vert]].children.size()
                 n_nodes++;
@@ -712,85 +719,18 @@ int main()
 
     ////// MEMORY DUMP
     std::cout << "# MEMORY DUMP" << std::endl;
-    std::ofstream myfile;
-    start = std::chrono::high_resolution_clock::now();
+    std::ofstream outfile("mem_edges.bin", std::ios::binary | std::ios::out | std::ios::trunc);
 
     const uint CFG_ENGINE_NCRITERIA       = rp.m_ruleType.m_criterionDefinition.size();
-    const uint CFG_ENGINE_CRITERIUM_WIDTH = 20;
+    const uint CFG_ENGINE_CRITERIUM_WIDTH = 12;
     const uint CFG_WEIGHT_WIDTH           = 19;
     const uint CFG_MEM_ADDR_WIDTH         = ceil(log2(n_bram_edges_max));
     const uint CFG_EDGE_BUFFERS_DEPTH     = 5;
     const uint CFG_EDGE_BRAM_DEPTH        = n_bram_edges_max;
-    const uint CFG_EDGE_BRAM_WIDTH        = 64;
-    const uint ZERO_PADDING               = CFG_EDGE_BRAM_WIDTH - (CFG_WEIGHT_WIDTH + CFG_MEM_ADDR_WIDTH + CFG_ENGINE_CRITERIUM_WIDTH + CFG_ENGINE_CRITERIUM_WIDTH + 1);
-
-    std::map<std::string, uint> dic = dictionnary[dictionnary.size()-1];
-    for (auto level = vertexes.rbegin(); level != vertexes.rend(); ++level)
-    {
-        myfile.open("bram_cr" + std::to_string(level->first+1) + ".mem");
-        n_edges = 0;
-
-        for (auto& value : vertexes[level->first])
-        {
-            for (auto& vert : vertexes[level->first][value.first])
-            {
-                if(g[mapaa[vert]].parents.size() != 0)
-                {
-
-                    g[mapaa[vert]].dump_pointer = n_edges;
-                    n_edges_max = g[mapaa[vert]].children.size();
-
-                    if (n_edges_max == 0)
-                    {
-                        n_edges++;
-                        myfile << toBinary(ZERO_PADDING, 0);        // padding
-                        myfile << "1";                              // last
-                        myfile << toBinary(CFG_WEIGHT_WIDTH, 0);    // weight
-                        myfile << toBinary(CFG_MEM_ADDR_WIDTH, 0);  // pointer
-                        myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dic[g[mapaa[vert]].label]); // op_b
-                        myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dic[g[mapaa[vert]].label]); // op_a
-                        myfile << "\n";
-                    }
-                    else
-                    {
-                        n_edges += n_edges_max;
-                        aux=1;
-                        for (auto& itr : g[mapaa[vert]].children)
-                        {
-                            myfile << toBinary(ZERO_PADDING, 0);                                // padding
-                            myfile << (aux == n_edges_max) ? "1" : "0";                         // last
-                            myfile << toBinary(CFG_WEIGHT_WIDTH, 100);                          // weight TODO
-                            myfile << toBinary(CFG_MEM_ADDR_WIDTH, g[itr].dump_pointer);        // pointer
-                            myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dic[g[itr].label]);  // op_b
-                            myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dic[g[itr].label]);  // op_a
-                            myfile << "\n";
-                            aux++;
-                        }
-                    }
-                }
-            }
-        }
-        myfile.close();
-        if(level != vertexes.rbegin())
-            dic = dictionnary[ordered[level->first].second];
-    }
-    // origin
-    myfile.open("bram_cr0.mem");
-    aux=0;
-    for (auto& vert : g[0].children)
-    {
-        myfile << toBinary(ZERO_PADDING, 0);                                                            // padding
-        myfile << (aux == n_edges_max) ? "1" : "0";                                                     // last
-        myfile << toBinary(CFG_WEIGHT_WIDTH, 100);                                                      // weight TODO
-        myfile << toBinary(CFG_MEM_ADDR_WIDTH, g[vert].dump_pointer);                                   // pointer
-        myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dictionnary[ordered[0].second][g[vert].label]); // op_b
-        myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dictionnary[ordered[0].second][g[vert].label]); // op_a
-        myfile << "\n";
-        aux++;
-    }
-    myfile.close();
-
-    finish = std::chrono::high_resolution_clock::now();
+    const uint BRAM_USED_BITS             = CFG_WEIGHT_WIDTH + CFG_MEM_ADDR_WIDTH + CFG_ENGINE_CRITERIUM_WIDTH + CFG_ENGINE_CRITERIUM_WIDTH + 1;
+    const uint CFG_EDGE_BRAM_WIDTH        = 1 << ((uint)ceil(log2(BRAM_USED_BITS)));
+    const uint ZERO_PADDING               = CFG_EDGE_BRAM_WIDTH - BRAM_USED_BITS;
+    
     std::cout << "constant CFG_ENGINE_NCRITERIA         : integer := " << CFG_ENGINE_NCRITERIA << "; -- Number of criteria\n";
     std::cout << "constant CFG_ENGINE_CRITERIUM_WIDTH   : integer := " << CFG_ENGINE_CRITERIUM_WIDTH << "; -- Number of bits of each criterium value\n";
     std::cout << "constant CFG_WEIGHT_WIDTH             : integer := " << CFG_WEIGHT_WIDTH << "; -- integer from 0 to 2^CFG_WEIGHT_WIDTH-1\n";
@@ -800,6 +740,133 @@ int main()
     std::cout << "constant CFG_EDGE_BUFFERS_DEPTH       : integer := " << CFG_EDGE_BUFFERS_DEPTH << ";\n";
     std::cout << "constant CFG_EDGE_BRAM_DEPTH          : integer := " << CFG_EDGE_BRAM_DEPTH << ";\n";
     std::cout << "constant CFG_EDGE_BRAM_WIDTH          : integer := " << CFG_EDGE_BRAM_WIDTH << ";\n";
+
+    start = std::chrono::high_resolution_clock::now();
+
+    const unsigned long int MASK_WEIGHT     = 0x7FFFF;
+    const unsigned long int MASK_POINTER    = 0x7FFF;
+    const unsigned long int MASK_OPERAND_B  = 0xFFF;
+    const unsigned long int MASK_OPERAND_A  = 0xFFF;
+    const unsigned long int SHIFT_LAST      = CFG_WEIGHT_WIDTH+CFG_MEM_ADDR_WIDTH+2*CFG_ENGINE_CRITERIUM_WIDTH;
+    const unsigned long int SHIFT_WEIGHT    = CFG_MEM_ADDR_WIDTH+2*CFG_ENGINE_CRITERIUM_WIDTH;
+    const unsigned long int SHIFT_POINTER   = 2*CFG_ENGINE_CRITERIUM_WIDTH;
+    const unsigned long int SHIFT_OPERAND_B = CFG_ENGINE_CRITERIUM_WIDTH;
+    const unsigned long int SHIFT_OPERAND_A = 0;
+
+    // POINTERS
+    uint edges_per_level[vertexes.size()];
+    for (auto level = vertexes.rbegin(); level != vertexes.rend(); ++level)
+    {
+        n_edges = 0;
+
+        for (auto& value : vertexes[level->first])
+        {
+            for (auto& vert : vertexes[level->first][value.first])
+            {
+                if (g[mapaa[vert]].parents.size() != 0)
+                {
+
+                    g[mapaa[vert]].dump_pointer = n_edges;
+                    n_edges_max = g[mapaa[vert]].children.size();
+
+                    if (n_edges_max == 0)
+                        n_edges++;
+                    else
+                        n_edges += n_edges_max;
+                }
+            }
+        }
+        edges_per_level[level->first] = n_edges;
+    }
+
+    // before-last-criterium nodes point to the result directly
+    for (auto& value : vertexes[vertexes.size()-2])
+    {
+        for (auto& vert : vertexes[vertexes.size()-2][value.first])
+        {
+            auto element = g[mapaa[vert]];
+            if (element.parents.size() != 0)
+            {
+                auto result = element.children.begin();
+                element.dump_pointer = g[mapaa[*result]].dump_pointer;
+            }
+        }
+    }
+
+
+    unsigned long long int mem_int, mem_aux;
+    uint SLICES_PER_LINE = 512 / 64;
+    // origin
+    aux = 1;
+    n_edges_max = g[0].children.size();
+
+    write_longlongint(&outfile, n_edges_max);
+    std::cout << "mem_int = " << mem_int << std::endl;
+
+    for (auto& vert : g[0].children)
+    {
+        mem_int = (aux++ == n_edges_max);
+        mem_int = mem_int << SHIFT_LAST;
+        mem_int |= ((unsigned long long int)256 & MASK_WEIGHT) << SHIFT_WEIGHT;
+        mem_int |= ((unsigned long long int)g[vert].dump_pointer & MASK_POINTER) << SHIFT_POINTER;
+        mem_int |= ((unsigned long long int)dictionnary[ordered[0].second][g[vert].label] & MASK_OPERAND_B) << SHIFT_OPERAND_B;
+        mem_int |= ((unsigned long long int)dictionnary[ordered[0].second][g[vert].label] & MASK_OPERAND_A) << SHIFT_OPERAND_A;
+        write_longlongint(&outfile, mem_int);
+    }
+    // padding
+    n_edges = (n_edges_max+1) % SLICES_PER_LINE;
+    n_edges = (n_edges == 0) ? 0 : SLICES_PER_LINE - n_edges;
+    for (uint pad = n_edges; pad != 0; pad--)
+        write_longlongint(&outfile, 0);
+    std::cout << "level=0 edges=" << n_edges_max << " padding=" << n_edges << std::endl;
+
+
+    uint the_order = 1;
+    std::map<std::string, uint> dic;
+    for (auto level : vertexes)
+    {
+        if (level.second == vertexes[vertexes.size()-2])
+            break;  // skip content
+
+        dic = dictionnary[ordered[the_order++].second];
+
+        // number of edges
+        mem_int = edges_per_level[level.first];
+        write_longlongint(&outfile, mem_int);
+
+        // write 
+        for (auto& value : vertexes[level.first])
+        {
+            for (auto& vert : vertexes[level.first][value.first])
+            {
+                if (g[mapaa[vert]].parents.size() != 0)
+                {
+                    aux=1;
+                    n_edges_max = g[mapaa[vert]].children.size();
+                    for (auto& itr : g[mapaa[vert]].children)
+                    {
+                        mem_int = (unsigned long long int)(aux++ == n_edges_max) << SHIFT_LAST;
+                        mem_int |= ((unsigned long long int)256 & MASK_WEIGHT) << SHIFT_WEIGHT;
+                        mem_int |= ((unsigned long long int)(g[itr].dump_pointer) & MASK_POINTER) << SHIFT_POINTER;
+                        mem_int |= ((unsigned long long int)(dic[g[itr].label] & MASK_OPERAND_B)) << SHIFT_OPERAND_B;
+                        mem_int |= ((unsigned long long int)(dic[g[itr].label] & MASK_OPERAND_A)) << SHIFT_OPERAND_A;
+                        write_longlongint(&outfile, mem_int);
+                    }
+                }
+            }
+        }
+        // padding
+        n_edges = (edges_per_level[level.first]+1) % SLICES_PER_LINE;
+        n_edges = (n_edges == 0) ? 0 : SLICES_PER_LINE - n_edges;
+        for (uint pad = n_edges; pad != 0; pad--)
+            write_longlongint(&outfile, 0);
+
+        std::cout << "level=" << level.first+1 << " edges=" << edges_per_level[level.first] << " padding=" << n_edges << std::endl;
+    }
+
+    outfile.close();
+
+    finish = std::chrono::high_resolution_clock::now();
 
     elapsed = finish - start;
     std::cout << "# MEMORY DUMP COMPLETED in " << elapsed.count() << " s\n";

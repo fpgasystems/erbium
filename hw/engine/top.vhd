@@ -9,7 +9,7 @@ use xil_defaultlib.core_pkg.all;
 entity top is
     port (
         clk_i          :  in std_logic;
-        rst_i          :  in std_logic;
+        rst_i          :  in std_logic; -- rst low active
         --
         query_i        :  in query_in_array_type;
         query_wr_en_i  :  in std_logic;

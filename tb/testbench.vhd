@@ -19,7 +19,7 @@ architecture testbench of testbench is
     signal sys_rst    : std_logic := '0';
     signal queries    : query_in_array_type;
     signal mem_edge   : edge_store_type;
-    signal mem_wren_i : std_logic_vector(1 downto 0);
+    signal mem_wren_i : std_logic_vector(CFG_ENGINE_NCRITERIA - 1 downto 0);
     signal mem_addr_i : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
 begin
 
@@ -194,11 +194,20 @@ begin
     
 end process sim;
 
-dut : entity bre.top port map(
-    clk_i    => sys_clk,
-    rst_i    => sys_rst,
-    query_i  => queries,
-    mem_i    => mem_edge,
+-- while not full
+--    read file
+--    write it
+
+-- write result in a file
+
+-- if output is LAST_QUERY_ID, finish
+
+
+dut : entity bre.top port map (
+    clk_i      => sys_clk,
+    rst_i      => sys_rst,
+    query_i    => queries,
+    mem_i      => mem_edge,
     mem_wren_i => mem_wren_i,
     mem_addr_i => mem_addr_i
 );

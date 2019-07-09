@@ -93,10 +93,8 @@ end process;
 query_seq: process(clk_i)
 begin
     if rising_edge(clk_i) then
-        if rst_i = '1' then
+        if rst_i = '0' then
             query_r.flow_ctrl       <= FLW_CTRL_BUFFER;
-            query_r.query.operand_a <= (others => 'Z');
-            query_r.query.operand_b <= (others => 'Z');
             query_r.query.query_id  <= 0;
             query_r.read_en         <= '0';
         else
@@ -162,8 +160,7 @@ end process;
 fetch_seq: process(clk_i)
 begin
     if rising_edge(clk_i) then
-        if rst_i = '1' then
-            fetch_r.mem_addr     <= (others => '0');
+        if rst_i = '0' then
             fetch_r.flow_ctrl    <= FLW_CTRL_BUFFER;
             fetch_r.buffer_rd_en <= '0';
             fetch_r.query_id     <= 0;
@@ -232,10 +229,8 @@ end process;
 execute_seq: process(clk_i)
 begin
     if rising_edge(clk_i) then
-        if rst_i = '1' then
+        if rst_i = '0' then
             execute_r.inference_res         <= '0';
-            execute_r.writing_edge.pointer  <= (others => '0');
-            execute_r.writing_edge.query_id <= 0;
             execute_r.weight_filter         <= 0;
         else
             execute_r <= execute_rin;

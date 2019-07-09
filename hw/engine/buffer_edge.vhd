@@ -60,7 +60,7 @@ begin
 p_ctrl : process (clk_i) is
 begin
     if rising_edge(clk_i) then
-        if rst_i = '1' then
+        if rst_i = '0' then
             fifo_cntr_reg  <= 0;
             wr_index_reg   <= 0;
             rd_index_reg   <= 0;

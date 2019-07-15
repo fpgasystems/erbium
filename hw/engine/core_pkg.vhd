@@ -126,7 +126,6 @@ package core_pkg is
         );
         port (
             clk_i        :  in std_logic;
-            rst_i        :  in std_logic;
             ram_reg_en_i :  in std_logic; -- Output register enable
             ram_en_i     :  in std_logic; -- RAM Enable, for additional power savings, disable port when not in use
             addr_i       :  in std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);

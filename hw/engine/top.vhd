@@ -213,13 +213,12 @@ gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
     (
         G_RAM_WIDTH       => CFG_EDGE_BRAM_WIDTH,
         G_RAM_DEPTH       => CFG_EDGE_BRAM_DEPTH,
-        G_RAM_PERFORMANCE => "LOW_LATENCY",
+        G_RAM_PERFORMANCE => "LOW_LATENCY",--"LOW_LATENCY",
         G_INIT_FILE       => "bram_cr" & integer'image(I) & ".mem"
     )
     port map
     (
         clk_i        => clk_i,
-        rst_i        => rst_i,
         ram_reg_en_i => '1',
         ram_en_i     => bram_en(I),
         addr_i       => bram_addr(I),

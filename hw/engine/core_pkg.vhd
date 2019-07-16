@@ -21,8 +21,8 @@ use ieee.numeric_std.all;
 library std;
 use std.textio.all;
 
-library xil_defaultlib;
-use xil_defaultlib.engine_pkg.all;
+library bre;
+use bre.engine_pkg.all;
 
 package core_pkg is
 
@@ -143,8 +143,8 @@ package core_pkg is
             G_MATCH_FUNCTION_PAIR : match_pair_function  := FNCTR_PAIR_NOP
         );
         port (
-            rst_i           :  in std_logic;
             clk_i           :  in std_logic;
+            rst_i           :  in std_logic; -- low active
             -- FIFO edge buffer from previous level
             prev_empty_i    :  in std_logic;
             prev_data_i     :  in edge_buffer_type;

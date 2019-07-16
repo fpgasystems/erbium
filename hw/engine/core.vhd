@@ -1,10 +1,12 @@
 library ieee;
 use ieee.std_logic_1164.all;
 
-library xil_defaultlib;
-use xil_defaultlib.std_pkg.all;
-use xil_defaultlib.engine_pkg.all;
-use xil_defaultlib.core_pkg.all;
+library bre;
+use bre.engine_pkg.all;
+use bre.core_pkg.all;
+
+library tools;
+use tools.std_pkg.all;
 
 entity core is
     generic (
@@ -14,8 +16,8 @@ entity core is
         G_MATCH_FUNCTION_PAIR : match_pair_function  := FNCTR_PAIR_NOP
     );
     port (
-        rst_i           :  in std_logic;
         clk_i           :  in std_logic;
+        rst_i           :  in std_logic; -- low active
         -- FIFO edge buffer from previous level
         prev_empty_i    :  in std_logic;
         prev_data_i     :  in edge_buffer_type;
@@ -163,7 +165,7 @@ begin
         if rst_i = '0' then
             fetch_r.flow_ctrl    <= FLW_CTRL_BUFFER;
             fetch_r.buffer_rd_en <= '0';
-            fetch_r.query_id     <= 0;
+            fetch_r.query_id     <=  0;
         else
             fetch_r <= fetch_rin;
         end if;

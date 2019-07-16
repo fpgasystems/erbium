@@ -177,9 +177,8 @@ end process;
 query_seq: process(clk_i)
 begin
     if rising_edge(clk_i) then
-        if rst_i = '1' then
+        if rst_i = '0' then
             query_r.flow_ctrl   <= FLW_CTRL_WAIT;
-            query_r.counter     <= 0;
             query_r.ready       <= '0';
             query_r.wr_en       <= '0';
         else
@@ -203,7 +202,7 @@ begin
 
     -- default
     v.mem_wren   := (others => '0');
-    v.engine_rst := '0';
+    v.engine_rst := '1';
     v.ready      := '0';
 
     case nfa_r.flow_ctrl is
@@ -215,7 +214,7 @@ begin
                 v.flow_ctrl     := FLW_CTRL_READ;
                 v.ready         := '0';
                 v.cnt_criterium :=  0;
-                v.engine_rst    := '1';
+                v.engine_rst    := '0';
             end if;
 
       when FLW_CTRL_READ =>
@@ -272,15 +271,11 @@ end process;
 nfa_seq : process(clk_i)
 begin
     if rising_edge(clk_i) then
-        if rst_i = '1' then
+        if rst_i = '0' then
             nfa_r.flow_ctrl       <= FLW_CTRL_WAIT;
             nfa_r.ready           <= '0';
-            nfa_r.cnt_criterium   <=  0;
-            nfa_r.cnt_slice       <=  0;
-            nfa_r.cnt_edge        <= (others => '0');
-            nfa_r.mem_addr        <= (others => '0');
             nfa_r.mem_wren        <= (others => '0');
-            nfa_r.engine_rst      <= '1';
+            nfa_r.engine_rst      <= '0';
         else
             nfa_r <= nfa_rin;
         end if;

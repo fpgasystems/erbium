@@ -1,10 +1,9 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.all;
 
-library xil_defaultlib;
-use xil_defaultlib.engine_pkg.all;
-use xil_defaultlib.core_pkg.all;
-use xil_defaultlib.core_pkg.all;
+library bre;
+use bre.engine_pkg.all;
+use bre.core_pkg.all;
 
 entity top is
     port (
@@ -213,7 +212,7 @@ gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
     (
         G_RAM_WIDTH       => CFG_EDGE_BRAM_WIDTH,
         G_RAM_DEPTH       => CFG_EDGE_BRAM_DEPTH,
-        G_RAM_PERFORMANCE => "LOW_LATENCY",--"LOW_LATENCY",
+        G_RAM_PERFORMANCE => "HIGH_PERFORMANCE",--"LOW_LATENCY",
         G_INIT_FILE       => "bram_cr" & integer'image(I) & ".mem"
     )
     port map

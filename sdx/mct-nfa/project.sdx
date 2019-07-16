@@ -1,12 +1,47 @@
 <?xml version="1.0" encoding="ASCII"?>
 <openclProject:OpenCLProject xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:openclProject="http://www.xilinx.com/openclproject" name="mct-nfa" location="/home/mowaidah/gits/nfa-bre/sdx/mct-nfa" platform="/home/mowaidah/gits/aws-fpga/SDAccel/aws_platform/xilinx_aws-vu9p-f1-04261818_dynamic_5_0/xilinx_aws-vu9p-f1-04261818_dynamic_5_0.xpfm" platformUID="xilinx:aws-vu9p-f1-04261818:dynamic:5.0(custom)" systemProject="mct-nfa_system" sysConfig="linux_x86" cpu="" cpuInstance="" os="linux">
   <configuration name="Emulation-SW" id="com.xilinx.sdx.opencl.config.sw_emu.935066911">
-    <configBuildOptions xsi:type="openclProject:OpenCLOptions" kernelDebug="true"/>
+    <configBuildOptions xsi:type="openclProject:OpenCLOptions" kernelDebug="true">
+      <binaryContainers name="binary_container_1">
+        <precompiledKernels name="mct" sourceFile="src/sdx_rtl_kernel/mct/mct.xo">
+          <computeUnits name="mct_1"/>
+        </precompiledKernels>
+      </binaryContainers>
+    </configBuildOptions>
+    <lastBuildOptions xsi:type="openclProject:OpenCLOptions" kernelDebug="true">
+      <binaryContainers name="binary_container_1">
+        <precompiledKernels name="mct" sourceFile="src/sdx_rtl_kernel/mct/mct.xo">
+          <computeUnits name="mct_1"/>
+        </precompiledKernels>
+      </binaryContainers>
+    </lastBuildOptions>
   </configuration>
   <configuration name="Emulation-HW" id="com.xilinx.sdx.opencl.config.hw_emu.317529911">
-    <configBuildOptions xsi:type="openclProject:OpenCLOptions" kernelDebug="true" target="hw_emu"/>
+    <configBuildOptions xsi:type="openclProject:OpenCLOptions" kernelDebug="true" target="hw_emu">
+      <binaryContainers name="binary_container_1">
+        <precompiledKernels name="mct" sourceFile="src/sdx_rtl_kernel/mct/mct.xo"/>
+      </binaryContainers>
+    </configBuildOptions>
+    <lastBuildOptions xsi:type="openclProject:OpenCLOptions" kernelDebug="true" target="hw_emu">
+      <binaryContainers name="binary_container_1">
+        <precompiledKernels name="mct" sourceFile="src/sdx_rtl_kernel/mct/mct.xo"/>
+      </binaryContainers>
+    </lastBuildOptions>
   </configuration>
   <configuration name="System" id="com.xilinx.sdx.opencl.config.hw.642858356">
-    <configBuildOptions xsi:type="openclProject:OpenCLOptions" target="hw"/>
+    <configBuildOptions xsi:type="openclProject:OpenCLOptions" target="hw">
+      <binaryContainers name="binary_container_1">
+        <precompiledKernels name="mct" sourceFile="src/sdx_rtl_kernel/mct/mct.xo">
+          <computeUnits name="mct_1"/>
+        </precompiledKernels>
+      </binaryContainers>
+    </configBuildOptions>
+    <lastBuildOptions xsi:type="openclProject:OpenCLOptions" target="hw">
+      <binaryContainers name="binary_container_1">
+        <precompiledKernels name="mct" sourceFile="src/sdx_rtl_kernel/mct/mct.xo">
+          <computeUnits name="mct_1"/>
+        </precompiledKernels>
+      </binaryContainers>
+    </lastBuildOptions>
   </configuration>
 </openclProject:OpenCLProject>

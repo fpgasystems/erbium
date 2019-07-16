@@ -161,9 +161,9 @@ std::string toBinary(uint padding, uint n)
 
 int main()
 {
-    //std::ifstream       file("../../../Documents/amadeus-share/mct_rules.csv");
+    std::ifstream       file("../../../../Documents/amadeus-share/mct_rules.csv");
     //std::ifstream       file("../data/demo_02.csv");
-    std::ifstream       file("../data/demo_01.csv");
+    //std::ifstream       file("../data/demo_01.csv");
 
     ////////////////////////////////////////////////////////////////////////////////////////
     std::cout << "# LOAD" << std::endl;
@@ -257,16 +257,17 @@ int main()
     nfa_bre::Dictionnary the_dictionnary(rp);
 
     // arbitrary criteria order
-    std::vector<int> arbitrary;
-    for (auto& aux : rp.m_ruleType.m_criterionDefinition)
-        arbitrary.push_back(-1);
-    arbitrary[0] = rp.m_ruleType.get_criterium_id("MCT_OFF");
-    arbitrary[1] = rp.m_ruleType.get_criterium_id("MCT_BRD");
-    arbitrary[arbitrary.size()-3] = rp.m_ruleType.get_criterium_id("IN_FLT_RG");
-    arbitrary[arbitrary.size()-2] = rp.m_ruleType.get_criterium_id("OUT_FLT_RG");
-    arbitrary[arbitrary.size()-1] = rp.m_ruleType.get_criterium_id("MCT_PRD");
+    //std::vector<int> arbitrary;
+    //for (auto& aux : rp.m_ruleType.m_criterionDefinition)
+    //    arbitrary.push_back(-1);
+    //arbitrary[0] = rp.m_ruleType.get_criterium_id("MCT_OFF");
+    //arbitrary[1] = rp.m_ruleType.get_criterium_id("MCT_BRD");
+    //arbitrary[arbitrary.size()-3] = rp.m_ruleType.get_criterium_id("IN_FLT_RG");
+    //arbitrary[arbitrary.size()-2] = rp.m_ruleType.get_criterium_id("OUT_FLT_RG");
+    //arbitrary[arbitrary.size()-1] = rp.m_ruleType.get_criterium_id("MCT_PRD");
+    //the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending, &arbitrary);
 
-    the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending, &arbitrary);
+    the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending);
     
     finish = std::chrono::high_resolution_clock::now();
 
@@ -298,14 +299,14 @@ int main()
         aux=0;
         for (auto& value : level.second)
             aux += value.second.size();
-        std::cout << "level " << level.first << " has " << aux << " nodes" << std::endl;
+        std::cout << "level " << level.first << " has " << aux << " states" << std::endl;
     }
     #endif
 
     // Stats
-    std::cout << "total number of nodes: " << boost::num_vertices(the_nfa.m_graph) << std::endl;
+    std::cout << "total number of states: " << boost::num_vertices(the_nfa.m_graph) << std::endl;
     std::cout << "total number of transitions: " << boost::num_edges(the_nfa.m_graph) << std::endl;
-    std::cout << "# GRAPH COMPLETED in " << elapsed.count() << " s\n";
+    std::cout << "# NFA COMPLETED in " << elapsed.count() << " s\n";
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // OPTIMISATIONS                                                                                  //
@@ -325,7 +326,7 @@ int main()
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::cout << "# DELETION" << std::endl;
-    std::cout << "deleting " << n_merged_nodes << " nodes" << std::endl;
+    std::cout << "deleting " << n_merged_nodes << " states" << std::endl;
     start = std::chrono::high_resolution_clock::now();
 
     the_nfa.deletion();
@@ -338,15 +339,17 @@ int main()
 // FINAL STATS                                                                                    //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    std::cout << "# FINAL STATS" << std::endl;
     uint n_bram_edges_max = the_nfa.print_stats();
 
-    std::cout << "total number of nodes: " << boost::num_vertices(the_nfa.m_graph) << std::endl;
+    std::cout << "total number of states: " << boost::num_vertices(the_nfa.m_graph) << std::endl;
     std::cout << "total number of transitions: " << boost::num_edges(the_nfa.m_graph) << std::endl;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // EXPORT FILE                                                                                    //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    std::cout << "# EXPORT DOT FILE" << std::endl;
     the_nfa.export_dot_file("automaton.dot");
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -416,7 +419,7 @@ int main()
         edges_per_level[level->first] = n_edges;
     }
 
-    // before-last-criterium nodes point to the result directly
+    // before-last-criterium states point to the result directly
     for (auto& value : the_nfa.m_vertexes[the_nfa.m_vertexes.size()-2])
     {
         for (auto& vert : the_nfa.m_vertexes[the_nfa.m_vertexes.size()-2][value.first])

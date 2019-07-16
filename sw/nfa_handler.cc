@@ -118,25 +118,35 @@ uint NFAHandler::optimise()
 void NFAHandler::deletion()
 {
     // effectively remove obsolete vertexes from the graph
-    std::map<uint, std::map<uint, std::set<uint>>> final_v; // per level > per value_dic > nodes list
+    std::map<uint, std::map<uint, std::set<uint>>> final_vertexes; // per level > per value_dic > nodes list
     graph_t final_graph(1);
     std::vector<uint> mapa;
     std::map<uint, uint> mapaa;
     final_graph[0].label="o"; // origin
 
-    // iterates all states
-    boost::graph_traits < graph_t >::vertex_iterator vi, vi_end;
-    for (boost::tie(vi, vi_end) = vertices(m_graph); vi != vi_end; ++vi)
-    {
-        if (m_graph[*vi].parents.size() != 0)
-        {
-            mapa.push_back(*vi);
-            mapaa[*vi] = boost::add_vertex(final_graph);
-            final_graph[mapaa[*vi]] = m_graph[*vi];
-            final_graph[mapaa[*vi]].parents.clear();
-            final_graph[mapaa[*vi]].children.clear();
+    std::map<std::string, uint> dic;
 
-            final_v[m_graph[*vi].level][m_dic->get_criterium_dic(m_graph[*vi].level)[m_graph[*vi].label]].insert(mapaa[*vi]);            
+    // iterates all states
+    uint node_to_use;
+    for (auto& level : m_vertexes)
+    {
+        dic = m_dic->get_criterium_dic(level.first);
+        for (auto& value : m_vertexes[level.first])
+        {
+            for (auto& vert : m_vertexes[level.first][value.first])
+            {
+                if (m_graph[vert].parents.size() != 0)
+                {
+                    mapa.push_back(vert);
+                    node_to_use = boost::add_vertex(final_graph);
+                    mapaa[vert] = node_to_use;
+                    final_graph[node_to_use] = m_graph[vert];
+                    final_graph[node_to_use].parents.clear();
+                    final_graph[node_to_use].children.clear();
+
+                    final_vertexes[level][dic[m_graph[vert].label]].insert(node_to_use);
+                }
+            }
         }
     }
     // from origin, add edges
@@ -158,7 +168,7 @@ void NFAHandler::deletion()
     }
 
     m_graph = final_graph;
-    m_vertexes = final_v;
+    m_vertexes = final_vertexes;
 }
 
 uint NFAHandler::print_stats()

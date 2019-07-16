@@ -144,7 +144,7 @@ void NFAHandler::deletion()
                     final_graph[node_to_use].parents.clear();
                     final_graph[node_to_use].children.clear();
 
-                    final_vertexes[level][dic[m_graph[vert].label]].insert(node_to_use);
+                    final_vertexes[level.first][dic[m_graph[vert].label]].insert(node_to_use);
                 }
             }
         }

@@ -192,17 +192,9 @@ void write_longlongint(std::ofstream* outfile, unsigned long long int value)
 
 int main()
 {
-    uint key = 0;
-
-
-
-
-
-    ////////////////////////////////////////////////////////////////////////////////////////
-
-    //std::ifstream       file("../../../Documents/amadeus-share/mct_rules.csv");
+    std::ifstream       file("../../../../Documents/amadeus-share/mct_rules.csv");
     //std::ifstream       file("../data/demo_02.csv");
-    std::ifstream       file("../data/demo_01.csv");
+    //std::ifstream       file("../data/demo_01.csv");
 
     std::cout << "# LOAD" << std::endl;
     auto start = std::chrono::high_resolution_clock::now();

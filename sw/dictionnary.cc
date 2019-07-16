@@ -1,31 +1,10 @@
-#include "definitions.h"
+#include "dictionnary.h"
 
-enum SortOrder = {Ascending, Descending};
+#include <algorithm>
 
-class Dictionnary
-{
+namespace nfa_bre {
 
-  public:
-    std::map<uint, std::map<std::string, uint>> m_dic_criteria; // per criteria_id > per value > ID
-    std::map<std::string, uint> m_dic_contents;                 // per value > ID
-    std::vector<uint> m_sorting_map;                            // key=position; value=criteria_id
-
-    Dictionnary(const& rulePack_s rp);
-
-    // sorting
-    std::vector<uint> sort_by_n_of_values(const& SortOrder order);
-
-  private:
-
-    struct sort_pred_inv
-    {
-        bool operator()(const std::pair<uint,uint> &left, const std::pair<uint,uint> &right) {
-            return left.first > right.first;
-        }
-    };
-}
-
-Dictionnary(const& rulePack_s rp)
+Dictionnary::Dictionnary(const rulePack_s rp)
 {
     // scan rules
     for (auto& rule : rp.m_rules)
@@ -35,13 +14,13 @@ Dictionnary(const& rulePack_s rp)
 
         m_dic_contents[rule.m_content] = 0;
     }
-    
+
     // content indexes
+    uint key = 0;
     for (auto& value : m_dic_contents)
         value.second = key++;
 
     // criteria indexes
-    uint key = 0;
     for (auto& criterium : m_dic_criteria)
     {
         key = 0;
@@ -51,28 +30,83 @@ Dictionnary(const& rulePack_s rp)
 
     // sorting map
     for (auto& criterium : m_dic_criteria)          // TODO: check: is a map scan sorted by the key?
-        ordered.push_back(criterium.first);
+        m_sorting_map.push_back(criterium.first);
     // nothing garantees that the rule.m_criteria will be sorted by m_index
 }
 
-std::vector<uint> sort_by_n_of_values(const& SortOrder order)
+std::vector<uint> Dictionnary::sort_by_n_of_values(const SortOrder order, std::vector<int>* arbitrary)
 {
     std::vector<std::pair<uint, uint>> the_map;     // list of pair <(#diff values) & (criteria_id)>
-    uint key = 0;
     
     // creation
     for (auto& criterium : m_dic_criteria)
-        the_map.push_back(std::pair<uint, uint>(criterium.second.size(), criteria.first));
+        the_map.push_back(std::pair<uint, uint>(criterium.second.size(), criterium.first));
 
     // effective sort
     if (order == SortOrder::Ascending)
-        sort(ordered.begin(), ordered.end());
+        std::sort(the_map.begin(), the_map.end());
     else
-        sort(ordered.begin(), ordered.end(), sort_pred_inv());
+        std::sort(the_map.begin(), the_map.end(), sort_pred_inv());
 
     // Update sorting_map
+    uint key = 0;
     for (auto& aux : the_map)
         m_sorting_map[key++] = aux.second;
 
+    if (arbitrary != NULL)
+    {
+        for (auto& aux : m_sorting_map)
+        {
+            if (exists_in_vector(*arbitrary, aux))
+                continue;
+
+            key = 0;
+            for (auto& arb : *arbitrary)
+            {
+                if (arb == -1)
+                {
+                    (*arbitrary)[key] = aux;
+                    break;
+                }
+                key++;
+            }
+        }
+
+        key = 0;
+        for (auto& aux : *arbitrary)
+            m_sorting_map[key++] = aux;
+    }
+
     return m_sorting_map;
 }
+bool Dictionnary::exists_in_vector(const std::vector<int> vec, int point)
+{
+    for (auto& aux : vec)
+    {
+        if (aux == point)
+            return true;
+    }
+    return false;
+}
+
+int Dictionnary::get_level_by_criterium_id(const uint criterium_id)
+{
+    int key = 0;
+    for (auto& aux : m_sorting_map)
+    {
+        if (aux == criterium_id)
+            return key;
+        key++;
+    }
+    return -1;
+}
+
+std::map<std::string, uint> Dictionnary::get_criterium_dic(const uint level)
+{
+    if (level == m_dic_criteria.size())
+        return m_dic_contents;
+    else
+        return m_dic_criteria[m_sorting_map[level]];
+}
+
+} // namespace nfa_bre

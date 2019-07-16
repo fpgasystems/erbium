@@ -1,5 +1,4 @@
 #include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/graphviz.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/foreach.hpp>
@@ -13,18 +12,25 @@
 #include <math.h>
 
 #include "definitions.h"
-
-namespace pt = boost::property_tree;
+#include "dictionnary.h"
+#include "nfa_handler.h"
 
 //#define _DEBUG true
 
-void abr_dataset::load(const std::string &filename)
+void write_longlongint(std::ofstream* outfile, unsigned long long int value)
+{
+    uintptr_t addr = (uintptr_t)&value;
+    for (short i = sizeof(value)-1; i >= 0; i--)
+        outfile->write((char*)(addr + i), 1);
+}
+
+void nfa_bre::abr_dataset_s::load(const std::string &filename)
 {
     // Create empty property tree object
-    pt::ptree tree;
+    boost::property_tree::ptree tree;
 
     // Parse the XML into the property tree.
-    pt::read_xml(filename, tree);
+    boost::property_tree::read_xml(filename, tree);
 
     m_organization = tree.get<std::string>("ABR.<xmlattr>.organization");
     m_application = tree.get<std::string>("ABR.<xmlattr>.application");
@@ -93,7 +99,6 @@ void abr_dataset::load(const std::string &filename)
     }
 }
 
-
 class CSVRow
 {
 public:
@@ -138,15 +143,6 @@ std::istream& operator>>(std::istream& str, CSVRow& data)
     return str;
 }
 
-struct vertex_info { 
-    uint level;
-    std::string label;
-    std::string path;
-    std::set<uint> parents;
-    uint dump_pointer;
-};
-typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, vertex_info> graph_t;
-
 std::string toBinary(uint padding, uint n)
 {
     std::string r;
@@ -165,24 +161,17 @@ std::string toBinary(uint padding, uint n)
 
 int main()
 {
-    uint key = 0;
-
-
-
-
-
-    ////////////////////////////////////////////////////////////////////////////////////////
-
     //std::ifstream       file("../../../Documents/amadeus-share/mct_rules.csv");
     //std::ifstream       file("../data/demo_02.csv");
     std::ifstream       file("../data/demo_01.csv");
 
+    ////////////////////////////////////////////////////////////////////////////////////////
     std::cout << "# LOAD" << std::endl;
     auto start = std::chrono::high_resolution_clock::now();
     CSVRow              row;
     row.readNextRow(file);
-    abr_dataset ds;
-    rulePack_s rp;
+    nfa_bre::abr_dataset_s ds;
+    nfa_bre::rulePack_s rp;
     ds.m_organization = "Amadeus";
     ds.m_application = "MCT";
 
@@ -190,15 +179,14 @@ int main()
     rp.m_ruleType.m_code = "MINCT";
     rp.m_ruleType.m_release = 0;
 
-    for (int i=6; i<row.m_data.size()-4; i++)
+    for (uint i=6; i<row.m_data.size()-4; i++)
     {
-        criterionDefinition_s cd;
+        nfa_bre::criterionDefinition_s cd;
         cd.m_index = i-6;
         cd.m_code = row.m_data[i];
         cd.m_isMandatory = false;
         cd.m_supertag = "";
         cd.m_weight = 0;
-        cd.m_used = 0;
         rp.m_ruleType.m_criterionDefinition.push_back(cd);
     }
 
@@ -217,26 +205,26 @@ int main()
         //    continue;
         //if (row.m_data[aux+3] != "\"35\"")
         //    continue;
+        //if (row.m_data[8] != "\"FIR\"" && row.m_data[9] != "\"FIR\"" && row.m_data[8] != "\"IBT\"" && row.m_data[9] != "\"IBT\"")
+        //    continue;
 
-        rule_s rl;
+        nfa_bre::rule_s rl;
         rl.m_ruleId = std::stoi(row.m_data[0].substr(1));
         rl.m_weight = std::stoi(row.m_data[1]);
         for (int i=6; i<aux; i++)
         {
-            if(!row.m_data[i].empty())
+            if (!row.m_data[i].empty())
             {
-                criterion_s ct;
+                nfa_bre::criterion_s ct;
                 ct.m_index = i-6;
                 ct.m_code = rp.m_ruleType.m_criterionDefinition[i-6].m_code;
                 ct.m_value = row.get_value(i);
-
-                rp.m_ruleType.m_criterionDefinition[i-6].m_used++;
                 rl.m_criteria.insert(ct);
             }
             else
             {
                 // IF NO VALUE, USE "*"
-                criterion_s ct;
+                nfa_bre::criterion_s ct;
                 ct.m_index = i-6;
                 ct.m_code = rp.m_ruleType.m_criterionDefinition[i-6].m_code;
                 ct.m_value = "*";
@@ -248,6 +236,7 @@ int main()
         else
             rl.m_content = std::to_string(std::stoi(row.get_value(aux+1))*60 + 
                                           std::stoi(row.get_value(aux+3)));
+
         rp.m_rules.insert(rl);
     }
     //rp.m_ruleType.print("");
@@ -265,11 +254,23 @@ int main()
     std::cout << "# DICTIONNARY" << std::endl;
     start = std::chrono::high_resolution_clock::now();
     
-    Dictionnary the_dictionnary(rp);
-    the_dictionnary.sort_by_n_of_values(SortOrder::Descending);
+    nfa_bre::Dictionnary the_dictionnary(rp);
+
+    // arbitrary criteria order
+    std::vector<int> arbitrary;
+    for (auto& aux : rp.m_ruleType.m_criterionDefinition)
+        arbitrary.push_back(-1);
+    arbitrary[0] = rp.m_ruleType.get_criterium_id("MCT_OFF");
+    arbitrary[1] = rp.m_ruleType.get_criterium_id("MCT_BRD");
+    arbitrary[arbitrary.size()-3] = rp.m_ruleType.get_criterium_id("IN_FLT_RG");
+    arbitrary[arbitrary.size()-2] = rp.m_ruleType.get_criterium_id("OUT_FLT_RG");
+    arbitrary[arbitrary.size()-1] = rp.m_ruleType.get_criterium_id("MCT_PRD");
+
+    the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending, &arbitrary);
     
     finish = std::chrono::high_resolution_clock::now();
 
+    uint key = 0;
     for (auto& aux : the_dictionnary.m_sorting_map)
     {
         std::cout << "[" << key++ << "] " << rp.m_ruleType.m_criterionDefinition[aux].m_code;
@@ -286,13 +287,13 @@ int main()
     std::cout << "# NFA" << std::endl;
     start = std::chrono::high_resolution_clock::now();
     
-    NFAHandler the_nfa(rp, the_dictionnary.m_dic_criteria);
+    nfa_bre::NFAHandler the_nfa(rp, &the_dictionnary);
 
     finish = std::chrono::high_resolution_clock::now();
     elapsed = finish - start;
     
     #ifdef _DEBUG
-    for (auto& level : vertexes)
+    for (auto& level : the_nfa.m_vertexes)
     {
         aux=0;
         for (auto& value : level.second)
@@ -300,178 +301,61 @@ int main()
         std::cout << "level " << level.first << " has " << aux << " nodes" << std::endl;
     }
     #endif
+
     // Stats
-    std::cout << "total number of nodes: " << boost::num_vertices(g) << std::endl;
-    std::cout << "total number of transitions: " << boost::num_edges(g) << std::endl;
-    std::cout << "total number of fwd merges: " << stats_fwd << std::endl;
+    std::cout << "total number of nodes: " << boost::num_vertices(the_nfa.m_graph) << std::endl;
+    std::cout << "total number of transitions: " << boost::num_edges(the_nfa.m_graph) << std::endl;
     std::cout << "# GRAPH COMPLETED in " << elapsed.count() << " s\n";
 
-    ////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// OPTIMISATIONS                                                                                  //
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    ////// OPTIMISATIONS
     std::cout << "# OPTIMISATIONS" << std::endl;
     start = std::chrono::high_resolution_clock::now();
-    // stats
-    uint merged_total = 0;
-    uint merged_level = 0;
 
-    boost::graph_traits < graph_t >::adjacency_iterator ai, a_end;
-    boost::graph_traits < graph_t >::adjacency_iterator bi, b_end;
-    boost::graph_traits < graph_t >::adjacency_iterator ci, c_end;
+    uint n_merged_nodes = the_nfa.optimise();
     
-    // iterates all the levels (one level per criterium)
-    for (auto level = ++(vertexes.rbegin()); level != vertexes.rend(); ++level)
-    {
-        #ifdef _DEBUG
-        std::cout << "level " << (level->first);
-        start = std::chrono::high_resolution_clock::now();
-        #endif
-        merged_level = 0;
-        // iterates all the values
-        for (auto value_id : vertexes[level->first])
-        {
-            // TODO: check why using the "auto" form misses some merges! (227 instead of 234)
-            // iterates all the nodes with this value within this level
-            for (auto vertex = vertexes[level->first][value_id.first].rbegin(); vertex != vertexes[level->first][value_id.first].rend(); ++vertex)
-            //for (auto& vertex : vertexes[level->first][value_id.first])
-            {
-                // skip if already merged
-                if (g[*vertex].label == "")
-                    continue;
-
-                boost::tie(ci, c_end) = adjacent_vertices(*vertex, g);
-                // for (auto& aux : vertexes[level->first][value_id.first])
-                // compare to all the other nodes with same value (within same level)
-                for (auto aux = std::next(vertex); aux != vertexes[level->first][value_id.first].rend(); ++aux)
-                //for (auto& aux : vertexes[level->first][value_id.first])
-                {
-                    //if (aux <= vertex)
-                    //    continue;
-
-                    // skip if already merged
-                    if (g[*aux].label == "")
-                        continue;
-
-                    bool equal = true;
-
-                    // Check if both nodes point to the same nodes
-                    boost::tie(ai, a_end) = boost::tie(ci, c_end);
-                    boost::tie(bi, b_end) = adjacent_vertices(*aux, g);
-
-                    for (; ai != a_end && equal; ++ai, ++bi)
-                    {
-                        if (*ai != *bi)
-                            equal = false;
-                    }
-                    if (ai != a_end || bi != b_end)
-                        equal = false;
-
-                    if (equal)
-                    {
-                        // redirect all the in edges of aux to vertex
-                        for (auto cr : g[*aux].parents)
-                        {
-                            boost::remove_edge(cr, *aux, g);
-                            boost::add_edge(cr, *vertex, g);
-                        }
-                        g[*aux].parents.clear();
-                        g[*aux].label = "";
-                        merged_level++;
-                        merged_total++;
-                    }
-                }
-            }
-        }
-        #ifdef _DEBUG
-        finish = std::chrono::high_resolution_clock::now();
-        elapsed = finish - start;
-        std::cout << " merged " << merged_level << " nodes in " << elapsed.count() << " s\n";
-        #endif
-    }
     finish = std::chrono::high_resolution_clock::now();
     elapsed = finish - start;
     std::cout << "# OPTIMISATIONS COMPLETED in " << elapsed.count() << " s\n";
 
-    ////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// DELETION                                                                                       //
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    ////// DELETION
-    std::cout << "# DELETING" << std::endl;
-    std::cout << "deleting " << merged_total << " nodes" << std::endl;
+    std::cout << "# DELETION" << std::endl;
+    std::cout << "deleting " << n_merged_nodes << " nodes" << std::endl;
     start = std::chrono::high_resolution_clock::now();
 
-    // effectively remove obsolete vertexes from the graph
-    graph_t final_one(1);
-    std::vector<uint> mapa;
-    std::map<uint, uint> mapaa;
+    the_nfa.deletion();
 
-    final_one[0].label="o"; // origin
-    boost::graph_traits < graph_t >::vertex_iterator vi, vi_end;
-    for (boost::tie(vi, vi_end) = vertices(g); vi != vi_end; ++vi)
-    {
-        if (g[*vi].parents.size() != 0)
-        {
-            mapa.push_back(*vi);
-            mapaa[*vi] = boost::add_vertex(final_one);
-            final_one[mapaa[*vi]] = g[*vi];
-        }
-    }
-    for(boost::tie(bi, b_end) = adjacent_vertices(0, g); bi != b_end; ++bi)
-        boost::add_edge(0, mapaa[*bi], final_one);
-    for (auto itr : mapa)
-    {
-        for(boost::tie(bi, b_end) = adjacent_vertices(itr, g); bi != b_end; ++bi)
-            boost::add_edge(mapaa[itr], mapaa[*bi], final_one);
-
-    }
-    g = final_one;
     finish = std::chrono::high_resolution_clock::now();
     elapsed = finish - start;
     std::cout << "# DELETING COMPLETED in " << elapsed.count() << " s\n";
 
-    ////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// FINAL STATS                                                                                    //
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    ////// FINAL STATS
-    uint n_nodes;
-    uint n_edges;
-    uint n_edges_max = 0;
-    uint n_bram_edges_max = 0;
-    for (auto& level : vertexes)
-    {
-        n_nodes = 0;
-        n_edges = 0;
-        n_edges_max = 0;
-        for (auto& value : vertexes[level.first])
-        {
-            for (auto& vert : vertexes[level.first][value.first])
-            {
-                if(g[mapaa[vert]].parents.size() != 0)
-                {
-                    aux = out_degree(mapaa[vert], g);
-                    n_nodes++;
-                    n_edges += aux;
-                    n_edges_max = (aux > n_edges_max) ? aux : n_edges_max;
-                }
-            }
-        }
-        std::cout << "level " << level.first << ": " << n_nodes << " nodes; " << n_edges << " edges; " << n_edges_max << " max edges\n";
-        n_bram_edges_max = (n_edges > n_bram_edges_max) ? n_edges : n_bram_edges_max;
-    }
+    uint n_bram_edges_max = the_nfa.print_stats();
 
-    std::cout << "total number of nodes: " << boost::num_vertices(g) << std::endl;
-    std::cout << "total number of transitions: " << boost::num_edges(g) << std::endl;
+    std::cout << "total number of nodes: " << boost::num_vertices(the_nfa.m_graph) << std::endl;
+    std::cout << "total number of transitions: " << boost::num_edges(the_nfa.m_graph) << std::endl;
 
-    ////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// EXPORT FILE                                                                                    //
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    ////// EXPORT FILE
-    std::ofstream dot_file("automaton.dot");
-    boost::write_graphviz(dot_file, g, boost::make_label_writer(get(&vertex_info::label, g)));
+    the_nfa.export_dot_file("automaton.dot");
 
-    ////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// MEMORY DUMP                                                                                    //
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    ////// MEMORY DUMP
+
     std::cout << "# MEMORY DUMP" << std::endl;
-    std::ofstream myfile;
-    start = std::chrono::high_resolution_clock::now();
+    std::ofstream outfile("mem_edges.bin", std::ios::binary | std::ios::out | std::ios::trunc);
 
     const uint CFG_ENGINE_NCRITERIA       = rp.m_ruleType.m_criterionDefinition.size();
     const uint CFG_ENGINE_CRITERIUM_WIDTH = 12;
@@ -479,89 +363,9 @@ int main()
     const uint CFG_MEM_ADDR_WIDTH         = ceil(log2(n_bram_edges_max));
     const uint CFG_EDGE_BUFFERS_DEPTH     = 5;
     const uint CFG_EDGE_BRAM_DEPTH        = n_bram_edges_max;
-    const uint CFG_EDGE_BRAM_WIDTH        = 64;
-    const uint ZERO_PADDING               = CFG_EDGE_BRAM_WIDTH - (CFG_WEIGHT_WIDTH + CFG_MEM_ADDR_WIDTH + CFG_ENGINE_CRITERIUM_WIDTH + CFG_ENGINE_CRITERIUM_WIDTH + 1);
-
-    std::map<std::string, uint> dic = dictionnary[dictionnary.size()-1];
-    for (auto level = vertexes.rbegin(); level != vertexes.rend(); ++level)
-    {
-        std::cout << "doing " << level->first+1 << std::endl;
-        myfile.open("bram_cr" + std::to_string(level->first+1) + ".mem");
-        n_edges = 0;
-
-        for (auto& value : vertexes[level->first])
-        {
-            for (auto& vert : vertexes[level->first][value.first])
-            {
-                if(g[mapaa[vert]].parents.size() != 0)
-                {
-
-                    g[mapaa[vert]].dump_pointer = n_edges;
-                    n_edges_max = out_degree(mapaa[vert], g);
-
-                    if (n_edges_max == 0)
-                    {
-                        n_edges++;
-                        myfile << toBinary(ZERO_PADDING, 0);        // padding
-                        myfile << "1";                              // last
-                        myfile << toBinary(CFG_WEIGHT_WIDTH, 0);    // weight
-                        myfile << toBinary(CFG_MEM_ADDR_WIDTH, 0);  // pointer
-                        myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dic[g[mapaa[vert]].label]); // op_b
-                        myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dic[g[mapaa[vert]].label]); // op_a
-                        myfile << "\n";
-                        //myfile << std::bitset<ZERO_PADDING>(0).to_string(); // padding
-                        //myfile << "1";         // last
-                        //myfile << std::bitset<CFG_WEIGHT_WIDTH>(0).to_string(); // weight
-                        //myfile << std::bitset<CFG_MEM_ADDR_WIDTH>(0).to_string(); // pointer
-                        //myfile << std::bitset<CFG_ENGINE_CRITERIUM_WIDTH>(contents[g[mapaa[vert]].label]).to_string(); // op_b
-                        //myfile << std::bitset<CFG_ENGINE_CRITERIUM_WIDTH>(contents[g[mapaa[vert]].label]).to_string(); // op_a
-                        //myfile << "\n";
-                    }
-                    else
-                    {
-                        n_edges += n_edges_max;
-                        boost::tie(ai, a_end) = adjacent_vertices(mapaa[vert], g);
-                        for (aux=1; ai != a_end; ++ai, ++aux)
-                        {
-                            myfile << toBinary(ZERO_PADDING, 0); // padding
-                            myfile << (aux == n_edges_max) ? "1" : "0";         // last
-                            myfile << toBinary(CFG_WEIGHT_WIDTH, 100); // weight TODO
-                            myfile << toBinary(CFG_MEM_ADDR_WIDTH, g[*ai].dump_pointer); // pointer
-                            myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dic[g[*ai].label]); // op_b
-                            myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dic[g[*ai].label]); // op_a
-                            myfile << "\n";
-                            //myfile << std::bitset<ZERO_PADDING>(0).to_string(); // padding
-                            //myfile << (aux == n_edges_max) ? "1" : "0";         // last
-                            //myfile << std::bitset<CFG_WEIGHT_WIDTH>(100).to_string(); // weight TODO
-                            //myfile << std::bitset<CFG_MEM_ADDR_WIDTH>(g[*ai].dump_pointer).to_string(); // pointer
-                            //myfile << std::bitset<CFG_ENGINE_CRITERIUM_WIDTH>(dictionnary[level->first][g[mapaa[vert]]]).to_string(); // op_b
-                            //myfile << std::bitset<CFG_ENGINE_CRITERIUM_WIDTH>(dictionnary[level->first][g[mapaa[vert]]]).to_string(); // op_a
-                            //myfile << "\n";
-                        }
-                    }
-                }
-            }
-        }
-        myfile.close();
-        if(level != vertexes.rbegin())
-            dic = dictionnary[ordered[level->first].second];
-    }
-    // origin
-    myfile.open("bram_cr0.mem");
-    boost::tie(ai, a_end) = adjacent_vertices(0, g);
-    for (aux=0; ai != a_end; ++ai, ++aux)
-    {
-        myfile << toBinary(ZERO_PADDING, 0); // padding
-        myfile << (aux == n_edges_max) ? "1" : "0";         // last
-        myfile << toBinary(CFG_WEIGHT_WIDTH, 100); // weight TODO
-        myfile << toBinary(CFG_MEM_ADDR_WIDTH, g[*ai].dump_pointer); // pointer
-        myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dictionnary[ordered[0].second][g[*ai].label]); // op_b
-        myfile << toBinary(CFG_ENGINE_CRITERIUM_WIDTH, dictionnary[ordered[0].second][g[*ai].label]); // op_a
-        myfile << "\n";
-    }
-    myfile.close();
-
-    finish = std::chrono::high_resolution_clock::now();
+    const uint BRAM_USED_BITS             = CFG_WEIGHT_WIDTH + CFG_MEM_ADDR_WIDTH + CFG_ENGINE_CRITERIUM_WIDTH + CFG_ENGINE_CRITERIUM_WIDTH + 1;
+    const uint CFG_EDGE_BRAM_WIDTH        = 1 << ((uint)ceil(log2(BRAM_USED_BITS)));    
+    
     std::cout << "constant CFG_ENGINE_NCRITERIA         : integer := " << CFG_ENGINE_NCRITERIA << "; -- Number of criteria\n";
     std::cout << "constant CFG_ENGINE_CRITERIUM_WIDTH   : integer := " << CFG_ENGINE_CRITERIUM_WIDTH << "; -- Number of bits of each criterium value\n";
     std::cout << "constant CFG_WEIGHT_WIDTH             : integer := " << CFG_WEIGHT_WIDTH << "; -- integer from 0 to 2^CFG_WEIGHT_WIDTH-1\n";
@@ -572,6 +376,134 @@ int main()
     std::cout << "constant CFG_EDGE_BRAM_DEPTH          : integer := " << CFG_EDGE_BRAM_DEPTH << ";\n";
     std::cout << "constant CFG_EDGE_BRAM_WIDTH          : integer := " << CFG_EDGE_BRAM_WIDTH << ";\n";
 
+    start = std::chrono::high_resolution_clock::now();
+
+    const unsigned long int MASK_WEIGHT     = 0x7FFFF;
+    const unsigned long int MASK_POINTER    = 0x7FFF;
+    const unsigned long int MASK_OPERAND_B  = 0xFFF;
+    const unsigned long int MASK_OPERAND_A  = 0xFFF;
+    const unsigned long int SHIFT_LAST      = CFG_WEIGHT_WIDTH+CFG_MEM_ADDR_WIDTH+2*CFG_ENGINE_CRITERIUM_WIDTH;
+    const unsigned long int SHIFT_WEIGHT    = CFG_MEM_ADDR_WIDTH+2*CFG_ENGINE_CRITERIUM_WIDTH;
+    const unsigned long int SHIFT_POINTER   = 2*CFG_ENGINE_CRITERIUM_WIDTH;
+    const unsigned long int SHIFT_OPERAND_B = CFG_ENGINE_CRITERIUM_WIDTH;
+    const unsigned long int SHIFT_OPERAND_A = 0;
+
+    // POINTERS
+    uint edges_per_level[the_nfa.m_vertexes.size()];
+    uint n_edges;
+    uint n_edges_max;
+    for (auto level = the_nfa.m_vertexes.rbegin(); level != the_nfa.m_vertexes.rend(); ++level)
+    {
+        n_edges = 0;
+
+        for (auto& value : the_nfa.m_vertexes[level->first])
+        {
+            for (auto& vert : the_nfa.m_vertexes[level->first][value.first])
+            {
+                if (the_nfa.m_graph[vert].parents.size() != 0)
+                {
+
+                    the_nfa.m_graph[vert].dump_pointer = n_edges;
+                    n_edges_max = the_nfa.m_graph[vert].children.size();
+
+                    if (n_edges_max == 0)
+                        n_edges++;
+                    else
+                        n_edges += n_edges_max;
+                }
+            }
+        }
+        edges_per_level[level->first] = n_edges;
+    }
+
+    // before-last-criterium nodes point to the result directly
+    for (auto& value : the_nfa.m_vertexes[the_nfa.m_vertexes.size()-2])
+    {
+        for (auto& vert : the_nfa.m_vertexes[the_nfa.m_vertexes.size()-2][value.first])
+        {
+            auto element = the_nfa.m_graph[vert];
+            if (element.parents.size() != 0)
+            {
+                auto result = element.children.begin();
+                element.dump_pointer = the_nfa.m_graph[*result].dump_pointer;
+            }
+        }
+    }
+
+
+    unsigned long long int mem_int;
+    uint SLICES_PER_LINE = 512 / 64;
+    // origin
+    aux = 1;
+    n_edges_max = the_nfa.m_graph[0].children.size();
+
+    write_longlongint(&outfile, n_edges_max);
+
+    for (auto& vert : the_nfa.m_graph[0].children)
+    {
+        mem_int = (aux++ == n_edges_max);
+        mem_int = mem_int << SHIFT_LAST;
+        mem_int |= ((unsigned long long int)256 & MASK_WEIGHT) << SHIFT_WEIGHT;
+        mem_int |= ((unsigned long long int)the_nfa.m_graph[vert].dump_pointer & MASK_POINTER) << SHIFT_POINTER;
+        mem_int |= ((unsigned long long int)the_dictionnary.get_criterium_dic(0)[the_nfa.m_graph[vert].label] & MASK_OPERAND_B) << SHIFT_OPERAND_B;
+        mem_int |= ((unsigned long long int)the_dictionnary.get_criterium_dic(0)[the_nfa.m_graph[vert].label] & MASK_OPERAND_A) << SHIFT_OPERAND_A;
+        write_longlongint(&outfile, mem_int);
+    }
+    // padding
+    n_edges = (n_edges_max+1) % SLICES_PER_LINE;
+    n_edges = (n_edges == 0) ? 0 : SLICES_PER_LINE - n_edges;
+    for (uint pad = n_edges; pad != 0; pad--)
+        write_longlongint(&outfile, 0);
+    std::cout << "level=0 edges=" << n_edges_max << " padding=" << n_edges << std::endl;
+
+
+    uint the_order = 1;
+    std::map<std::string, uint> dic;
+    for (auto level : the_nfa.m_vertexes)
+    {
+        if (level.second == the_nfa.m_vertexes[the_nfa.m_vertexes.size()-2])
+            break;  // skip content
+
+        dic = the_dictionnary.get_criterium_dic(the_order++);
+
+        // number of edges
+        mem_int = edges_per_level[level.first];
+        write_longlongint(&outfile, mem_int);
+
+        // write 
+        for (auto& value : the_nfa.m_vertexes[level.first])
+        {
+            for (auto& vert : the_nfa.m_vertexes[level.first][value.first])
+            {
+                if (the_nfa.m_graph[vert].parents.size() != 0)
+                {
+                    aux=1;
+                    n_edges_max = the_nfa.m_graph[vert].children.size();
+                    for (auto& itr : the_nfa.m_graph[vert].children)
+                    {
+                        mem_int = (unsigned long long int)(aux++ == n_edges_max) << SHIFT_LAST;
+                        mem_int |= ((unsigned long long int)256 & MASK_WEIGHT) << SHIFT_WEIGHT;
+                        mem_int |= ((unsigned long long int)(the_nfa.m_graph[itr].dump_pointer) & MASK_POINTER) << SHIFT_POINTER;
+                        mem_int |= ((unsigned long long int)(dic[the_nfa.m_graph[itr].label] & MASK_OPERAND_B)) << SHIFT_OPERAND_B;
+                        mem_int |= ((unsigned long long int)(dic[the_nfa.m_graph[itr].label] & MASK_OPERAND_A)) << SHIFT_OPERAND_A;
+                        write_longlongint(&outfile, mem_int);
+                    }
+                }
+            }
+        }
+        // padding
+        n_edges = (edges_per_level[level.first]+1) % SLICES_PER_LINE;
+        n_edges = (n_edges == 0) ? 0 : SLICES_PER_LINE - n_edges;
+        for (uint pad = n_edges; pad != 0; pad--)
+            write_longlongint(&outfile, 0);
+
+        std::cout << "level=" << level.first+1 << " edges=" << edges_per_level[level.first] << " padding=" << n_edges << std::endl;
+    }
+
+    outfile.close();
+
+    finish = std::chrono::high_resolution_clock::now();
+
     elapsed = finish - start;
     std::cout << "# MEMORY DUMP COMPLETED in " << elapsed.count() << " s\n";
 
@@ -579,28 +511,3 @@ int main()
 
     return 0;
 }
-
-/*
-typedef adjacency_list<vecS, vecS, bidirectionalS, 
-    no_property, property<edge_index_t, std::size_t> > Graph;
-
-  const int num_vertices = 9;
-  Graph G(num_vertices);
-
-  int capacity_array[] = { 10, 20, 20, 20, 40, 40, 20, 20, 20, 10 };
-  int flow_array[] = { 8, 12, 12, 12, 12, 12, 16, 16, 16, 8 };
-
-  // Add edges to the graph, and assign each edge an ID number.
-  add_edge(0, 1, 0, G);
-  // ...
-
-  typedef graph_traits<Graph>::edge_descriptor Edge;
-  typedef property_map<Graph, edge_index_t>::type EdgeID_Map;
-  EdgeID_Map edge_id = get(edge_index, G);
-
-  random_access_iterator_property_map
-    <int*, int, int&, EdgeID_Map> 
-      capacity(capacity_array, edge_id), 
-      flow(flow_array, edge_id);
-
-  print_network(G, capacity, flow);*/

@@ -46,11 +46,11 @@ architecture rtl of buffer_query is
     type fifo_data_type is array (0 to G_DEPTH-1) of query_buffer_type;
 
     -- # Words in FIFO, has extra range to allow for assert conditions
-    signal fifo_cntr_reg : integer range -1 to G_DEPTH+1 := 0;
+    signal fifo_cntr_reg : integer range -1 to G_DEPTH+1;
     signal fifo_data_reg : fifo_data_type;-- := (others => (others => (others => '0')));
 
-    signal wr_index_reg  : integer range 0 to G_DEPTH-1 := 0;
-    signal rd_index_reg  : integer range 0 to G_DEPTH-1 := 0;
+    signal wr_index_reg  : integer range 0 to G_DEPTH-1;
+    signal rd_index_reg  : integer range 0 to G_DEPTH-1;
 
     signal sig_full      : std_logic;
     signal sig_empty     : std_logic;

@@ -1,5 +1,5 @@
-library IEEE;
-use IEEE.STD_LOGIC_1164.all;
+library ieee;
+use ieee.std_logic_1164.all;
 
 library bre;
 use bre.engine_pkg.all;
@@ -208,23 +208,23 @@ gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
         next_write_o    => next_write(I)
     );
 
-    bram_g : bram_edge_store generic map
-    (
-        G_RAM_WIDTH       => CFG_EDGE_BRAM_WIDTH,
-        G_RAM_DEPTH       => CFG_EDGE_BRAM_DEPTH,
-        G_RAM_PERFORMANCE => "HIGH_PERFORMANCE",--"LOW_LATENCY",
-        G_INIT_FILE       => "bram_cr" & integer'image(I) & ".mem"
-    )
-    port map
-    (
-        clk_i        => clk_i,
-        ram_reg_en_i => '1',
-        ram_en_i     => bram_en(I),
-        addr_i       => bram_addr(I),
-        wr_data_i    => mem_i,
-        wr_en_i      => mem_wren_i(I),
-        rd_data_o    => mem_edge(I)
-    );
+    -- bram_g : bram_edge_store generic map
+    -- (
+    --     G_RAM_WIDTH       => CFG_EDGE_BRAM_WIDTH,
+    --     G_RAM_DEPTH       => CFG_EDGE_BRAM_DEPTH,
+    --     G_RAM_PERFORMANCE => "HIGH_PERFORMANCE",--"LOW_LATENCY",
+    --     G_INIT_FILE       => "bram_cr" & integer'image(I) & ".mem"
+    -- )
+    -- port map
+    -- (
+    --     clk_i        => clk_i,
+    --     ram_reg_en_i => '1',
+    --     ram_en_i     => bram_en(I),
+    --     addr_i       => bram_addr(I),
+    --     wr_data_i    => mem_i,
+    --     wr_en_i      => mem_wren_i(I),
+    --     rd_data_o    => mem_edge(I)
+    -- );
     
     gen_fwd : if I /= CFG_ENGINE_NCRITERIA - 1 generate -- from I to I+1
 

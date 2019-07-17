@@ -1,3 +1,15 @@
+----------------------------------------------------------------------------------------------------
+-- project : 
+--  author : 
+--    date : 
+--    file : core.vhd
+--  design : 
+----------------------------------------------------------------------------------------------------
+-- Description : 
+----------------------------------------------------------------------------------------------------
+-- $Log$
+----------------------------------------------------------------------------------------------------
+
 library ieee;
 use ieee.std_logic_1164.all;
 
@@ -110,8 +122,7 @@ end process;
 ----------------------------------------------------------------------------------------------------
 
 prev_read_o <= fetch_r.buffer_rd_en;
-mem_addr_o <= fetch_r.mem_addr when fetch_r.flow_ctrl = FLW_CTRL_MEM else
-              (others => 'Z');
+mem_addr_o <= fetch_r.mem_addr;
 mem_en_o   <= '1' when fetch_r.flow_ctrl = FLW_CTRL_MEM else
               '0';
 
@@ -217,7 +228,7 @@ begin
 
     -- TODO check if it's not a NOP!!!!!!!!!!!
 
-    v.writing_edge.pointer := mem_edge_i.pointer;
+    v.writing_edge.pointer  := mem_edge_i.pointer;
     v.writing_edge.query_id := fetch_r.query_id;
 
     -- effectively used only in the last level instance
@@ -232,8 +243,8 @@ execute_seq: process(clk_i)
 begin
     if rising_edge(clk_i) then
         if rst_i = '0' then
-            execute_r.inference_res         <= '0';
-            execute_r.weight_filter         <= 0;
+            execute_r.inference_res <= '0';
+            execute_r.weight_filter <=  0;
         else
             execute_r <= execute_rin;
         end if;

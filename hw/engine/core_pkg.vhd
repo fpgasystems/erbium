@@ -1,18 +1,3 @@
-----------------------------------------------------------------------------------------------------
---
---      Input file         : core_pkg.vhd
---      Design name        : core_pkg
---      Author             : Tamar Kranenburg
---      Company            : Delft University of Technology
---                         : Faculty EEMCS, Department ME&CE
---                         : Systems and Circuits group
---
---      Description        : Package with components and type definitions for the interface
---                           of the components
---
---
-----------------------------------------------------------------------------------------------------
-
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
@@ -87,7 +72,7 @@ package core_pkg is
     end record;
 
 ----------------------------------------------------------------------------------------------------
--- COMPONENTS
+-- COMPONENTS                                                                                     --
 ----------------------------------------------------------------------------------------------------
 
     component functor is
@@ -202,33 +187,16 @@ package core_pkg is
             empty_o    : out std_logic
         );
     end component;
+
 ----------------------------------------------------------------------------------------------------
--- FUNCTIONS
+-- FUNCTIONS                                                                                      --
 ----------------------------------------------------------------------------------------------------
+
     function deserialise_edge_store(vec : std_logic_vector) return edge_store_type;
 
 end core_pkg;
 
 package body core_pkg is
-
-function to_bstring(sl : std_logic) return string is
-  variable sl_str_v : string(1 to 3);  -- std_logic image with quotes around
-begin
-  sl_str_v := std_logic'image(sl);
-  return "" & sl_str_v(2);  -- "" & character to get string
-end function;
-
-function to_bstring(slv : std_logic_vector) return string is
-  alias    slv_norm : std_logic_vector(1 to slv'length) is slv;
-  variable sl_str_v : string(1 to 1);  -- String of std_logic
-  variable res_v    : string(1 to slv'length);
-begin
-  for idx in slv_norm'range loop
-    sl_str_v := to_bstring(slv_norm(idx));
-    res_v(idx) := sl_str_v(1);
-  end loop;
-  return res_v;
-end function;
 
 function deserialise_edge_store(vec : std_logic_vector) return edge_store_type is
     variable res : edge_store_type;
@@ -247,6 +215,5 @@ function deserialise_edge_store(vec : std_logic_vector) return edge_store_type i
 
     return res;
 end deserialise_edge_store;
-
 
 end core_pkg;

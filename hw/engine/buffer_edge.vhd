@@ -1,22 +1,3 @@
--------------------------------------------------------------------------------
--- File Downloaded from http://www.nandland.com
---
--- Description: Creates a Synchronous FIFO made out of registers.
---              Generic: G_DEPTH sets the depth of the FIFO created.
---
---              Total FIFO register usage will be width * depth
---              Note that this fifo should not be used to cross clock domains.
---              (Read and write clocks NEED TO BE the same clock domain)
---
---              FIFO Full Flag will assert as soon as last word is written.
---              FIFO Empty Flag will assert as soon as last word is read.
---
---              FIFO is 100% synthesizable.  It uses assert statements which do
---              not synthesize, but will cause your simulation to crash if you
---              are doing something you shouldn't be doing (reading from an
---              empty FIFO or writing to a full FIFO).
--------------------------------------------------------------------------------
- 
 library ieee;
 use ieee.std_logic_1164.all;
 
@@ -46,11 +27,11 @@ architecture rtl of buffer_edge is
     type fifo_data_type is array (0 to G_DEPTH-1) of edge_buffer_type;
 
     -- # Words in FIFO, has extra range to allow for assert conditions
-    signal fifo_cntr_reg : integer range -1 to G_DEPTH+1 := 0;
+    signal fifo_cntr_reg : integer range -1 to G_DEPTH+1;
     signal fifo_data_reg : fifo_data_type;-- := (others => (others => (others => '0')));
 
-    signal wr_index_reg  : integer range 0 to G_DEPTH-1 := 0;
-    signal rd_index_reg  : integer range 0 to G_DEPTH-1 := 0;
+    signal wr_index_reg  : integer range 0 to G_DEPTH-1;
+    signal rd_index_reg  : integer range 0 to G_DEPTH-1;
 
     signal sig_full      : std_logic;
     signal sig_empty     : std_logic;

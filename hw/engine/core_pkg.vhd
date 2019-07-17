@@ -188,6 +188,21 @@ package core_pkg is
         );
     end component;
 
+    component uram_wrapper is
+    generic (
+        G_RAM_WIDTH : integer := 64;                   -- Specify RAM witdh (number of bits per row)
+        G_RAM_DEPTH : integer := 1024                  -- Specify RAM depth (number of entries)
+    );
+    port (
+        clk_i        :  in std_logic;
+        rd_addr_i    :  in std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        rd_data_o    : out std_logic_vector(G_RAM_WIDTH-1 downto 0);
+        wr_en_i      :  in std_logic;
+        wr_addr_i    :  in std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        wr_data_i    :  in std_logic_vector(G_RAM_WIDTH-1 downto 0)
+    );
+    end component;
+
 ----------------------------------------------------------------------------------------------------
 -- FUNCTIONS                                                                                      --
 ----------------------------------------------------------------------------------------------------

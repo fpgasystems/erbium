@@ -67,7 +67,7 @@ architecture rtl of mct_wrapper is
         cnt_edge        : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
         cnt_slice       : integer range 0 to C_QUERY_PARTITIONS-1;
         mem_addr        : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
-        mem_data        : edge_store_type;
+        mem_data        : std_logic_vector(CFG_EDGE_BRAM_WIDTH - 1 downto 0);
         mem_wren        : std_logic_vector(CFG_ENGINE_NCRITERIA - 1 downto 0);
         engine_rst      : std_logic;
     end record;
@@ -225,7 +225,7 @@ begin
                 v.flow_ctrl := FLW_CTRL_WRITE;
                 v.mem_wren  := (others => '0');
                 v.mem_addr  := (others => '0');
-                v.mem_data  := deserialise_edge_store(rd_data_i(2*CFG_EDGE_BRAM_WIDTH-1 downto CFG_EDGE_BRAM_WIDTH));
+                v.mem_data  := rd_data_i(2*CFG_EDGE_BRAM_WIDTH-1 downto CFG_EDGE_BRAM_WIDTH);
                 v.cnt_edge  := rd_data_i(CFG_MEM_ADDR_WIDTH-1 downto  0);
 
                 v.cnt_slice := 2;
@@ -244,10 +244,9 @@ begin
                 -- Once per edge
                 v.ready     := '0';
                 v.mem_addr  := increment(nfa_r.mem_addr);
-                v.mem_data  := deserialise_edge_store(rd_data_i(
-                                        ((nfa_r.cnt_slice+1)*CFG_EDGE_BRAM_WIDTH)-1
-                                        downto
-                                        (nfa_r.cnt_slice*CFG_EDGE_BRAM_WIDTH)));
+                v.mem_data  := rd_data_i(((nfa_r.cnt_slice+1)*CFG_EDGE_BRAM_WIDTH)-1
+                                         downto
+                                         (nfa_r.cnt_slice*CFG_EDGE_BRAM_WIDTH));
                 v.cnt_slice := nfa_r.cnt_slice + 1;
                 v.mem_wren(nfa_r.cnt_criterium) := '1';
                 if v.cnt_slice = C_QUERY_PARTITIONS-1 then

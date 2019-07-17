@@ -14,7 +14,7 @@ entity top is
         query_wr_en_i  :  in std_logic;
         query_ready_o  : out std_logic;
         --
-        mem_i          :  in edge_store_type;
+        mem_i          :  in std_logic_vector(CFG_EDGE_BRAM_WIDTH - 1 downto 0);
         mem_wren_i     :  in std_logic_vector(CFG_ENGINE_NCRITERIA - 1 downto 0);
         mem_addr_i     :  in std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
         --
@@ -124,6 +124,7 @@ architecture behavioural of top is
     type edge_store_array   is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of edge_store_type;
     type weight_array       is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of integer;
     type mem_addr_array     is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+    type mem_data_array     is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of std_logic_vector(CFG_EDGE_BRAM_WIDTH - 1 downto 0);
     --
     type query_buffer_array is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of query_buffer_type;
     --
@@ -144,19 +145,17 @@ architecture behavioural of top is
     signal next_write    : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
     --
     -- BRAM INTERFACE ARRAYS
-    signal bram_en       : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
-    signal bram_addr     : mem_addr_array;
+    --signal bram_en       : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
+    signal uram_rd_data  : mem_data_array;
     --
     -- CORNER CASE SIGNALS
     signal sig_origin_node : edge_buffer_type;
 begin
 
-
 gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
     
-    bram_en(I)   <= mem_wren_i(I) or mem_en(I);
-    bram_addr(I) <= mem_addr_i when mem_wren_i(I) = '1' else
-                    mem_addr(I);
+    --bram_en(I)   <= mem_wren_i(I) or mem_en(I);
+    mem_edge(I) <= deserialise_edge_store(uram_rd_data(I));
 
     buff_query_g : buffer_query generic map
     (
@@ -208,23 +207,26 @@ gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
         next_write_o    => next_write(I)
     );
 
-    -- bram_g : bram_edge_store generic map
-    -- (
-    --     G_RAM_WIDTH       => CFG_EDGE_BRAM_WIDTH,
-    --     G_RAM_DEPTH       => CFG_EDGE_BRAM_DEPTH,
-    --     G_RAM_PERFORMANCE => "HIGH_PERFORMANCE",--"LOW_LATENCY",
-    --     G_INIT_FILE       => "bram_cr" & integer'image(I) & ".mem"
-    -- )
-    -- port map
-    -- (
-    --     clk_i        => clk_i,
-    --     ram_reg_en_i => '1',
+    uram_g : uram_wrapper generic map
+    (
+        G_RAM_WIDTH     => CFG_EDGE_BRAM_WIDTH,
+        G_RAM_DEPTH     => CFG_EDGE_BRAM_DEPTH
+    )
+    port map
+    (
+        clk_i           => clk_i,
+        rd_addr_i       => mem_addr(I),
+        rd_data_o       => uram_rd_data(I),
+        wr_en_i         => mem_wren_i(I),
+        wr_addr_i       => mem_addr_i,
+        wr_data_i       => mem_i
+    );
+
     --     ram_en_i     => bram_en(I),
     --     addr_i       => bram_addr(I),
     --     wr_data_i    => mem_i,
-    --     wr_en_i      => mem_wren_i(I),
+    
     --     rd_data_o    => mem_edge(I)
-    -- );
     
     gen_fwd : if I /= CFG_ENGINE_NCRITERIA - 1 generate -- from I to I+1
 

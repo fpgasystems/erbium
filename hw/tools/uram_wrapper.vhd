@@ -14,6 +14,10 @@
 --  primitives  : primitives and points to the models that will be used
 --              : for simulation.
 
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_unsigned.all;
+
 library UNISIM;
 use UNISIM.vcomponents.all;
 
@@ -23,7 +27,7 @@ use tools.ram_pkg.all;
 entity uram_wrapper is
     generic (
         G_RAM_WIDTH : integer := 64;                   -- Specify RAM witdh (number of bits per row)
-        G_RAM_DEPTH : integer := 1024;                 -- Specify RAM depth (number of entries)
+        G_RAM_DEPTH : integer := 1024                  -- Specify RAM depth (number of entries)
     );
     port (
         clk_i        :  in std_logic;
@@ -112,9 +116,9 @@ port map (
 );
 
 rd_data_o <= rd_data(G_RAM_WIDTH-1 downto 0);
-rd_addr   <= (22 downto (clogb2(G_RAM_DEPTH) => '0') && rd_addr_i;
+rd_addr   <= (22 downto clogb2(G_RAM_DEPTH) => '0') & rd_addr_i;
 
 wr_data   <= (71 downto G_RAM_WIDTH => '0') & wr_data_i;
-wr_addr   <= (22 downto (clogb2(G_RAM_DEPTH) => '0') && wr_addr_i;
+wr_addr   <= (22 downto clogb2(G_RAM_DEPTH) => '0') & wr_addr_i;
 
 end behavioural;

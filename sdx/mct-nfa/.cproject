@@ -19,11 +19,20 @@
 							<option id="com.xilinx.sdx.opencl.toolchain.sw_emu.debug.option.kernel_debug.1035533781" name="Enable debugging by default for kernel code" superClass="com.xilinx.sdx.opencl.toolchain.sw_emu.debug.option.kernel_debug"/>
 							<targetPlatform id="com.xilinx.sdx.opencl.config.sw_emu.935066911..193402395" name=""/>
 							<builder buildPath="${workspace_loc:/mct-nfa}/Emulation-SW" enableAutoBuild="true" id="com.xilinx.sdx.opencl.make_builder.2041782893" managedBuildOn="true" name="Xilinx SDx OpenCL Builder.Emulation-SW" superClass="com.xilinx.sdx.opencl.make_builder"/>
-							<tool id="com.xilinx.sdx.opencl.toolchain.xocc_compiler.1746753113" name="SDx XOCC Kernel Compiler" superClass="com.xilinx.sdx.opencl.toolchain.xocc_compiler"/>
+							<tool id="com.xilinx.sdx.opencl.toolchain.xocc_compiler.1746753113" name="SDx XOCC Kernel Compiler" superClass="com.xilinx.sdx.opencl.toolchain.xocc_compiler">
+								<inputType id="com.xilinx.sdx.opencl.toolchain.xocc_compiler.input.cl.855044271" name="OpenCL files" superClass="com.xilinx.sdx.opencl.toolchain.xocc_compiler.input.cl"/>
+							</tool>
 							<tool id="com.xilinx.sdx.opencl.toolchain.xocc_linker.2038592304" name="SDx XOCC Kernel Linker" superClass="com.xilinx.sdx.opencl.toolchain.xocc_linker"/>
 							<tool id="com.xilinx.sdx.opencl.emconfigutil.396425062" name="emconfigutil" superClass="com.xilinx.sdx.opencl.emconfigutil"/>
-							<tool id="com.xilinx.sdx.opencl.toolchain.gcc_compiler.sw_emu.debug.985932440" name="SDx GCC Host Compiler (x86_64)" superClass="com.xilinx.sdx.opencl.toolchain.gcc_compiler.sw_emu.debug"/>
-							<tool id="com.xilinx.sdx.opencl.toolchain.gcc_linker.hw.819780731" name="SDx GCC Host Linker (x86_64)" superClass="com.xilinx.sdx.opencl.toolchain.gcc_linker.hw"/>
+							<tool id="com.xilinx.sdx.opencl.toolchain.gcc_compiler.sw_emu.debug.985932440" name="SDx GCC Host Compiler (x86_64)" superClass="com.xilinx.sdx.opencl.toolchain.gcc_compiler.sw_emu.debug">
+								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1538715385" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
+							</tool>
+							<tool id="com.xilinx.sdx.opencl.toolchain.gcc_linker.hw.819780731" name="SDx GCC Host Linker (x86_64)" superClass="com.xilinx.sdx.opencl.toolchain.gcc_linker.hw">
+								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.123826300" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
+									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
+									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
+								</inputType>
+							</tool>
 						</toolChain>
 					</folderInfo>
 				</configuration>
@@ -48,15 +57,25 @@
 							<option id="com.xilinx.sdx.opencl.toolchain.hw_emu.debug.option.kernel_debug.615184142" name="Enable debugging by default for kernel code" superClass="com.xilinx.sdx.opencl.toolchain.hw_emu.debug.option.kernel_debug"/>
 							<targetPlatform id="com.xilinx.sdx.opencl.config.hw_emu.317529911..1808434295" name=""/>
 							<builder buildPath="${workspace_loc:/mct-nfa}/Emulation-HW" enableAutoBuild="true" id="com.xilinx.sdx.opencl.make_builder.1862493741" managedBuildOn="true" name="Xilinx SDx OpenCL Builder.Emulation-HW" superClass="com.xilinx.sdx.opencl.make_builder"/>
-							<tool id="com.xilinx.sdx.opencl.toolchain.xocc_compiler.946201209" name="SDx XOCC Kernel Compiler" superClass="com.xilinx.sdx.opencl.toolchain.xocc_compiler"/>
+							<tool id="com.xilinx.sdx.opencl.toolchain.xocc_compiler.946201209" name="SDx XOCC Kernel Compiler" superClass="com.xilinx.sdx.opencl.toolchain.xocc_compiler">
+								<inputType id="com.xilinx.sdx.opencl.toolchain.xocc_compiler.input.cl.580445716" name="OpenCL files" superClass="com.xilinx.sdx.opencl.toolchain.xocc_compiler.input.cl"/>
+							</tool>
 							<tool id="com.xilinx.sdx.opencl.toolchain.xocc_linker.475614974" name="SDx XOCC Kernel Linker" superClass="com.xilinx.sdx.opencl.toolchain.xocc_linker"/>
 							<tool id="com.xilinx.sdx.opencl.emconfigutil.1758527209" name="emconfigutil" superClass="com.xilinx.sdx.opencl.emconfigutil"/>
-							<tool id="com.xilinx.sdx.opencl.toolchain.gcc_compiler.hw_emu.debug.1093097952" name="SDx GCC Host Compiler (x86_64)" superClass="com.xilinx.sdx.opencl.toolchain.gcc_compiler.hw_emu.debug"/>
-							<tool id="com.xilinx.sdx.opencl.toolchain.gcc_linker.hw.757980308" name="SDx GCC Host Linker (x86_64)" superClass="com.xilinx.sdx.opencl.toolchain.gcc_linker.hw"/>
+							<tool id="com.xilinx.sdx.opencl.toolchain.gcc_compiler.hw_emu.debug.1093097952" name="SDx GCC Host Compiler (x86_64)" superClass="com.xilinx.sdx.opencl.toolchain.gcc_compiler.hw_emu.debug">
+								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.762235155" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
+							</tool>
+							<tool id="com.xilinx.sdx.opencl.toolchain.gcc_linker.hw.757980308" name="SDx GCC Host Linker (x86_64)" superClass="com.xilinx.sdx.opencl.toolchain.gcc_linker.hw">
+								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.469055264" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
+									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
+									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
+								</inputType>
+							</tool>
 						</toolChain>
 					</folderInfo>
 				</configuration>
 			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 		</cconfiguration>
 		<cconfiguration id="com.xilinx.sdx.opencl.config.hw.642858356">
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="com.xilinx.sdx.opencl.config.hw.642858356" moduleId="org.eclipse.cdt.core.settings" name="System">
@@ -75,15 +94,25 @@
 						<toolChain id="com.xilinx.sdx.opencl.toolchain.hw.354048017" name="Xilinx SDx OpenCL Toolchain (x86_64)" superClass="com.xilinx.sdx.opencl.toolchain.hw">
 							<targetPlatform id="com.xilinx.sdx.opencl.config.hw.642858356..1748647583" name=""/>
 							<builder buildPath="${workspace_loc:/mct-nfa}/System" enableAutoBuild="true" id="com.xilinx.sdx.opencl.make_builder.487866462" managedBuildOn="true" name="Xilinx SDx OpenCL Builder.System" superClass="com.xilinx.sdx.opencl.make_builder"/>
-							<tool id="com.xilinx.sdx.opencl.toolchain.xocc_compiler.585699429" name="SDx XOCC Kernel Compiler" superClass="com.xilinx.sdx.opencl.toolchain.xocc_compiler"/>
+							<tool id="com.xilinx.sdx.opencl.toolchain.xocc_compiler.585699429" name="SDx XOCC Kernel Compiler" superClass="com.xilinx.sdx.opencl.toolchain.xocc_compiler">
+								<inputType id="com.xilinx.sdx.opencl.toolchain.xocc_compiler.input.cl.675684209" name="OpenCL files" superClass="com.xilinx.sdx.opencl.toolchain.xocc_compiler.input.cl"/>
+							</tool>
 							<tool id="com.xilinx.sdx.opencl.toolchain.xocc_linker.1288397829" name="SDx XOCC Kernel Linker" superClass="com.xilinx.sdx.opencl.toolchain.xocc_linker"/>
 							<tool id="com.xilinx.sdx.opencl.emconfigutil.921919907" name="emconfigutil" superClass="com.xilinx.sdx.opencl.emconfigutil"/>
-							<tool id="com.xilinx.sdx.opencl.toolchain.gcc_compiler.hw.781174198" name="SDx GCC Host Compiler (x86_64)" superClass="com.xilinx.sdx.opencl.toolchain.gcc_compiler.hw"/>
-							<tool id="com.xilinx.sdx.opencl.toolchain.gcc_linker.hw.1718556378" name="SDx GCC Host Linker (x86_64)" superClass="com.xilinx.sdx.opencl.toolchain.gcc_linker.hw"/>
+							<tool id="com.xilinx.sdx.opencl.toolchain.gcc_compiler.hw.781174198" name="SDx GCC Host Compiler (x86_64)" superClass="com.xilinx.sdx.opencl.toolchain.gcc_compiler.hw">
+								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1112531450" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
+							</tool>
+							<tool id="com.xilinx.sdx.opencl.toolchain.gcc_linker.hw.1718556378" name="SDx GCC Host Linker (x86_64)" superClass="com.xilinx.sdx.opencl.toolchain.gcc_linker.hw">
+								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.530165706" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
+									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
+									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
+								</inputType>
+							</tool>
 						</toolChain>
 					</folderInfo>
 				</configuration>
 			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 		</cconfiguration>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>

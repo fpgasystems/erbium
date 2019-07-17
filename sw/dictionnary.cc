@@ -101,7 +101,7 @@ int Dictionnary::get_level_by_criterium_id(const uint criterium_id)
     return -1;
 }
 
-std::map<std::string, uint> Dictionnary::get_criterium_dic(const uint level)
+std::map<std::string, uint> Dictionnary::get_criterium_dic_by_level(const uint level)
 {
     if (level == m_dic_criteria.size())
         return m_dic_contents;

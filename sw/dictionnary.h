@@ -22,7 +22,7 @@ class Dictionnary
     // sorting
     std::vector<uint> sort_by_n_of_values(const SortOrder order,
                                           std::vector<int>* arbitrary = NULL);
-    std::map<std::string, uint> get_criterium_dic(const uint level);
+    std::map<std::string, uint> get_criterium_dic_by_level(const uint level);
     int get_level_by_criterium_id(const uint criterium_id);
 
 

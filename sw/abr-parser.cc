@@ -3,8 +3,6 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/foreach.hpp>
 #include <string>
-#include <set>
-#include <map>
 #include <exception>
 #include <iostream>
 #include <fstream>
@@ -16,13 +14,6 @@
 #include "nfa_handler.h"
 
 //#define _DEBUG true
-
-void write_longlongint(std::ofstream* outfile, unsigned long long int value)
-{
-    uintptr_t addr = (uintptr_t)&value;
-    for (short i = sizeof(value)-1; i >= 0; i--)
-        outfile->write((char*)(addr + i), 1);
-}
 
 void nfa_bre::abr_dataset_s::load(const std::string &filename)
 {
@@ -257,17 +248,17 @@ int main()
     nfa_bre::Dictionnary the_dictionnary(rp);
 
     // arbitrary criteria order
-    //std::vector<int> arbitrary;
-    //for (auto& aux : rp.m_ruleType.m_criterionDefinition)
-    //    arbitrary.push_back(-1);
-    //arbitrary[0] = rp.m_ruleType.get_criterium_id("MCT_OFF");
-    //arbitrary[1] = rp.m_ruleType.get_criterium_id("MCT_BRD");
-    //arbitrary[arbitrary.size()-3] = rp.m_ruleType.get_criterium_id("IN_FLT_RG");
-    //arbitrary[arbitrary.size()-2] = rp.m_ruleType.get_criterium_id("OUT_FLT_RG");
-    //arbitrary[arbitrary.size()-1] = rp.m_ruleType.get_criterium_id("MCT_PRD");
-    //the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending, &arbitrary);
+    std::vector<int> arbitrary;
+    for (auto& aux : rp.m_ruleType.m_criterionDefinition)
+        arbitrary.push_back(-1);
+    arbitrary[0] = rp.m_ruleType.get_criterium_id("MCT_OFF");
+    arbitrary[1] = rp.m_ruleType.get_criterium_id("MCT_BRD");
+    arbitrary[arbitrary.size()-3] = rp.m_ruleType.get_criterium_id("MCT_PRD");
+    arbitrary[arbitrary.size()-2] = rp.m_ruleType.get_criterium_id("OUT_FLT_RG");
+    arbitrary[arbitrary.size()-1] = rp.m_ruleType.get_criterium_id("IN_FLT_RG");
+    the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending, &arbitrary);
 
-    the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending);
+    //the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending);
     
     finish = std::chrono::high_resolution_clock::now();
 
@@ -346,7 +337,7 @@ int main()
     std::cout << "total number of transitions: " << boost::num_edges(the_nfa.m_graph) << std::endl;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// EXPORT FILE                                                                                    //
+// EXPORT DOT FILE                                                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::cout << "# EXPORT DOT FILE" << std::endl;
@@ -356,9 +347,7 @@ int main()
 // MEMORY DUMP                                                                                    //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
     std::cout << "# MEMORY DUMP" << std::endl;
-    std::ofstream outfile("mem_edges.bin", std::ios::binary | std::ios::out | std::ios::trunc);
 
     const uint CFG_ENGINE_NCRITERIA       = rp.m_ruleType.m_criterionDefinition.size();
     const uint CFG_ENGINE_CRITERIUM_WIDTH = 12;
@@ -381,136 +370,16 @@ int main()
 
     start = std::chrono::high_resolution_clock::now();
 
-    const unsigned long int MASK_WEIGHT     = 0x7FFFF;
-    const unsigned long int MASK_POINTER    = 0x7FFF;
-    const unsigned long int MASK_OPERAND_B  = 0xFFF;
-    const unsigned long int MASK_OPERAND_A  = 0xFFF;
-    const unsigned long int SHIFT_LAST      = CFG_WEIGHT_WIDTH+CFG_MEM_ADDR_WIDTH+2*CFG_ENGINE_CRITERIUM_WIDTH;
-    const unsigned long int SHIFT_WEIGHT    = CFG_MEM_ADDR_WIDTH+2*CFG_ENGINE_CRITERIUM_WIDTH;
-    const unsigned long int SHIFT_POINTER   = 2*CFG_ENGINE_CRITERIUM_WIDTH;
-    const unsigned long int SHIFT_OPERAND_B = CFG_ENGINE_CRITERIUM_WIDTH;
-    const unsigned long int SHIFT_OPERAND_A = 0;
-
-    // POINTERS
-    uint edges_per_level[the_nfa.m_vertexes.size()];
-    uint n_edges;
-    uint n_edges_max;
-    for (auto level = the_nfa.m_vertexes.rbegin(); level != the_nfa.m_vertexes.rend(); ++level)
-    {
-        n_edges = 0;
-
-        for (auto& value : the_nfa.m_vertexes[level->first])
-        {
-            for (auto& vert : the_nfa.m_vertexes[level->first][value.first])
-            {
-                if (the_nfa.m_graph[vert].parents.size() != 0)
-                {
-
-                    the_nfa.m_graph[vert].dump_pointer = n_edges;
-                    n_edges_max = the_nfa.m_graph[vert].children.size();
-
-                    if (n_edges_max == 0)
-                        n_edges++;
-                    else
-                        n_edges += n_edges_max;
-                }
-            }
-        }
-        edges_per_level[level->first] = n_edges;
-    }
-
-    // before-last-criterium states point to the result directly
-    for (auto& value : the_nfa.m_vertexes[the_nfa.m_vertexes.size()-2])
-    {
-        for (auto& vert : the_nfa.m_vertexes[the_nfa.m_vertexes.size()-2][value.first])
-        {
-            auto element = the_nfa.m_graph[vert];
-            if (element.parents.size() != 0)
-            {
-                auto result = element.children.begin();
-                element.dump_pointer = the_nfa.m_graph[*result].dump_pointer;
-            }
-        }
-    }
-
-
-    unsigned long long int mem_int;
-    uint SLICES_PER_LINE = 512 / 64;
-    // origin
-    aux = 1;
-    n_edges_max = the_nfa.m_graph[0].children.size();
-
-    write_longlongint(&outfile, n_edges_max);
-
-    for (auto& vert : the_nfa.m_graph[0].children)
-    {
-        mem_int = (aux++ == n_edges_max);
-        mem_int = mem_int << SHIFT_LAST;
-        mem_int |= ((unsigned long long int)256 & MASK_WEIGHT) << SHIFT_WEIGHT;
-        mem_int |= ((unsigned long long int)the_nfa.m_graph[vert].dump_pointer & MASK_POINTER) << SHIFT_POINTER;
-        mem_int |= ((unsigned long long int)the_dictionnary.get_criterium_dic(0)[the_nfa.m_graph[vert].label] & MASK_OPERAND_B) << SHIFT_OPERAND_B;
-        mem_int |= ((unsigned long long int)the_dictionnary.get_criterium_dic(0)[the_nfa.m_graph[vert].label] & MASK_OPERAND_A) << SHIFT_OPERAND_A;
-        write_longlongint(&outfile, mem_int);
-    }
-    // padding
-    n_edges = (n_edges_max+1) % SLICES_PER_LINE;
-    n_edges = (n_edges == 0) ? 0 : SLICES_PER_LINE - n_edges;
-    for (uint pad = n_edges; pad != 0; pad--)
-        write_longlongint(&outfile, 0);
-    std::cout << "level=0 edges=" << n_edges_max << " padding=" << n_edges << std::endl;
-
-
-    uint the_order = 1;
-    std::map<std::string, uint> dic;
-    for (auto level : the_nfa.m_vertexes)
-    {
-        if (level.second == the_nfa.m_vertexes[the_nfa.m_vertexes.size()-2])
-            break;  // skip content
-
-        dic = the_dictionnary.get_criterium_dic(the_order++);
-
-        // number of edges
-        mem_int = edges_per_level[level.first];
-        write_longlongint(&outfile, mem_int);
-
-        // write 
-        for (auto& value : the_nfa.m_vertexes[level.first])
-        {
-            for (auto& vert : the_nfa.m_vertexes[level.first][value.first])
-            {
-                if (the_nfa.m_graph[vert].parents.size() != 0)
-                {
-                    aux=1;
-                    n_edges_max = the_nfa.m_graph[vert].children.size();
-                    for (auto& itr : the_nfa.m_graph[vert].children)
-                    {
-                        mem_int = (unsigned long long int)(aux++ == n_edges_max) << SHIFT_LAST;
-                        mem_int |= ((unsigned long long int)256 & MASK_WEIGHT) << SHIFT_WEIGHT;
-                        mem_int |= ((unsigned long long int)(the_nfa.m_graph[itr].dump_pointer) & MASK_POINTER) << SHIFT_POINTER;
-                        mem_int |= ((unsigned long long int)(dic[the_nfa.m_graph[itr].label] & MASK_OPERAND_B)) << SHIFT_OPERAND_B;
-                        mem_int |= ((unsigned long long int)(dic[the_nfa.m_graph[itr].label] & MASK_OPERAND_A)) << SHIFT_OPERAND_A;
-                        write_longlongint(&outfile, mem_int);
-                    }
-                }
-            }
-        }
-        // padding
-        n_edges = (edges_per_level[level.first]+1) % SLICES_PER_LINE;
-        n_edges = (n_edges == 0) ? 0 : SLICES_PER_LINE - n_edges;
-        for (uint pad = n_edges; pad != 0; pad--)
-            write_longlongint(&outfile, 0);
-
-        std::cout << "level=" << level.first+1 << " edges=" << edges_per_level[level.first] << " padding=" << n_edges << std::endl;
-    }
-
-    outfile.close();
+    the_nfa.memory_dump("mem_edges.bin");
 
     finish = std::chrono::high_resolution_clock::now();
 
     elapsed = finish - start;
     std::cout << "# MEMORY DUMP COMPLETED in " << elapsed.count() << " s\n";
 
-    ////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//                                                                                                //
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
     return 0;
 }

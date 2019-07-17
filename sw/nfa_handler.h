@@ -5,6 +5,7 @@
 #include "dictionnary.h"
 
 #include <string>
+#include <fstream>
 
 namespace nfa_bre {
 
@@ -18,9 +19,17 @@ class NFAHandler {
     void deletion();
     uint print_stats(); // returns n_bram_edges_max
     void export_dot_file(const std::string filename);
+    void memory_dump(const std::string filename);
+
+    bool import_parameters(const std::string filename);
+    bool export_parameters(const std::string filename);
 
   private:
     Dictionnary* m_dic;
+
+    void write_longlongint(std::ofstream* outfile, unsigned long long int value);
+
+    bool m_imported_param;
 };
 
 } // namespace nfa_bre

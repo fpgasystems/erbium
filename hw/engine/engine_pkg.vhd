@@ -17,7 +17,6 @@ package engine_pkg is
     constant CFG_EDGE_BRAM_DEPTH          : integer := 32768;--30690;
     constant CFG_EDGE_BRAM_WIDTH          : integer := 64;
 
-
     -- MEMORY DATA SLICE RANGES
     subtype RNG_BRAM_EDGE_STORE_OPERAND_A is natural range CFG_ENGINE_CRITERIUM_WIDTH - 1 downto 0;
     subtype RNG_BRAM_EDGE_STORE_OPERAND_B is natural range CFG_ENGINE_CRITERIUM_WIDTH*2 - 1 downto CFG_ENGINE_CRITERIUM_WIDTH;

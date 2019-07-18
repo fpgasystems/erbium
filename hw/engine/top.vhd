@@ -29,6 +29,7 @@ architecture behavioural of top is
     type MATCH_STRCT_ARRAY          is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of match_structure_type;
     type MATCH_SIMP_FUNCTION_ARRAY  is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of match_simp_function;
     type MATCH_PAIR_FUNCTION_ARRAY  is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of match_pair_function;
+    type RAM_DEPTH_ARRAY            is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of integer;
     --
     constant ary_match_struct        : MATCH_STRCT_ARRAY := (STRCT_SIMPLE,
                                                              STRCT_SIMPLE,
@@ -118,6 +119,9 @@ architecture behavioural of top is
                                                                      FNCTR_PAIR_NOP,
                                                                      FNCTR_PAIR_NOP,
                                                                      FNCTR_PAIR_NOP);
+    constant ary_ram_depth : RAM_DEPTH_ARRAY := (
+                                                
+                                                );
     --
     -- CORE INTERFACE ARRAYS
     type edge_buffer_array  is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of edge_buffer_type;

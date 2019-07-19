@@ -52,6 +52,11 @@ local.properties
 .cache-main
 .scala_dependencies
 .worksheet
+*.snap
+.history
+*.tree
+.metadata
+*.log
 
 # vivado
 *.jou

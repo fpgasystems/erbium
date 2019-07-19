@@ -184,6 +184,13 @@
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
+      <File Path="$PPRDIR/../../../../hw/engine/result_reducer.vhd">
+        <FileInfo>
+          <Attr Name="Library" Val="bre"/>
+          <Attr Name="UsedIn" Val="synthesis"/>
+          <Attr Name="UsedIn" Val="simulation"/>
+        </FileInfo>
+      </File>
       <File Path="$PPRDIR/../../../../hw/tools/uram_wrapper.vhd">
         <FileInfo>
           <Attr Name="Library" Val="bre"/>
@@ -193,6 +200,7 @@
       </File>
       <File Path="$PPRDIR/imports/mct.v">
         <FileInfo>
+          <Attr Name="Library" Val="tools"/>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="implementation"/>
           <Attr Name="UsedIn" Val="simulation"/>

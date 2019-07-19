@@ -119,9 +119,9 @@ architecture behavioural of top is
                                                                      FNCTR_PAIR_NOP,
                                                                      FNCTR_PAIR_NOP,
                                                                      FNCTR_PAIR_NOP);
-    constant ary_ram_depth : RAM_DEPTH_ARRAY := (
-                                                
-                                                );
+--    constant ary_ram_depth : RAM_DEPTH_ARRAY := (
+--                                                
+--                                                );
     --
     -- CORE INTERFACE ARRAYS
     type edge_buffer_array  is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of edge_buffer_type;
@@ -147,6 +147,9 @@ architecture behavioural of top is
     signal next_full     : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
     signal next_data     : edge_buffer_array;
     signal next_write    : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
+    -- result reducer
+    signal resred_value  : edge_buffer_type;
+    signal resred_ready  : std_logic;
     --
     -- BRAM INTERFACE ARRAYS
     --signal bram_en       : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
@@ -155,6 +158,10 @@ architecture behavioural of top is
     -- CORNER CASE SIGNALS
     signal sig_origin_node : edge_buffer_type;
 begin
+
+----------------------------------------------------------------------------------------------------
+-- NFA-BRE ENGINE TOP LEVEL                                                                       --
+----------------------------------------------------------------------------------------------------
 
 gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
     
@@ -190,7 +197,7 @@ gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
     (
         rst_i           => rst_i,
         clk_i           => clk_i,
-        -- FIFO buffer from above
+        -- FIFO buffer from previous level
         prev_empty_i    => prev_empty(I),
         prev_data_i     => prev_data(I),
         prev_read_o     => prev_read(I),
@@ -205,7 +212,7 @@ gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
         mem_edge_i      => mem_edge(I),
         mem_addr_o      => mem_addr(I),
         mem_en_o        => mem_en(I),
-        -- FIFO buffer to below
+        -- FIFO buffer to next level
         next_full_i     => next_full(I),
         next_data_o     => next_data(I),
         next_write_o    => next_write(I)
@@ -258,6 +265,25 @@ gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
 
 end generate gen_stages;
 
+----------------------------------------------------------------------------------------------------
+-- RESULT REDUCER                                                                                 --
+----------------------------------------------------------------------------------------------------
+
+reducer : result_reducer port map
+(
+    clk_i           => clk_i,
+    rst_i           => rst_i,
+    --
+    interim_valid_i => next_write(CFG_ENGINE_NCRITERIA - 1),
+    interim_data_i  => next_data(CFG_ENGINE_NCRITERIA - 1),
+    interim_ready_o => resred_ready,
+    -- final result to TOP
+    result_ready_i  => result_ready_i, -- TODO not used yet
+    result_data_o   => resred_value,
+    result_valid_o  => result_valid_o
+);
+-- if host's often not ready (result_ready_i), deploy a fifo so the last level is less often blocked
+
 -- ORIGIN
 sig_origin_node.pointer <= (others => '0');
 prev_empty(0) <= '0';
@@ -265,9 +291,7 @@ prev_data(0)  <= sig_origin_node;
 
 -- LAST
 query_ready_o  <= not query_full(CFG_ENGINE_NCRITERIA - 1);
-result_value_o <= next_data(CFG_ENGINE_NCRITERIA - 1).pointer;
-result_valid_o <= next_write(CFG_ENGINE_NCRITERIA - 1);
-next_full(CFG_ENGINE_NCRITERIA - 1) <= not result_ready_i;
--- if hosts is often not ready, deploy a fifo so the last level is less often blocked
+next_full(CFG_ENGINE_NCRITERIA - 1) <= not resred_ready;
+result_value_o <= resred_value.pointer;
 
 end architecture behavioural;

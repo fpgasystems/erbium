@@ -126,7 +126,7 @@ mem_addr_o <= fetch_r.mem_addr;
 mem_en_o   <= '1' when fetch_r.flow_ctrl = FLW_CTRL_MEM else
               '0';
 
-fetch_comb: process(fetch_r, rst_i, mem_edge_i.last, prev_data_i, prev_empty_i, next_full_i)
+fetch_comb: process(fetch_r, mem_edge_i.last, prev_data_i, prev_empty_i, next_full_i)
     variable v : fetch_out_type;
 begin
     v := fetch_r;

@@ -34,7 +34,7 @@ package core_pkg is
     type edge_buffer_type is record
         pointer         : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
         query_id        : integer;
-        -- computed weight
+        weight          : integer;
     end record;
 
     type query_buffer_type is record
@@ -150,6 +150,21 @@ package core_pkg is
             next_data_o     : out edge_buffer_type;
             next_write_o    : out std_logic
         );
+    end component;
+
+    component result_reducer is
+    port (
+        clk_i           :  in std_logic;
+        rst_i           :  in std_logic; -- low active
+        -- interim result from NFA-PE
+        interim_valid_i :  in std_logic;
+        interim_data_i  :  in edge_buffer_type;
+        interim_ready_o : out std_logic;
+        -- final result to TOP
+        result_ready_i  :  in std_logic; -- TODO not used yet
+        result_data_o   : out edge_buffer_type;
+        result_valid_o  : out std_logic
+    );
     end component;
 
     component buffer_edge is

@@ -15,20 +15,19 @@ class Dictionnary
 
     std::map<uint, std::map<std::string, uint>> m_dic_criteria; // per criteria_id > per value > ID
     std::map<std::string, uint> m_dic_contents;                 // per value > ID
-    std::vector<uint> m_sorting_map;                            // key=position; value=criteria_id
+    std::vector<unsigned short int> m_sorting_map;              // key=position; value=criteria_id
 
-    Dictionnary(const rulePack_s rp);
+    Dictionnary(const rulePack_s& rulepack);
 
     // sorting
-    std::vector<uint> sort_by_n_of_values(const SortOrder order,
-                                          std::vector<int>* arbitrary = NULL);
-    std::map<std::string, uint> get_criterium_dic_by_level(const uint level);
-    int get_level_by_criterium_id(const uint criterium_id);
+    std::vector<unsigned short int> sort_by_n_of_values(const SortOrder order, std::vector<unsigned short int>* arbitrary = NULL);
+    std::map<std::string, uint> get_criterion_dic_by_level(const unsigned short int& level);
+    int get_level_by_criterion_id(const uint& criterion_id);
 
 
   private:
 
-    bool exists_in_vector(const std::vector<int> vec, int point);
+    bool exists_in_vector(const std::vector<unsigned short int> vec, const unsigned short int& point);
     struct sort_pred_inv
     {
         bool operator()(const std::pair<uint,uint> &left, const std::pair<uint,uint> &right) {

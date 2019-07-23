@@ -101,7 +101,8 @@ void nfa_bre::rulePack_s::load(const std::string& filename)
             aux_criterionDef.m_index       = aux.second.get<int>("sequenceNumber");
             aux_criterionDef.m_code        = aux.second.get<std::string>("code");
             aux_criterionDef.m_isMandatory = aux.second.get("isMandatory",false);
-            aux_criterionDef.m_supertag    = aux.second.get<std::string>("criterionTypeReference.id");
+            aux_criterionDef.m_supertag    = aux.second.get<std::string>("criterionTypeReference.fileName");
+            aux_criterionDef.m_functor     = aux.second.get<unsigned short int>("criterionTypeReference.id");
             aux_criterionDef.m_weight      = aux.second.get<unsigned long int>("weight", 0);
 
             switch (aux.second.count("guiProperties"))

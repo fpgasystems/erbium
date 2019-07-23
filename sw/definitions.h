@@ -18,17 +18,19 @@ struct criterionDefinition_s
     std::string m_code;
     bool m_isMandatory;
     std::string m_supertag;
+    unsigned short int m_functor;
     unsigned long int m_weight;
     bool m_isPair;
     bool operator < (const criterionDefinition_s &other) const { return m_index < other.m_index; }
     void print(const std::string &level) const
     {
-        printf("%s[Criterion] index=%d code=%s isMandatory=%s supertag=%s weight=%lu isPair=%s\n", 
+        printf("%s[Criterion] index=%d code=%s isMandatory=%s supertag=%s functor=%d weight=%lu isPair=%s\n", 
                 level.c_str(),
                 m_index,
                 m_code.c_str(),
                 (m_isMandatory) ? "true" : "false",
                 m_supertag.c_str(),
+                m_functor,
                 m_weight,
                 (m_isPair) ? "true" : "false");
     }
@@ -52,7 +54,7 @@ struct ruleType_s
         for(auto& aux : m_criterionDefinition)
             aux.print(level + "\t");
     }
-    int get_criterium_id(const std::string code)
+    int get_criterion_id(const std::string& code)
     {
         for (auto& aux : m_criterionDefinition)
         {
@@ -123,8 +125,6 @@ struct abr_dataset_s
         for(auto& aux : m_rulePacks)
             aux.print(level + "\t");
     }
-
-    
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

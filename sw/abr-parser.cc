@@ -98,8 +98,8 @@ int main()
         //    continue;
         //if (row.m_data[8] != "\"GRU\"" && row.m_data[9] != "\"GRU\"")
         //    continue;
-        //if (row.m_data[8] != "\"ZRH\"" && row.m_data[9] != "\"ZRH\"" && row.m_data[8] != "\"CDG\"" && row.m_data[9] != "\"CDG\"" && row.m_data[8] != "\"GRU\"" && row.m_data[9] != "\"GRU\"")
-        //    continue;
+        if (row.m_data[8] != "\"ZRH\"" && row.m_data[9] != "\"ZRH\"" && row.m_data[8] != "\"CDG\"" && row.m_data[9] != "\"CDG\"" && row.m_data[8] != "\"GRU\"" && row.m_data[9] != "\"GRU\"")
+            continue;
         //if (row.m_data[aux+3] != "\"35\"")
         //    continue;
         //if (row.m_data[8] != "\"FIR\"" && row.m_data[9] != "\"FIR\"" && row.m_data[8] != "\"IBT\"" && row.m_data[9] != "\"IBT\"")
@@ -140,9 +140,9 @@ int main()
     std::cout << rp.m_rules.size() << " rules loaded" << std::endl;
     std::cout << "# LOAD COMPLETED in " << elapsed.count() << " s\n";
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// DICTIONNARY                                                                                    //
-////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // DICTIONNARY                                                                                //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
     
     std::cout << "# DICTIONNARY" << std::endl;
     start = std::chrono::high_resolution_clock::now();
@@ -153,11 +153,11 @@ int main()
     // std::vector<int> arbitrary;
     // for (auto& aux : rp.m_ruleType.m_criterionDefinition)
     //     arbitrary.push_back(-1);
-    // arbitrary[0] = rp.m_ruleType.get_criterium_id("MCT_OFF");
-    // arbitrary[1] = rp.m_ruleType.get_criterium_id("MCT_BRD");
-    // arbitrary[arbitrary.size()-3] = rp.m_ruleType.get_criterium_id("MCT_PRD");
-    // arbitrary[arbitrary.size()-2] = rp.m_ruleType.get_criterium_id("OUT_FLT_RG");
-    // arbitrary[arbitrary.size()-1] = rp.m_ruleType.get_criterium_id("IN_FLT_RG");
+    // arbitrary[0] = rp.m_ruleType.get_criterion_id("MCT_OFF");
+    // arbitrary[1] = rp.m_ruleType.get_criterion_id("MCT_BRD");
+    // arbitrary[arbitrary.size()-3] = rp.m_ruleType.get_criteriON_id("MCT_PRD");
+    // arbitrary[arbitrary.size()-2] = rp.m_ruleType.get_criteriON_id("OUT_FLT_RG");
+    // arbitrary[arbitrary.size()-1] = rp.m_ruleType.get_criteriON_id("IN_FLT_RG");
     // the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending, &arbitrary);
 
     the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending);
@@ -175,9 +175,9 @@ int main()
     elapsed = finish - start;
     std::cout << "# DICTIONNARY COMPLETED in " << elapsed.count() << " s\n";
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// NFA                                                                                            //
-////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // NFA                                                                                        //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::cout << "# NFA" << std::endl;
     start = std::chrono::high_resolution_clock::now();
@@ -202,9 +202,9 @@ int main()
     std::cout << "total number of transitions: " << boost::num_edges(the_nfa.m_graph) << std::endl;
     std::cout << "# NFA COMPLETED in " << elapsed.count() << " s\n";
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// OPTIMISATIONS                                                                                  //
-////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // OPTIMISATIONS                                                                              //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::cout << "# OPTIMISATIONS" << std::endl;
     start = std::chrono::high_resolution_clock::now();
@@ -215,9 +215,9 @@ int main()
     elapsed = finish - start;
     std::cout << "# OPTIMISATIONS COMPLETED in " << elapsed.count() << " s\n";
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// DELETION                                                                                       //
-////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // DELETION                                                                                   //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::cout << "# DELETION" << std::endl;
     std::cout << "deleting " << n_merged_nodes << " states" << std::endl;
@@ -229,9 +229,9 @@ int main()
     elapsed = finish - start;
     std::cout << "# DELETING COMPLETED in " << elapsed.count() << " s\n";
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// FINAL STATS                                                                                    //
-////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // FINAL STATS                                                                                //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::cout << "# FINAL STATS" << std::endl;
     uint n_bram_edges_max = the_nfa.print_stats();
@@ -239,30 +239,30 @@ int main()
     std::cout << "total number of states: " << boost::num_vertices(the_nfa.m_graph) << std::endl;
     std::cout << "total number of transitions: " << boost::num_edges(the_nfa.m_graph) << std::endl;
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// EXPORT DOT FILE                                                                                //
-////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // EXPORT DOT FILE                                                                            //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::cout << "# EXPORT DOT FILE" << std::endl;
     the_nfa.export_dot_file("automaton.dot");
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// MEMORY DUMP                                                                                    //
-////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // MEMORY DUMP                                                                                //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::cout << "# MEMORY DUMP" << std::endl;
 
     const uint CFG_ENGINE_NCRITERIA       = rp.m_ruleType.m_criterionDefinition.size();
-    const uint CFG_ENGINE_CRITERIUM_WIDTH = 12;
+    const uint CFG_ENGINE_CRITERION_WIDTH = 12;
     const uint CFG_WEIGHT_WIDTH           = 19;
     const uint CFG_MEM_ADDR_WIDTH         = ceil(log2(n_bram_edges_max));
     const uint CFG_EDGE_BUFFERS_DEPTH     = 5;
     const uint CFG_EDGE_BRAM_DEPTH        = n_bram_edges_max;
-    const uint BRAM_USED_BITS             = CFG_WEIGHT_WIDTH + CFG_MEM_ADDR_WIDTH + CFG_ENGINE_CRITERIUM_WIDTH + CFG_ENGINE_CRITERIUM_WIDTH + 1;
+    const uint BRAM_USED_BITS             = CFG_WEIGHT_WIDTH + CFG_MEM_ADDR_WIDTH + CFG_ENGINE_CRITERION_WIDTH + CFG_ENGINE_CRITERION_WIDTH + 1;
     const uint CFG_EDGE_BRAM_WIDTH        = 1 << ((uint)ceil(log2(BRAM_USED_BITS)));    
     
     std::cout << "constant CFG_ENGINE_NCRITERIA         : integer := " << CFG_ENGINE_NCRITERIA << "; -- Number of criteria\n";
-    std::cout << "constant CFG_ENGINE_CRITERIUM_WIDTH   : integer := " << CFG_ENGINE_CRITERIUM_WIDTH << "; -- Number of bits of each criterium value\n";
+    std::cout << "constant CFG_ENGINE_CRITERION_WIDTH   : integer := " << CFG_ENGINE_CRITERION_WIDTH << "; -- Number of bits of each criterion value\n";
     std::cout << "constant CFG_WEIGHT_WIDTH             : integer := " << CFG_WEIGHT_WIDTH << "; -- integer from 0 to 2^CFG_WEIGHT_WIDTH-1\n";
     std::cout << "--\n";
     std::cout << "constant CFG_MEM_ADDR_WIDTH           : integer := " << CFG_MEM_ADDR_WIDTH << ";\n";
@@ -280,9 +280,20 @@ int main()
     elapsed = finish - start;
     std::cout << "# MEMORY DUMP COMPLETED in " << elapsed.count() << " s\n";
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-//                                                                                                //
-////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // WORKLOAD DUMP                                                                              //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    std::cout << "# WORKLOAD DUMP" << std::endl;
+    start = std::chrono::high_resolution_clock::now();
+
+    the_nfa.dump_mirror_workload("workload.bin", rp);
+
+    finish = std::chrono::high_resolution_clock::now();
+    elapsed = finish - start;
+    std::cout << "# WORKLOAD DUMP COMPLETED in " << elapsed.count() << " s\n";
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    //                                                                                            //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
     return 0;
 }

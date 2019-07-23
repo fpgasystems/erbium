@@ -18,29 +18,33 @@ struct criterionDefinition_s
     std::string m_code;
     bool m_isMandatory;
     std::string m_supertag;
-    int m_weight;
+    unsigned long int m_weight;
+    bool m_isPair;
     bool operator < (const criterionDefinition_s &other) const { return m_index < other.m_index; }
     void print(const std::string &level) const
     {
-        printf("%s[Criterion] index=%d code=%s isMandatory=%s supertag=%s weight=%d\n", 
+        printf("%s[Criterion] index=%d code=%s isMandatory=%s supertag=%s weight=%lu isPair=%s\n", 
                 level.c_str(),
                 m_index,
                 m_code.c_str(),
-                (m_isMandatory)?"true":"false",
+                (m_isMandatory) ? "true" : "false",
                 m_supertag.c_str(),
-                m_weight);
+                m_weight,
+                (m_isPair) ? "true" : "false");
     }
 };
 struct ruleType_s
 {
     std::string m_organization;
     std::string m_code;
-    int m_release;
-    std::vector<criterionDefinition_s> m_criterionDefinition;
+    std::string m_description;
+
+    unsigned long int m_release;
+    std::set<criterionDefinition_s> m_criterionDefinition;
 
     void print(const std::string &level) const
     {
-        printf("%s[RuleType] org=%s app=%s v=%d\n",
+        printf("%s[RuleType] org=%s app=%s v=%lu\n",
             level.c_str(),
             m_organization.c_str(),
             m_code.c_str(),
@@ -62,28 +66,26 @@ struct ruleType_s
 struct criterion_s
 {
     int m_index;
-    std::string m_code;
     std::string m_value;
     bool operator < (const criterion_s &other) const { return m_index < other.m_index; }
     void print(const std::string &level) const
     {
-        printf("%s[Criterion] id=%d code=%s value=%s\n",
+        printf("%s[Criterion] id=%d value=%s\n",
             level.c_str(),
             m_index,
-            m_code.c_str(),
             m_value.c_str());
     }
 };
 struct rule_s
 {
     int m_ruleId;
-    int m_weight;
+    unsigned long int m_weight;
     std::set<criterion_s> m_criteria;
     std::string m_content;
     bool operator < (const rule_s &other) const { return m_ruleId < other.m_ruleId; }
     void print(const std::string &level) const
     {
-        printf("%s[Rule] id=%d weight=%d\n", 
+        printf("%s[Rule] id=%d weight=%lu\n", 
             level.c_str(),
             m_ruleId,
             m_weight);
@@ -96,6 +98,7 @@ struct rulePack_s
     ruleType_s m_ruleType;
     std::set<rule_s> m_rules;
 
+    void load(const std::string& filename);
     bool operator < (const rulePack_s &other) const { return true; }
     void print(const std::string &level) const
     {
@@ -110,7 +113,7 @@ struct abr_dataset_s
     std::string m_application;
     std::set<rulePack_s> m_rulePacks;
 
-    void load(const std::string &filename);
+    void load(const std::string& filename);
     void save(const std::string &filename);
 
     void print(const std::string &level) const
@@ -120,6 +123,8 @@ struct abr_dataset_s
         for(auto& aux : m_rulePacks)
             aux.print(level + "\t");
     }
+
+    
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

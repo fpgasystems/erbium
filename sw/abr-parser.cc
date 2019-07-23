@@ -1,7 +1,4 @@
 #include <boost/graph/adjacency_list.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/xml_parser.hpp>
-#include <boost/foreach.hpp>
 #include <string>
 #include <exception>
 #include <iostream>
@@ -14,81 +11,6 @@
 #include "nfa_handler.h"
 
 //#define _DEBUG true
-
-void nfa_bre::abr_dataset_s::load(const std::string &filename)
-{
-    // Create empty property tree object
-    boost::property_tree::ptree tree;
-
-    // Parse the XML into the property tree.
-    boost::property_tree::read_xml(filename, tree);
-
-    m_organization = tree.get<std::string>("ABR.<xmlattr>.organization");
-    m_application = tree.get<std::string>("ABR.<xmlattr>.application");
-
-    BOOST_FOREACH(boost::property_tree::ptree::value_type &aux, tree.get_child("ABR.RUL"))
-    {
-        //printf("[%s]\n", aux.first.c_str());
-
-        // RULE PACK
-        rulePack_s aux_rulePack;
-
-        if (!strcmp(aux.first.c_str(), "rules"))
-        {
-            BOOST_FOREACH(boost::property_tree::ptree::value_type &aux_a, aux.second.get_child(""))
-            {
-                //printf("\t[%s]\n", aux_a.first.c_str());
-
-                if (!strcmp(aux_a.first.c_str(), "RTD"))
-                {
-                    // RULE TYPE
-                    ruleType_s aux_ruleType;
-                    aux_ruleType.m_organization = aux_a.second.get<std::string>("<xmlattr>.organization");
-                    aux_ruleType.m_code = aux_a.second.get<std::string>("<xmlattr>.ruleTypeCode");
-                    aux_ruleType.m_release = aux_a.second.get<int>("<xmlattr>.release");
-                    BOOST_FOREACH(boost::property_tree::ptree::value_type &aux_b, aux_a.second.get_child(""))
-                    {
-                        //printf("\t\t[%s]\n", aux_b.first.c_str());
-                        if (!strcmp(aux_b.first.c_str(), "criterionDefinition"))
-                        {
-                            criterionDefinition_s aux_criterionDef;
-                            aux_criterionDef.m_index = aux_b.second.get<int>("<xmlattr>.index");
-                            aux_criterionDef.m_code = aux_b.second.get<std::string>("<xmlattr>.code");
-                            aux_criterionDef.m_isMandatory = aux_b.second.get("<xmlattr>.isMandatory",false);
-                            aux_criterionDef.m_supertag = aux_b.second.get<std::string>("criterionType.<xmlattr>.supertag");
-                            aux_criterionDef.m_weight = aux_b.second.get<int>("criterionWeight.<xmlattr>.weight");
-                            aux_ruleType.m_criterionDefinition.push_back(aux_criterionDef);
-                        }
-                        //printf("[%s] %s\n", aux_b.first.c_str(), aux_b.second.data().c_str());
-                        //boost::property_tree::ptree::value_type &aux_c = aux_b.second.get_child("<xmlattr>");
-                    }
-                    aux_rulePack.m_ruleType = aux_ruleType;
-                }
-                else if (!strcmp(aux_a.first.c_str(), "rule"))
-                {
-                    // RULE
-                    rule_s aux_rule;
-                    aux_rule.m_ruleId = aux_a.second.get<int>("<xmlattr>.ruleId");
-                    aux_rule.m_weight = aux_a.second.get<int>("weight");
-                    aux_rule.m_content = aux_a.second.get<std::string>("content");
-                    BOOST_FOREACH(boost::property_tree::ptree::value_type &aux_b, aux_a.second.get_child("criteria"))
-                    {
-                        //printf("[%s]\n", aux_b.first.c_str());
-
-                        criterion_s aux_criterion;
-                        aux_criterion.m_index = aux_b.second.get<int>("<xmlattr>.index");
-                        aux_criterion.m_code = aux_b.second.get<std::string>("<xmlattr>.code");
-                        aux_criterion.m_value = aux_b.second.get<std::string>("value");
-                        aux_rule.m_criteria.insert(aux_criterion);
-                    }
-                    
-                    aux_rulePack.m_rules.insert(aux_rule);
-                }
-            }
-            m_rulePacks.insert(aux_rulePack);
-        }
-    }
-}
 
 class CSVRow
 {
@@ -152,7 +74,7 @@ std::string toBinary(uint padding, uint n)
 
 int main()
 {
-    std::ifstream       file("../../../../Documents/amadeus-share/mct_rules.csv");
+    std::ifstream       file("../../../Documents/amadeus-share/mct_rules.csv");
     //std::ifstream       file("../data/demo_02.csv");
     //std::ifstream       file("../data/demo_01.csv");
 
@@ -161,25 +83,9 @@ int main()
     auto start = std::chrono::high_resolution_clock::now();
     CSVRow              row;
     row.readNextRow(file);
-    nfa_bre::abr_dataset_s ds;
+
     nfa_bre::rulePack_s rp;
-    ds.m_organization = "Amadeus";
-    ds.m_application = "MCT";
-
-    rp.m_ruleType.m_organization = "Amadeus";
-    rp.m_ruleType.m_code = "MINCT";
-    rp.m_ruleType.m_release = 0;
-
-    for (uint i=6; i<row.m_data.size()-4; i++)
-    {
-        nfa_bre::criterionDefinition_s cd;
-        cd.m_index = i-6;
-        cd.m_code = row.m_data[i];
-        cd.m_isMandatory = false;
-        cd.m_supertag = "";
-        cd.m_weight = 0;
-        rp.m_ruleType.m_criterionDefinition.push_back(cd);
-    }
+    rp.load("../../../Documents/amadeus-share/ruleTypeDefinition_MINCT_1-0_Template1.xml");
 
     int aux = row.m_data.size()-4;
     while(file >> row)
@@ -208,7 +114,6 @@ int main()
             {
                 nfa_bre::criterion_s ct;
                 ct.m_index = i-6;
-                ct.m_code = rp.m_ruleType.m_criterionDefinition[i-6].m_code;
                 ct.m_value = row.get_value(i);
                 rl.m_criteria.insert(ct);
             }
@@ -217,7 +122,6 @@ int main()
                 // IF NO VALUE, USE "*"
                 nfa_bre::criterion_s ct;
                 ct.m_index = i-6;
-                ct.m_code = rp.m_ruleType.m_criterionDefinition[i-6].m_code;
                 ct.m_value = "*";
                 rl.m_criteria.insert(ct);
             }
@@ -230,8 +134,6 @@ int main()
 
         rp.m_rules.insert(rl);
     }
-    //rp.m_ruleType.print("");
-    //ds.m_rulePacks.insert(rp);
 
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - start;
@@ -247,25 +149,26 @@ int main()
     
     nfa_bre::Dictionnary the_dictionnary(rp);
 
-    // arbitrary criteria order
-    std::vector<int> arbitrary;
-    for (auto& aux : rp.m_ruleType.m_criterionDefinition)
-        arbitrary.push_back(-1);
-    arbitrary[0] = rp.m_ruleType.get_criterium_id("MCT_OFF");
-    arbitrary[1] = rp.m_ruleType.get_criterium_id("MCT_BRD");
-    arbitrary[arbitrary.size()-3] = rp.m_ruleType.get_criterium_id("MCT_PRD");
-    arbitrary[arbitrary.size()-2] = rp.m_ruleType.get_criterium_id("OUT_FLT_RG");
-    arbitrary[arbitrary.size()-1] = rp.m_ruleType.get_criterium_id("IN_FLT_RG");
-    the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending, &arbitrary);
+    // // arbitrary criteria order
+    // std::vector<int> arbitrary;
+    // for (auto& aux : rp.m_ruleType.m_criterionDefinition)
+    //     arbitrary.push_back(-1);
+    // arbitrary[0] = rp.m_ruleType.get_criterium_id("MCT_OFF");
+    // arbitrary[1] = rp.m_ruleType.get_criterium_id("MCT_BRD");
+    // arbitrary[arbitrary.size()-3] = rp.m_ruleType.get_criterium_id("MCT_PRD");
+    // arbitrary[arbitrary.size()-2] = rp.m_ruleType.get_criterium_id("OUT_FLT_RG");
+    // arbitrary[arbitrary.size()-1] = rp.m_ruleType.get_criterium_id("IN_FLT_RG");
+    // the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending, &arbitrary);
 
-    //the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending);
+    the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending);
     
     finish = std::chrono::high_resolution_clock::now();
 
     uint key = 0;
     for (auto& aux : the_dictionnary.m_sorting_map)
     {
-        std::cout << "[" << key++ << "] " << rp.m_ruleType.m_criterionDefinition[aux].m_code;
+        std::cout << "[" << key++ << "] ";
+        std::cout << std::next(rp.m_ruleType.m_criterionDefinition.begin(), aux)->m_code;
         std::cout <<  " #" << the_dictionnary.m_dic_criteria[aux].size() << std::endl;
     }
 

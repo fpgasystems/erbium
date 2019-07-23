@@ -18,11 +18,12 @@ class NFAHandler {
     uint optimise();
     void deletion();
     uint print_stats(); // returns n_bram_edges_max
-    void export_dot_file(const std::string filename);
-    void memory_dump(const std::string filename);
+    void export_dot_file(const std::string& filename);
+    void memory_dump(const std::string& filename);
+    void dump_mirror_workload(const std::string& filename, const rulePack_s& rp);
 
-    bool import_parameters(const std::string filename);
-    bool export_parameters(const std::string filename);
+    bool import_parameters(const std::string& filename);
+    bool export_parameters(const std::string& filename);
 
   private:
     Dictionnary* m_dic;

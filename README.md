@@ -1,5 +1,5 @@
 
-*** Run in F1 ***
+* Run in F1 *
 
 After generating the bitstream successfully follow this steps to run on AWS F1:
 
@@ -9,7 +9,7 @@ This generates the following files:
 - Generates a <timestamp>_afi_id.txt which contains the identifiers for your AFI
 - Creates an AWS FPGA Binary file with an *.awsxclbin extension that is composed of: Metadata and AGFI-ID.
 
-**This *.awsxclbin is the AWS FPGA Binary file that will need to be loaded by your host application to the FPGA**
+*This *.awsxclbin is the AWS FPGA Binary file that will need to be loaded by your host application to the FPGA*
 
 2. Check if the AFI is ready: 
 $aws ec2 describe-fpga-images --fpga-image-ids <AFI ID>
@@ -31,7 +31,7 @@ source /opt/xilinx/xrt/setup.sh
 - This makes the environment ready to test: ./myapp
 Note that any input files and the awsxclbin file should be in the same directory of ./myapp
 
-*** Access to F1 Instance ***
+* Access to F1 Instance *
 - Login: After launching the F1 instance from the AWS console you can log into it.
 ssh -i keys/fpgakey.pem centos@INSTANCE-IP
 

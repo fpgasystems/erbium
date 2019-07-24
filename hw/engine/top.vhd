@@ -152,7 +152,6 @@ architecture behavioural of top is
     signal resred_ready  : std_logic;
     --
     -- BRAM INTERFACE ARRAYS
-    --signal bram_en       : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
     signal uram_rd_data  : mem_data_array;
     --
     -- CORNER CASE SIGNALS
@@ -165,7 +164,6 @@ begin
 
 gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
     
-    --bram_en(I)   <= mem_wren_i(I) or mem_en(I);
     mem_edge(I) <= deserialise_edge_store(uram_rd_data(I));
 
     buff_query_g : buffer_query generic map
@@ -232,12 +230,6 @@ gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
         wr_addr_i       => mem_addr_i,
         wr_data_i       => mem_i
     );
-
-    --     ram_en_i     => bram_en(I),
-    --     addr_i       => bram_addr(I),
-    --     wr_data_i    => mem_i,
-    
-    --     rd_data_o    => mem_edge(I)
     
     gen_fwd : if I /= CFG_ENGINE_NCRITERIA - 1 generate -- from I to I+1
 

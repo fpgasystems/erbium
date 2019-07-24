@@ -34,8 +34,8 @@ entity functor is
         G_FUNCTION      : match_simp_function := FNCTR_SIMP_NOP
     );
     port (
-        rule_i          :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH-1 downto 0);
-        query_i         :  in std_logic_vector(CFG_ENGINE_CRITERIUM_WIDTH-1 downto 0);
+        rule_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
+        query_i         :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
         funct_o         : out std_logic
     );
 end functor;

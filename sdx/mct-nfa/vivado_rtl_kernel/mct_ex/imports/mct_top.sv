@@ -84,11 +84,11 @@ logic [16-1:0]                     num_words_per_tuple;
 logic [16-1:0]                     num_64bit_words_per_tuple;
 logic [8-1:0]                      tree_depth;
 logic [8-1:0]                      num_trees_per_pu_minus_one;
-logic [32-1:0]                     total_trees_numcls_minus_one;
-logic [32-1:0]                     total_trees_numcls;
-logic [32-1:0]                     total_tuples_numcls_minus_one;
-logic [32-1:0]                     total_output_numcls;
-logic [32-1:0]                     total_output_numcls_minus_one;
+//logic [32-1:0]                     total_trees_numcls_minus_one;
+//logic [32-1:0]                     total_trees_numcls;
+//logic [32-1:0]                     total_tuples_numcls_minus_one;
+//logic [32-1:0]                     total_output_numcls;
+//logic [32-1:0]                     total_output_numcls_minus_one;
 logic [16-1:0]                     last_result_line_mask;
 
 logic                              write_done;
@@ -171,7 +171,7 @@ inst_InputChannel (
 
 mct_wrapper mct_wrapper(
   .clk_i                          (ap_clk),
-  .rst_i                          (~rst_n),
+  .rst_i                          (rst_n),
   
   // input
   .rd_data_i                      (rd_tdata),

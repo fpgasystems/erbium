@@ -1,31 +1,3 @@
-/**********
-Copyright (c) 2018, Xilinx, Inc.
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
-
-1. Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.
-
-2. Redistributions in binary form must reproduce the above copyright notice,
-this list of conditions and the following disclaimer in the documentation
-and/or other materials provided with the distribution.
-
-3. Neither the name of the copyright holder nor the names of its contributors
-may be used to endorse or promote products derived from this software
-without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
-THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
-EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-**********/
 #include "CL/cl.h"
 
 #include <algorithm>
@@ -35,21 +7,21 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <random>
 #include <vector>
 
-//#include "xcl2.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <iostream>
 #include <fstream>
 #include <math.h>
-//#include <unistd.h>
-//#include <assert.h>
-//#include <stdbool.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 
 #define PATH_MAX 500
+
+const unsigned char C_CACHELINE_SIZE   = 64; // in bytes
+const unsigned char C_CRITERION_SIZE   =  4; // in bytes
+const unsigned char C_RESULT_SIZE      =  2; // in bytes
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //                                                                                                //
@@ -64,7 +36,6 @@ typedef struct {
     cl_device_id device_id;
     cl_command_queue command_queue;
 } xcl_world;
-
 
 static void* smalloc(size_t size) {
     void* ptr;
@@ -604,6 +575,17 @@ void xcl_run_kernel3d_nb(xcl_world world, cl_kernel krnl, cl_event *event, size_
     }
 }
 
+// Wrap any OpenCL API calls that return error code(cl_int) with the below macros
+// to quickly check for an error
+#define OCL_CHECK(call)                                                        \
+    do {                                                                       \
+        cl_int err = call;                                                     \
+        if (err != CL_SUCCESS) {                                               \
+            printf("Error calling " #call ", error code is: %d\n", err);       \
+            exit(EXIT_FAILURE);                                                \
+        }                                                                      \
+    } while (0);
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //                                                                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -612,35 +594,19 @@ void xcl_run_kernel3d_nb(xcl_world world, cl_kernel krnl, cl_event *event, size_
 template <typename T>
 struct aligned_allocator
 {
-  using value_type = T;
-  T* allocate(std::size_t num)
-  {
-    void* ptr = nullptr;
-    if (posix_memalign(&ptr,4096,num*sizeof(T)))
-      throw std::bad_alloc();
-    return reinterpret_cast<T*>(ptr);
-  }
-  void deallocate(T* p, std::size_t num)
-  {
-    free(p);
-  }
+    using value_type = T;
+    T* allocate(std::size_t num)
+    {
+        void* ptr = nullptr;
+        if (posix_memalign(&ptr, 4096, num*sizeof(T)))
+            throw std::bad_alloc();
+        return reinterpret_cast<T*>(ptr);
+    }
+    void deallocate(T* p, std::size_t num)
+    {
+        free(p);
+    }
 };
-
-const int ARRAY_SIZE = 1 << 14;
-static const char *error_message =
-    "Error: Result mismatch:\n"
-    "i = %d CPU result = %d Device result = %d\n";
-
-// Wrap any OpenCL API calls that return error code(cl_int) with the below macros
-// to quickly check for an error
-#define OCL_CHECK(call)                                                        \
-  do {                                                                         \
-    cl_int err = call;                                                         \
-    if (err != CL_SUCCESS) {                                                   \
-      printf("Error calling " #call ", error code is: %d\n", err);             \
-      exit(EXIT_FAILURE);                                                      \
-    }                                                                          \
-  } while (0);
 
 static double get_time()
 {
@@ -653,185 +619,197 @@ static double get_time()
 //                                                                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-char* initNFA(char* nfa_file, int* ensemble_size)
-{    
-    char* nfa = NULL;
+unsigned short int number_of_lines(const uint& data_size, const unsigned short int& line_size)
+{
+    return data_size / line_size + ((data_size % line_size) ? 1 : 0);
+}
 
-    std::ifstream* file = new std::ifstream(nfa_file, std::ios::in|std::ios::binary);
+void load_nfa_from_file(char* file_name, 
+    std::vector<unsigned long int, aligned_allocator<unsigned long int>>** nfa_data, uint* raw_size)
+{
+    std::ifstream* file = new std::ifstream(file_name, std::ios::in | std::ios::binary);
     if(file->is_open())
     {
         file->seekg(0, std::ios::end);
-        uint32_t size = file->tellg();
+        *raw_size = file->tellg();
 
-        //
-        *ensemble_size = size;
-
-        nfa = new char[*ensemble_size];
-
-        printf("opend nfa file of size: %d\n", size);
+        char* file_buffer = new char[*raw_size];
 
         file->seekg(0, std::ios::beg);
-        file->read(nfa, size);
+        file->read(file_buffer, *raw_size);
+
+        *nfa_data =
+                new std::vector<unsigned long int, aligned_allocator<unsigned long int>>(*raw_size);
+        memcpy((*nfa_data)->data(), file_buffer, *raw_size);
+        delete [] file_buffer;
+
+        printf("Opened NFA .bin file of size: %u\n", *raw_size); fflush(stdout);
     }
     else
     {
-        printf("failed to open trees file\n");
+        *raw_size = 0;
+        *nfa_data = new std::vector<unsigned long int, aligned_allocator<unsigned long int>>(*raw_size);
+        printf("[!] Failed to open NFA .bin file\n"); fflush(stdout);
     }
-
-    return nfa;
 }
 
-void initQueries(void* queries, uint numCriteria, uint numQueries)
+void load_queries_from_file(char* file_name, uint* queries_data, uint& queries_size)
 {
-    
+    std::ifstream* file = new std::ifstream(file_name, std::ios::in | std::ios::binary);
+    if(file->is_open())
+    {
+        file->seekg(0, std::ios::end);
+        uint raw_size = file->tellg();
+
+        if (raw_size != queries_size)
+        {
+            printf("[!] QUERIES .bin file has unexpected size\n     - expected: %u\n     - actual: %u\n",
+                    queries_size, raw_size); fflush(stdout);
+        }
+        else
+        {
+            char* file_buffer = new char[raw_size];
+            file->seekg(0, std::ios::beg);
+            file->read(file_buffer, raw_size);
+
+            memcpy(queries_data, file_buffer, raw_size);
+            delete [] file_buffer;
+
+            printf("Opened QUERIES .bin file of size: %u\n", raw_size); fflush(stdout);
+        }
+    }
+    else
+        printf("[!] Failed to open QUERIES .bin file\n"); fflush(stdout);
 }
 
-void runMCT(cl_command_queue queue, xcl_world world, cl_program program, cl_kernel kernel, 
+void run_nfabre_kernel(cl_command_queue queue, xcl_world world, cl_program program, cl_kernel kernel, 
                 void* nfa, void* queries, void* results, 
-                unsigned char numCriteria, uint queries_size, uint results_size, uint nfa_size, 
-                uint nfaNumCLs, uint queriesNumCLs, uint resultNumCLs)
+                unsigned char& num_criteria, uint& nfa_size, uint& queries_size, uint& results_size)
 {
-  int err;
-  printf("Start Run Queries\n"); fflush(stdout);
-  //
-  //
-  cl_mem buffer_queries, buffer_nfa, buffer_results;
+    printf("run_nfabre_kernel()\n"); fflush(stdout);
 
-  size_t global = 1, local = 1;
+    unsigned short int nfadata_cls = nfa_size / C_CACHELINE_SIZE;
+    unsigned short int queries_cls = queries_size / C_CACHELINE_SIZE;
+    unsigned short int results_cls = number_of_lines(results_size, C_CACHELINE_SIZE);
+    
+    cl_mem buffer_queries, buffer_nfadata, buffer_results;
+    size_t global = 1, local = 1;    
 
+    // data buffers
+    buffer_nfadata = clCreateBuffer(world.context, CL_MEM_READ_ONLY  | CL_MEM_USE_HOST_PTR, nfa_size, nfa, NULL);
+    buffer_queries = clCreateBuffer(world.context, CL_MEM_READ_ONLY  | CL_MEM_USE_HOST_PTR, queries_size, queries, NULL);
+    buffer_results = clCreateBuffer(world.context, CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR, results_size, results, NULL);
 
-  // write trees
-  buffer_nfa = clCreateBuffer(world.context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, nfa_size, nfa, NULL);
+    /*printf("Buffers created: nfa=%p, queries=%p, results=%p\n",
+           buffer_nfadata, buffer_queries, buffer_results); fflush(stdout);*/
 
-  printf("nfa buffer created, %p\n", buffer_nfa); fflush(stdout);
+    OCL_CHECK(clEnqueueMigrateMemObjects(queue, 1, &buffer_nfadata, 0, 0, NULL, NULL));
+    clFinish(queue);
 
-  OCL_CHECK(clEnqueueMigrateMemObjects(
-        queue, 1, &buffer_nfa,
-        0 /* flags, 0 means from host */,
-        0, NULL,
-        NULL));
-  printf("migrate nfa to queue\n"); fflush(stdout);
-  clFinish(queue);
+    //Set the Kernel Arguments
+    uint extraParam = 0;
+    xcl_set_kernel_arg(kernel, 0, 1, &num_criteria);
+    xcl_set_kernel_arg(kernel, 1, 4, &queries_cls);
+    xcl_set_kernel_arg(kernel, 2, 4, &nfadata_cls);
+    xcl_set_kernel_arg(kernel, 3, 4, &results_cls);
+    xcl_set_kernel_arg(kernel, 4, 4, &extraParam);
+    xcl_set_kernel_arg(kernel, 5, 4, &extraParam);
+    xcl_set_kernel_arg(kernel, 6, sizeof(cl_mem), &buffer_nfadata);
+    xcl_set_kernel_arg(kernel, 7, sizeof(cl_mem), &buffer_queries);
+    xcl_set_kernel_arg(kernel, 8, sizeof(cl_mem), &buffer_results);
 
-  printf("migrate trees done\n"); fflush(stdout);
+    double stamp00 = get_time();
 
-  // create data/ results buffers
-  buffer_queries = clCreateBuffer(world.context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,  queries_size, queries, NULL);
-  buffer_results = clCreateBuffer(world.context, CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR, results_size, results, NULL);
+    OCL_CHECK(clEnqueueMigrateMemObjects(queue, 1, &buffer_queries, 0 /* flags, 0 means from host */,
+        0, NULL, NULL));
 
-  //Set the Kernel Arguments
-  uint extraParam = 0;
-  xcl_set_kernel_arg(kernel, 0, 1, &numCriteria);
-  xcl_set_kernel_arg(kernel, 1, 4, &queriesNumCLs);
-  xcl_set_kernel_arg(kernel, 2, 4, &nfaNumCLs);
-  xcl_set_kernel_arg(kernel, 3, 4, &resultNumCLs);
-  xcl_set_kernel_arg(kernel, 4, 4, &extraParam);
-  xcl_set_kernel_arg(kernel, 5, 4, &extraParam);
-  xcl_set_kernel_arg(kernel, 6, sizeof(cl_mem), &buffer_nfa);
-  xcl_set_kernel_arg(kernel, 7, sizeof(cl_mem), &buffer_queries);
-  xcl_set_kernel_arg(kernel, 8, sizeof(cl_mem), &buffer_results);
-  
+    OCL_CHECK(clEnqueueNDRangeKernel(queue, kernel, 1, nullptr, &global, &local, 0 , NULL, NULL));
 
-  printf("Start processing \n"); fflush(stdout);
-  double stamp00 = get_time();
+    OCL_CHECK(clEnqueueMigrateMemObjects(queue, 1, &buffer_results, CL_MIGRATE_MEM_OBJECT_HOST, 
+        0, NULL, NULL));
 
-  OCL_CHECK(clEnqueueMigrateMemObjects(
-        queue, 1, &buffer_queries,
-        0 /* flags, 0 means from host */,
-        0, NULL,
-        NULL));
+    clFlush(queue);
+    clFinish(queue);
 
-  OCL_CHECK(clEnqueueNDRangeKernel(queue, kernel, 1, nullptr,
-                                     &global, &local, 0 , NULL,
-                                     NULL));
+    double stamp01 = get_time();
+    printf("Time to process queries: %.8f Seconds\n", stamp01-stamp00); fflush(stdout);
 
-  OCL_CHECK( clEnqueueMigrateMemObjects(queue, 1, &buffer_results,
-                CL_MIGRATE_MEM_OBJECT_HOST, 0, NULL, NULL));
-
- // printf("Waiting...\n");
-  clFlush(queue);
-  clFinish(queue);
-
-  double stamp01 = get_time();
-
-  printf("Time to process Queries: %.8f Seconds\n", stamp01-stamp00); fflush(stdout);
-
-
-  //Releasing mem objects and events
-  OCL_CHECK(clReleaseMemObject(buffer_nfa));
-
-  OCL_CHECK(clReleaseMemObject(buffer_queries));
-  OCL_CHECK(clReleaseMemObject(buffer_results));
-
+    //Releasing mem objects and events
+    OCL_CHECK(clReleaseMemObject(buffer_nfadata));
+    OCL_CHECK(clReleaseMemObject(buffer_queries));
+    OCL_CHECK(clReleaseMemObject(buffer_results));
 }
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 int main(int argc, char** argv)
 {
-    //int err;                            // error code returned from api calls
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // PARAMETERS                                                                                 //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    if (argc < 2) {
-       printf("Usage: %s NUM_TUPLES NUM_TREES DEPTH TIMER_SET OVERLAP NUM_QUERIES\n", argv[0]);
-       return EXIT_FAILURE;
-    }
+    // if (argc < 2) {
+    //    printf("Usage: %s NUM_TUPLES NUM_TREES DEPTH TIMER_SET OVERLAP NUM_QUERIES\n", argv[0]);
+    //    return EXIT_FAILURE;
+    // }
 
-    printf("Setup FPGA\n");
+    unsigned int  num_queries       = 136002; // atoi(argv[1]);
+    unsigned char num_criteria      = 22; // atoi(argv[2]);
+    char          nfa_file[100]     = "/home/maschif/gitlab/nfa-bre/sw/mem_edges.bin";
+    char          queries_file[100] = "/home/maschif/gitlab/nfa-bre/sw/workload.bin";
+    // TODO print parameters for structure check!
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // HARDWARE SETUP                                                                             //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
+    printf(">> Setup FPGA\n"); fflush(stdout);
     double stamp_p0 = get_time();
 
-    xcl_world world    = xcl_world_single();
+    xcl_world  world   = xcl_world_single();
     cl_program program = xcl_import_binary(world, "mct");
 
     double stamp_p1 = get_time();
+    printf("Time to program FPGA: %.8f Seconds\n", stamp_p1-stamp_p0); fflush(stdout);
 
-    printf("Time to program FPGA: %.8f Seconds\n", stamp_p1-stamp_p0);
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // DATA SETUP                                                                                 //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    cl_kernel kernel = xcl_get_kernel(program, "mct");
-    cl_command_queue queue = world.command_queue;
+    printf(">> Setup data\n"); fflush(stdout);
+    unsigned int results_size = num_queries * C_RESULT_SIZE;
+    unsigned int queries_size = number_of_lines(num_criteria * C_CRITERION_SIZE, C_CACHELINE_SIZE);
+    queries_size = queries_size * num_queries * C_CACHELINE_SIZE;
+    unsigned int nfa_size;
 
-    // parameters
-    int  numQueries          = 10; //atoi(argv[1]);// atoi(argv[1]);
-    int  numCriteria         = 22; //atoi(argv[2]);// atoi(argv[1]);
-    char nfa_file[100]       = "nfa.bin";
+    std::vector<unsigned int, aligned_allocator<unsigned int>> queries(queries_size);
+    std::vector<unsigned int, aligned_allocator<unsigned int>> results(results_size);
+    std::vector<unsigned long int, aligned_allocator<unsigned long int>>* nfa_data;
 
-    int  paddedCriteria      = (numCriteria%16 != 0)? 16 - numCriteria%16 : 0;
-    int  query_size          = numCriteria*4 + paddedCriteria*4;
-    int  data_size           = query_size*numQueries*4;
-    int  res_size            = numQueries*4;
-    uint dataNumCLs          = data_size/64 + ((data_size%64 > 0)? 1 : 0);
-    uint outputNumCLs        = res_size/64 + ((res_size%64 > 0)? 1 : 0);
+    load_queries_from_file(queries_file, queries.data(), queries_size);
+    load_nfa_from_file(nfa_file, &nfa_data, &nfa_size);
 
-    std::vector<float,aligned_allocator<float>> queries(data_size);
-    std::vector<float,aligned_allocator<float>> results(res_size);
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // KERNEL EXECUTION                                                                           //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    initQueries(queries.data(), numCriteria, numQueries);
+    cl_kernel        kernel = xcl_get_kernel(program, "mct");
+    cl_command_queue queue  = world.command_queue;
 
-    std::vector<unsigned long int,aligned_allocator<unsigned long int>>* nfa_m;
+    run_nfabre_kernel(queue, world, program, kernel, nfa_data->data(), queries.data(), results.data(), 
+                      num_criteria, nfa_size, queries_size, results_size);
 
-    int nfa_size;
-    char* nfa = initNFA(nfa_file, &nfa_size);
-    nfa_m = new std::vector<unsigned long int,aligned_allocator<unsigned long int>>(nfa_size);
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // RESULTS                                                                                    //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    memcpy(nfa_m->data(), nfa, nfa_size);
-
-    uint nfaNumCLs = nfa_size/64 + ((nfa_size%64 > 0)? 1 : 0);
-
-    delete [] nfa;
-
-    //-------------------------------------------------------------------------------------//
-    //-------------------------------------------------------------------------------------//
-    //-------------------------------------------------------------------------------------//
-
-    runMCT(queue, world, program, kernel, nfa_m->data(), queries.data(), results.data(), 
-           numCriteria, data_size, res_size, nfa_size, nfaNumCLs, dataNumCLs, outputNumCLs);
-
-    // write results to file
     std::ofstream file;
     file.open("results.txt");
 
-    for (int i = 0; i < numQueries; ++i)
+    for (uint i = 0; i < num_queries; ++i)
         file << (results.data())[i] << "\n";
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // MEMORY RELEASE                                                                             //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
     OCL_CHECK(clReleaseKernel(kernel));
     OCL_CHECK(clReleaseProgram(program));

@@ -37,6 +37,8 @@ PACKAGE std_pkg IS
     function shift(value : std_logic_vector(31 downto 0); shamt: std_logic_vector(4 downto 0); s: std_logic; t: std_logic) return std_logic_vector;
     function shift_left(value : std_logic_vector(31 downto 0); shamt : std_logic_vector(4 downto 0)) return std_logic_vector;
     function shift_right(value : std_logic_vector(31 downto 0); shamt : std_logic_vector(4 downto 0); padding: std_logic) return std_logic_vector;
+    function FLOOR (X : real ) return integer;
+        -- returns largest integer value (as real) not greater than X
 
 end std_pkg;
 
@@ -218,5 +220,37 @@ PACKAGE BODY std_pkg IS
         end if;
         return x;
     end;
+
+    function floor(X : real) return integer is
+        -- returns largest integer value (as real) not greater than X
+        -- No conversion to an integer type is expected, so truncate
+        -- cannot overflow for large arguments.
+        --
+        variable large: real  := 1073741824.0;
+        type long is range -1073741824 to 1073741824;
+        -- 2**30 is longer than any single-precision mantissa
+        variable rd: real;
+    begin
+        if abs( X ) >= large then
+            return integer(X);
+        else
+            rd := real ( long( X));
+            if X > 0.0 then
+                if rd <= X then
+                    return integer(rd);
+                else
+                    return integer(rd - 1.0);
+                end if;
+            elsif  X = 0.0  then
+                return 0;
+            else
+                if rd >= X then
+                    return integer(rd);
+                else
+                    return integer(rd + 1.0);
+                end if;
+            end if;
+        end if;
+  end floor;
 
 end std_pkg;

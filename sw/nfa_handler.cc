@@ -212,9 +212,9 @@ void NFAHandler::memory_dump(const std::string& filename)
     std::ofstream outfile(filename, std::ios::binary | std::ios::out | std::ios::trunc);
 
     //const uint CFG_ENGINE_NCRITERIA       = rulepack.m_ruleType.m_criterionDefinition.size();
-    const uint CFG_ENGINE_CRITERION_WIDTH = 12;
+    const uint CFG_ENGINE_CRITERION_WIDTH = 14;
     const uint CFG_WEIGHT_WIDTH           = 19;
-    const uint CFG_MEM_ADDR_WIDTH         = 16;
+    const uint CFG_MEM_ADDR_WIDTH         = 15;
     //const uint CFG_MEM_ADDR_WIDTH         = ceil(log2(n_bram_edges_max));
     //const uint CFG_EDGE_BUFFERS_DEPTH     = 5;
     //const uint CFG_EDGE_BRAM_DEPTH        = n_bram_edges_max;
@@ -224,8 +224,8 @@ void NFAHandler::memory_dump(const std::string& filename)
 
     const unsigned long long int MASK_WEIGHT     = 0x7FFFF;
     const unsigned long long int MASK_POINTER    = 0x7FFF;
-    const unsigned long long int MASK_OPERAND_B  = 0xFFF;
-    const unsigned long long int MASK_OPERAND_A  = 0xFFF;
+    const unsigned long long int MASK_OPERAND_B  = 0x3FFF; // depends on CFG_ENGINE_CRITERION_WIDTH
+    const unsigned long long int MASK_OPERAND_A  = 0x3FFF; // depends on CFG_ENGINE_CRITERION_WIDTH
     const unsigned long long int SHIFT_LAST      = CFG_WEIGHT_WIDTH+CFG_MEM_ADDR_WIDTH+2*CFG_ENGINE_CRITERION_WIDTH;
     const unsigned long long int SHIFT_WEIGHT    = CFG_MEM_ADDR_WIDTH+2*CFG_ENGINE_CRITERION_WIDTH;
     const unsigned long long int SHIFT_POINTER   = 2*CFG_ENGINE_CRITERION_WIDTH;
@@ -345,9 +345,10 @@ void NFAHandler::memory_dump(const std::string& filename)
 template<typename T>
 void NFAHandler::write_longlongint(std::ofstream* outfile, const T& value)
 {
-    const uintptr_t addr = (uintptr_t)&value;
-    for (short i = sizeof(value) - 1; i >= 0; i--)
-        outfile->write((char*)(addr + i), 1);
+    //const uintptr_t addr = (uintptr_t)&value;
+    //for (short i = sizeof(value) - 1; i >= 0; i--)
+    //    outfile->write((char*)(addr + i), 1);
+    outfile->write((char*)&value, sizeof(value));
 }
 
 bool import_parameters(const std::string& filename)
@@ -410,7 +411,7 @@ void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePac
                         break;
                     default:
                         std::cout << "[!] Pair functor #" << aux_definition.m_functor;
-                        std::cout << " is unknown" << std::endl;
+                        std::cout << " of value= " << aux_criterion.m_value << " is unknown\n";
                         mem_opa = 0;
                         mem_opb = 0;
                 }
@@ -427,7 +428,6 @@ void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePac
     }
 
     outfile.close();
-    std::cout << "it has " << rulepack.m_ruleType.m_criterionDefinition.size() << std::endl;
 }
 
 } // namespace nfa_bre

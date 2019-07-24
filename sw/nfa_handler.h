@@ -48,13 +48,19 @@ class NFAHandler {
     unsigned short int date_check(const unsigned short int& d,
                                         unsigned short int m,
                                         unsigned short int y) /* Rata Die day one is 0001-01-01 */
-    {        
+    {
+        const unsigned long int JANFIRST9999  = 3651695; // 1st Jan 9999 - infinity up
+        const unsigned long int JANFIRST1990  =  726468; // 1st Jan 1990 - infinity down
         const unsigned long int JANFIRST2006  =  732312; // 1st Jan 2006 - start date
-        const unsigned long int JANFIRST9999  = 3651695; // 1st Jan 9999 - infinity
         const unsigned long int NOVNINETH2050 =  748695; // 9th Nov 2050 - end date
+        
         unsigned long int interim = full_rata_die_day(d, m, y);
 
-        if (interim < JANFIRST2006)
+        if (interim == JANFIRST1990)
+        {
+            return 0;
+        }
+        else if (interim < JANFIRST2006)
         {
             printf("[!] Minimal date is Jan 1st 2006, got: m=%d d=%d y=%d\n", m, d, y);
             return 0;

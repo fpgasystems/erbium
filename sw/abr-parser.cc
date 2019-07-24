@@ -80,11 +80,12 @@ int main()
 
     ////////////////////////////////////////////////////////////////////////////////////////
     std::cout << "# LOAD" << std::endl;
-    auto start = std::chrono::high_resolution_clock::now();
     CSVRow              row;
     row.readNextRow(file);
-
     nfa_bre::rulePack_s rp;
+
+    auto start = std::chrono::high_resolution_clock::now();
+
     rp.load("../../../Documents/amadeus-share/ruleTypeDefinition_MINCT_1-0_Template1.xml");
 
     int aux = row.m_data.size()-4;
@@ -98,8 +99,8 @@ int main()
         //    continue;
         //if (row.m_data[8] != "\"GRU\"" && row.m_data[9] != "\"GRU\"")
         //    continue;
-        if (row.m_data[8] != "\"ZRH\"" && row.m_data[9] != "\"ZRH\"" && row.m_data[8] != "\"CDG\"" && row.m_data[9] != "\"CDG\"" && row.m_data[8] != "\"GRU\"" && row.m_data[9] != "\"GRU\"")
-            continue;
+        //if (row.m_data[8] != "\"ZRH\"" && row.m_data[9] != "\"ZRH\"" && row.m_data[8] != "\"CDG\"" && row.m_data[9] != "\"CDG\"" && row.m_data[8] != "\"GRU\"" && row.m_data[9] != "\"GRU\"")
+        //    continue;
         //if (row.m_data[aux+3] != "\"35\"")
         //    continue;
         //if (row.m_data[8] != "\"FIR\"" && row.m_data[9] != "\"FIR\"" && row.m_data[8] != "\"IBT\"" && row.m_data[9] != "\"IBT\"")
@@ -108,6 +109,7 @@ int main()
         nfa_bre::rule_s rl;
         rl.m_ruleId = std::stoi(row.m_data[0].substr(1));
         rl.m_weight = std::stoi(row.m_data[1]);
+
         for (int i=6; i<aux; i++)
         {
             if (!row.m_data[i].empty())
@@ -126,6 +128,7 @@ int main()
                 rl.m_criteria.insert(ct);
             }
         }
+
         if (row.m_data[aux+2] == "\"TRUE\"")
             rl.m_content = "999";
         else
@@ -199,7 +202,7 @@ int main()
 
     // Stats
     std::cout << "total number of states: " << boost::num_vertices(the_nfa.m_graph) << std::endl;
-    std::cout << "total number of transitions: " << boost::num_edges(the_nfa.m_graph) << std::endl;
+    //std::cout << "total number of transitions: " << boost::num_edges(the_nfa.m_graph) << std::endl;
     std::cout << "# NFA COMPLETED in " << elapsed.count() << " s\n";
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -253,14 +256,14 @@ int main()
     std::cout << "# MEMORY DUMP" << std::endl;
 
     const uint CFG_ENGINE_NCRITERIA       = rp.m_ruleType.m_criterionDefinition.size();
-    const uint CFG_ENGINE_CRITERION_WIDTH = 12;
+    const uint CFG_ENGINE_CRITERION_WIDTH = 14;
     const uint CFG_WEIGHT_WIDTH           = 19;
-    const uint CFG_MEM_ADDR_WIDTH         = ceil(log2(n_bram_edges_max));
+    const uint CFG_MEM_ADDR_WIDTH         = 15; // ceil(log2(n_bram_edges_max));
     const uint CFG_EDGE_BUFFERS_DEPTH     = 5;
-    const uint CFG_EDGE_BRAM_DEPTH        = n_bram_edges_max;
+    const uint CFG_EDGE_BRAM_DEPTH        = (1 << (CFG_MEM_ADDR_WIDTH + 1)) - 1;
     const uint BRAM_USED_BITS             = CFG_WEIGHT_WIDTH + CFG_MEM_ADDR_WIDTH + CFG_ENGINE_CRITERION_WIDTH + CFG_ENGINE_CRITERION_WIDTH + 1;
-    const uint CFG_EDGE_BRAM_WIDTH        = 1 << ((uint)ceil(log2(BRAM_USED_BITS)));    
-    
+    const uint CFG_EDGE_BRAM_WIDTH        = 1 << ((uint)ceil(log2(BRAM_USED_BITS)));
+
     std::cout << "constant CFG_ENGINE_NCRITERIA         : integer := " << CFG_ENGINE_NCRITERIA << "; -- Number of criteria\n";
     std::cout << "constant CFG_ENGINE_CRITERION_WIDTH   : integer := " << CFG_ENGINE_CRITERION_WIDTH << "; -- Number of bits of each criterion value\n";
     std::cout << "constant CFG_WEIGHT_WIDTH             : integer := " << CFG_WEIGHT_WIDTH << "; -- integer from 0 to 2^CFG_WEIGHT_WIDTH-1\n";
@@ -270,6 +273,14 @@ int main()
     std::cout << "constant CFG_EDGE_BUFFERS_DEPTH       : integer := " << CFG_EDGE_BUFFERS_DEPTH << ";\n";
     std::cout << "constant CFG_EDGE_BRAM_DEPTH          : integer := " << CFG_EDGE_BRAM_DEPTH << ";\n";
     std::cout << "constant CFG_EDGE_BRAM_WIDTH          : integer := " << CFG_EDGE_BRAM_WIDTH << ";\n";
+    std::cout << "BRAM_USED_BITS                        : integer := " << BRAM_USED_BITS << ";\n";
+
+    if (ceil(log2(n_bram_edges_max)) > CFG_MEM_ADDR_WIDTH)
+    {
+        std::cout << "[!] Required address space for " << n_bram_edges_max << " is ";
+        std::cout << ceil(log2(n_bram_edges_max)) << " bits (CFG_MEM_ADDR_WIDTH = ";
+        std::cout << CFG_MEM_ADDR_WIDTH << " bits;\n";
+    }
 
     start = std::chrono::high_resolution_clock::now();
 
@@ -291,6 +302,7 @@ int main()
     finish = std::chrono::high_resolution_clock::now();
     elapsed = finish - start;
     std::cout << "# WORKLOAD DUMP COMPLETED in " << elapsed.count() << " s\n";
+    
     ////////////////////////////////////////////////////////////////////////////////////////////////
     //                                                                                            //
     ////////////////////////////////////////////////////////////////////////////////////////////////

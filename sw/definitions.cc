@@ -59,8 +59,8 @@ void nfa_bre::abr_dataset_s::load(const std::string& filename)
                 {
                     // RULE
                     rule_s aux_rule;
-                    aux_rule.m_ruleId = aux_a.second.get<int>("<xmlattr>.ruleId");
-                    aux_rule.m_weight = aux_a.second.get<unsigned long int>("weight");
+                    aux_rule.m_ruleId  = aux_a.second.get<int>("<xmlattr>.ruleId");
+                    aux_rule.m_weight  = aux_a.second.get<unsigned long int>("weight");
                     aux_rule.m_content = aux_a.second.get<std::string>("content");
                     BOOST_FOREACH(boost::property_tree::ptree::value_type &aux_b, aux_a.second.get_child("criteria"))
                     {

@@ -70,25 +70,25 @@ begin
 
     sig_res_equ <= compare(query_i, rule_i);
 
-    if (query_i > rule_i) then
+    if (my_conv_integer(query_i) > my_conv_integer(rule_i)) then
         sig_res_grt <= '1';
     else
         sig_res_grt <= '0';
     end if;
 
-    if (query_i >= rule_i) then
+    if (my_conv_integer(query_i) >= my_conv_integer(rule_i)) then
         sig_res_geq <= '1';
     else
         sig_res_geq <= '0';
     end if;
 
-    if (query_i < rule_i) then
+    if (my_conv_integer(query_i) < my_conv_integer(rule_i)) then
         sig_res_les <= '1';
     else
         sig_res_les <= '0';
     end if;
 
-    if (query_i <= rule_i) then
+    if (my_conv_integer(query_i) <= my_conv_integer(rule_i)) then
         sig_res_leq <= '1';
     else
         sig_res_leq <= '0';

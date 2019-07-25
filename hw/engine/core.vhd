@@ -57,6 +57,7 @@ architecture behavioural of core is
     signal fetch_r, fetch_rin     : fetch_out_type;
     signal execute_r, execute_rin : execute_out_type;
     signal query_r, query_rin     : query_flow_type;
+    signal mem_r, mem_rin         : mem_delay_type;
 begin
 
 ----------------------------------------------------------------------------------------------------
@@ -95,7 +96,7 @@ begin
                     v.read_en := '1';
                 else
                     v.flow_ctrl := FLW_CTRL_BUFFER;
-                end if;                
+                end if;
 
             end if;
 
@@ -122,25 +123,30 @@ end process;
 ----------------------------------------------------------------------------------------------------
 
 prev_read_o <= fetch_r.buffer_rd_en;
-mem_addr_o <= fetch_r.mem_addr;
-mem_en_o   <= '1' when fetch_r.flow_ctrl = FLW_CTRL_MEM else
-              '0';
+mem_addr_o  <= fetch_r.mem_addr;
+mem_en_o    <= '1' when fetch_r.flow_ctrl = FLW_CTRL_MEM else
+               '0';
 
-fetch_comb: process(fetch_r, mem_edge_i.last, prev_data_i, prev_empty_i, next_full_i)
-    variable v : fetch_out_type;
+fetch_comb: process(fetch_r, mem_edge_i.last, prev_data_i, prev_empty_i, next_full_i, query_empty_i, mem_r.valid)
+    variable v       : fetch_out_type;
+    variable v_stall : std_logic;
 begin
     v := fetch_r;
 
     -- default
     v.buffer_rd_en := '0';
+    v.mem_rd_en    := '0';
+
+    v_stall := prev_empty_i or next_full_i or query_empty_i;
 
     -- state machine
     case fetch_r.flow_ctrl is
 
       when FLW_CTRL_BUFFER =>
 
-            if prev_empty_i = '0' and next_full_i = '0' then
+            if v_stall = '0' then
                 v.buffer_rd_en := '1';
+                v.mem_rd_en    := '1';
                 v.flow_ctrl    := FLW_CTRL_MEM;
                 v.mem_addr     := prev_data_i.pointer;
                 v.query_id     := prev_data_i.query_id;
@@ -148,21 +154,23 @@ begin
 
       when FLW_CTRL_MEM =>
 
-            if mem_edge_i.last = '1' then
+            
+            if mem_edge_i.last = '1' and mem_r.valid = '1' then
 
-                if prev_empty_i = '0' and next_full_i = '0' then
+                if v_stall = '0' then
                     v.buffer_rd_en := '1';
+                    v.mem_rd_en    := '1';
                     v.flow_ctrl    := FLW_CTRL_MEM;
                     v.mem_addr     := prev_data_i.pointer;
                     v.query_id     := prev_data_i.query_id;
                 else
                     v.flow_ctrl := FLW_CTRL_BUFFER;
-                    v.mem_addr  := (others => '0');
                     v.query_id  := 0;
                 end if;
 
             elsif next_full_i = '0' then
-                v.mem_addr := increment(fetch_r.mem_addr);
+                v.mem_addr  := increment(fetch_r.mem_addr);
+                v.mem_rd_en := '1';
             end if;
 
     end case;
@@ -176,9 +184,47 @@ begin
         if rst_i = '0' then
             fetch_r.flow_ctrl    <= FLW_CTRL_BUFFER;
             fetch_r.buffer_rd_en <= '0';
+            fetch_r.mem_rd_en    <= '0';
             fetch_r.query_id     <=  0;
         else
             fetch_r <= fetch_rin;
+        end if;
+    end if;
+end process;
+
+----------------------------------------------------------------------------------------------------
+-- MEMORY DELAY (2 CYCLES)                                                                        --
+----------------------------------------------------------------------------------------------------
+
+mem_comb: process(mem_r, fetch_r.mem_rd_en, mem_edge_i.last)
+    variable v : mem_delay_type;
+begin
+    v := mem_rin;
+
+    -- delay it
+    v.rden_dlay := fetch_r.mem_rd_en;
+
+    if mem_r.rden_dlay = '1' then
+        if mem_edge_i.last = '1' and mem_r.valid = '1' then
+            v.valid := '0';
+        else
+            v.valid := '1';
+        end if;
+    else
+        v.valid     := '0';
+    end if;
+
+    mem_rin <= v;
+end process;
+
+mem_seq: process(clk_i)
+begin
+    if rising_edge(clk_i) then
+        if rst_i = '0' then
+            mem_r.valid     <= '0';
+            mem_r.rden_dlay <= '0';
+        else
+            mem_r <= mem_rin;
         end if;
     end if;
 end process;
@@ -188,8 +234,8 @@ end process;
 ----------------------------------------------------------------------------------------------------
 
 next_data_o  <= execute_r.writing_edge;
-next_write_o <= '1' when execute_r.inference_res = '1' and next_full_i = '0' else
-               '0';
+next_write_o <= execute_r.inference_res;
+
 exe_matcher: matcher generic map
 (
     G_STRUCTURE     => G_MATCH_STRCT,
@@ -206,7 +252,7 @@ port map
     match_result_o  => sig_exe_match_result
 );
 
-execute_comb : process(execute_r, mem_edge_i.weight, weight_filter_i, sig_exe_match_result, fetch_r)
+execute_comb : process(execute_r, weight_filter_i, sig_exe_match_result, fetch_r, mem_r.valid, mem_edge_i, next_full_i)
     variable v : execute_out_type;
     variable v_weight_check : std_logic;
 begin
@@ -220,16 +266,10 @@ begin
     end if;
 
     -- result of EXE
-    if (fetch_r.flow_ctrl = FLW_CTRL_MEM) then
-        v.inference_res := sig_exe_match_result and v_weight_check;
-    else
-        v.inference_res := '0';
-    end if;
-
-    -- TODO check if it's not a NOP!!!!!!!!!!!
-
+    v.inference_res := sig_exe_match_result and v_weight_check and mem_r.valid and not next_full_i;
     v.writing_edge.pointer  := mem_edge_i.pointer;
     v.writing_edge.query_id := fetch_r.query_id;
+    --v.writing_edge.weight := computed_weight;
 
     -- effectively used only in the last level instance
     if v.inference_res = '1' then

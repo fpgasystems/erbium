@@ -52,6 +52,7 @@ package core_pkg is
 
     type fetch_out_type is record
         buffer_rd_en    : std_logic;
+        mem_rd_en       : std_logic;
         mem_addr        : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
         flow_ctrl       : core_flow_control;
         query_id        : integer;
@@ -61,6 +62,11 @@ package core_pkg is
         inference_res   : std_logic;
         writing_edge    : edge_buffer_type;
         weight_filter   : integer;
+    end record;
+
+    type mem_delay_type is record
+        valid           : std_logic;
+        rden_dlay       : std_logic;
     end record;
 
     type mem_out_type is record

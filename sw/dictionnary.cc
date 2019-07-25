@@ -6,6 +6,8 @@ namespace nfa_bre {
 
 Dictionnary::Dictionnary(const rulePack_s& rulepack)
 {
+    // TODO pre-add the wildcart '*' for all levels (so it's always the id=0)
+    
     // scan rules
     for (auto& rule : rulepack.m_rules)
     {

@@ -688,10 +688,10 @@ void run_nfabre_kernel(cl_command_queue queue, xcl_world world, cl_program progr
 {
     printf("run_nfabre_kernel()\n"); fflush(stdout);
 
-    unsigned short int nfadata_cls = nfa_size / C_CACHELINE_SIZE;
-    unsigned short int queries_cls = queries_size / C_CACHELINE_SIZE;
-    unsigned short int results_cls = number_of_lines(results_size, C_CACHELINE_SIZE);
-    
+    unsigned int nfadata_cls = nfa_size / C_CACHELINE_SIZE;
+    unsigned int queries_cls = queries_size / C_CACHELINE_SIZE;
+    unsigned int results_cls = number_of_lines(results_size, C_CACHELINE_SIZE);
+
     cl_mem buffer_queries, buffer_nfadata, buffer_results;
     size_t global = 1, local = 1;    
 

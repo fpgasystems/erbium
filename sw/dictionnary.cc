@@ -33,12 +33,13 @@ Dictionnary::Dictionnary(const rulePack_s& rulepack)
             value.second = key++;
     }
 
-    // TODO pre-add the wildcart '*' for all levels (so it's always the id=0)
+    // Put wildcard '*' codes as 0
     uint buff;
     for (auto& aux : rulepack.m_ruleType.m_criterionDefinition)
     {
-        buff = m_dic_criteria[aux.m_index].GET_FIRST().second;
-        m_dic_criteria[aux.m_index].GET_FIRST().second = m_dic_criteria[aux.m_index]["*"];
+
+        buff = m_dic_criteria[aux.m_index].begin()->second;
+        m_dic_criteria[aux.m_index].begin()->second = m_dic_criteria[aux.m_index]["*"];
         m_dic_criteria[aux.m_index]["*"] = buff;
     }
 

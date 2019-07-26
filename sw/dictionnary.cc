@@ -6,7 +6,10 @@ namespace nfa_bre {
 
 Dictionnary::Dictionnary(const rulePack_s& rulepack)
 {
-    // TODO pre-add the wildcart '*' for all levels (so it's always the id=0)
+    for (auto& aux : rulepack.m_ruleType.m_criterionDefinition)
+    {
+        m_dic_criteria[aux.m_index]["*"] = 0;
+    }
     
     // scan rules
     for (auto& rule : rulepack.m_rules)
@@ -28,6 +31,15 @@ Dictionnary::Dictionnary(const rulePack_s& rulepack)
         key = 0;
         for(auto& value : criterion.second)
             value.second = key++;
+    }
+
+    // TODO pre-add the wildcart '*' for all levels (so it's always the id=0)
+    uint buff;
+    for (auto& aux : rulepack.m_ruleType.m_criterionDefinition)
+    {
+        buff = m_dic_criteria[aux.m_index].GET_FIRST().second;
+        m_dic_criteria[aux.m_index].GET_FIRST().second = m_dic_criteria[aux.m_index]["*"];
+        m_dic_criteria[aux.m_index]["*"] = buff;
     }
 
     // sorting map

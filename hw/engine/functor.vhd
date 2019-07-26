@@ -48,13 +48,13 @@ architecture behavioural of functor is
     signal sig_res_les : std_logic;
     signal sig_res_leq : std_logic;
     --
-    signal sig_res_die : std_logic;
-    signal sig_res_dse : std_logic;
-    signal sig_res_seq : std_logic;
-    signal sig_res_mme : std_logic;
+    signal sig_wildchar : std_logic;
+    signal sig_result : std_logic;
 begin
 
-with G_FUNCTION select funct_o <=
+funct_o <= sig_wildchar or sig_result;
+
+with G_FUNCTION select sig_result <=
     sig_res_equ when FNCTR_SIMP_EQU,
     sig_res_neq when FNCTR_SIMP_NEQ,
     sig_res_grt when FNCTR_SIMP_GRT,
@@ -67,6 +67,8 @@ sig_res_neq <= not sig_res_equ;
 
 process(query_i, rule_i)
 begin
+
+    sig_wildchar <= is_zero(rule_i);
 
     sig_res_equ <= compare(query_i, rule_i);
 

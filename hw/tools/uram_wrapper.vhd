@@ -34,6 +34,7 @@ entity uram_wrapper is
     );
     port (
         clk_i        :  in std_logic;
+        rd_en_i      :  in std_logic;
         rd_addr_i    :  in std_logic_vector((clogb2(G_RAM_DEPTH)-1) downto 0);
         rd_data_o    : out std_logic_vector(G_RAM_WIDTH-1 downto 0);
         wr_en_i      :  in std_logic;

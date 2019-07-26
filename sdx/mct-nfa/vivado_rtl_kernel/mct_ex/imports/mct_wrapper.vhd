@@ -1,4 +1,3 @@
--- NON REGISTERED READY SIGNAL
 ----------------------------------------------------------------------------------------------------
 --                                                                                                --
 --                                                                                                --
@@ -20,37 +19,36 @@ use bre.engine_pkg.all;
 use bre.core_pkg.all;
 
 entity mct_wrapper is
+    generic (
+        G_DATA_BUS_WIDTH : integer := 512
+    )
     port (
         clk_i        :  in std_logic;
         rst_i        :  in std_logic;
-
         -- input bus
-        rd_data_i    :  in std_logic_vector(511 downto 0);
+        rd_data_i    :  in std_logic_vector(G_DATA_BUS_WIDTH - 1 downto 0);
         rd_valid_i   :  in std_logic;
         rd_last_i    :  in std_logic; -- not in use
         rd_stype_i   :  in std_logic;
         rd_ready_o   : out std_logic;
-
         -- output bus
-        wr_data_o    : out std_logic_vector(511 downto 0);
+        wr_data_o    : out std_logic_vector(G_DATA_BUS_WIDTH - 1 downto 0);
         wr_valid_o   : out std_logic;
         wr_ready_i   :  in std_logic
     );
 end mct_wrapper;
 
 architecture rtl of mct_wrapper is
-
-    constant CFG_DATA_BUS_WIDTH : integer   := 512; -- TODO put as generic
     constant CFG_RD_TYPE_NFA    : std_logic := '0'; -- related to rd_stype_i
     constant CFG_RD_TYPE_QUERY  : std_logic := '1'; -- related to rd_stype_i
-    constant C_QUERY_PARTITIONS : integer := CFG_DATA_BUS_WIDTH / CFG_RAW_QUERY_WIDTH;
-    constant C_EDGES_PARTITIONS : integer := CFG_DATA_BUS_WIDTH / CFG_EDGE_BRAM_WIDTH;
+    constant C_QUERY_PARTITIONS : integer := G_DATA_BUS_WIDTH / CFG_RAW_QUERY_WIDTH;
+    constant C_EDGES_PARTITIONS : integer := G_DATA_BUS_WIDTH / CFG_EDGE_BRAM_WIDTH;
     --
     signal sig_query_ready    : std_logic;
     signal sig_result_ready   : std_logic;
     signal sig_result_valid   : std_logic;
     signal sig_result_value   : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
-
+    signal sig_query_id       : std_logic_vector(CFG_QUERY_ID_WIDTH - 1 downto 0);
 
     type flow_ctrl_type is (FLW_CTRL_WAIT, FLW_CTRL_READ, FLW_CTRL_WRITE);
     
@@ -109,7 +107,6 @@ begin
                 v.flow_ctrl := FLW_CTRL_READ;
                 v.counter   := 0;
                 v.ready     := '1';
-                -- TODO increment query_id
             end if;
 
       when FLW_CTRL_READ =>
@@ -138,6 +135,7 @@ begin
                                 downto
                                 (idx * CFG_RAW_QUERY_WIDTH) + 16
                              );
+                        v.query_array(query_r.counter + idx).query_id := my_conv_integer(sig_query_id);
                     end loop;
                 else
                     useful := remaining;
@@ -157,10 +155,9 @@ begin
                                 downto
                                 (idx * CFG_RAW_QUERY_WIDTH) + 16
                              );
+                        v.query_array(query_r.counter + idx).query_id := my_conv_integer(sig_query_id);
                     end loop;
                 end if;
-                
-                --v.query_array(idx).query_id  := ; -- TODO query_id
                 
                 v.counter := query_r.counter + useful;
                 if (v.counter = CFG_ENGINE_NCRITERIA) then
@@ -302,7 +299,7 @@ end process;
 -- A query result consists of the index of the content it points to. This result value occupies
 -- CFG_MEM_ADDR_WIDTH bits
 
-wr_data_o <= (CFG_DATA_BUS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+wr_data_o <= (G_DATA_BUS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
 
 ----------------------------------------------------------------------------------------------------
 -- NFA-BRE ENGINE TOP                                                                             --
@@ -323,6 +320,21 @@ mct_engine_top: entity bre.top port map
     result_ready_i  => wr_ready_i,
     result_valid_o  => wr_valid_o,
     result_value_o  => sig_result_value
+);
+
+----------------------------------------------------------------------------------------------------
+-- QUERY ID GENERATOR                                                                             --
+----------------------------------------------------------------------------------------------------
+query_id_gen : simple_counter generic map
+(
+    G_WIDTH   => CFG_QUERY_ID_WIDTH
+)
+port  map
+(
+    clk_i     => clk_i,
+    rst_i     => rst_i,
+    enable_i  => query_r.wr_en,
+    counter_o => sig_query_id
 );
 
 end architecture rtl;

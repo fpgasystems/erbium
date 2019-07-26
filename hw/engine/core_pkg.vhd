@@ -33,14 +33,14 @@ package core_pkg is
 
     type edge_buffer_type is record
         pointer         : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
-        query_id        : integer;
+        query_id        : integer range 0 to 2**CFG_QUERY_ID_WIDTH - 1;
         weight          : integer;
     end record;
 
     type query_buffer_type is record
         operand_a       : std_logic_vector(CFG_CRITERION_VALUE_WIDTH - 1 downto 0);
         operand_b       : std_logic_vector(CFG_CRITERION_VALUE_WIDTH - 1 downto 0);
-        query_id        : integer;
+        query_id        : integer range 0 to 2**CFG_QUERY_ID_WIDTH - 1;
     end record;
     type query_in_array_type is array(0 to CFG_ENGINE_NCRITERIA - 1) of query_buffer_type;
 
@@ -55,7 +55,7 @@ package core_pkg is
         mem_rd_en       : std_logic;
         mem_addr        : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
         flow_ctrl       : core_flow_control;
-        query_id        : integer;
+        query_id        : integer range 0 to 2**CFG_QUERY_ID_WIDTH - 1;
     end record;
 
     type execute_out_type is record
@@ -207,21 +207,6 @@ package core_pkg is
             rd_data_o  : out query_buffer_type;
             empty_o    : out std_logic
         );
-    end component;
-
-    component uram_wrapper is
-    generic (
-        G_RAM_WIDTH : integer := 64;                   -- Specify RAM witdh (number of bits per row)
-        G_RAM_DEPTH : integer := 1024                  -- Specify RAM depth (number of entries)
-    );
-    port (
-        clk_i        :  in std_logic;
-        rd_addr_i    :  in std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
-        rd_data_o    : out std_logic_vector(G_RAM_WIDTH-1 downto 0);
-        wr_en_i      :  in std_logic;
-        wr_addr_i    :  in std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
-        wr_data_i    :  in std_logic_vector(G_RAM_WIDTH-1 downto 0)
-    );
     end component;
 
 ----------------------------------------------------------------------------------------------------

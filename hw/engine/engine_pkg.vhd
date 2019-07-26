@@ -6,8 +6,9 @@ package engine_pkg is
 
     -- MAIN PARAMETERS
     constant CFG_ENGINE_NCRITERIA         : integer := 22; -- Number of criteria
-    constant CFG_CRITERION_VALUE_WIDTH    : integer := 14; -- Number of bits of each criterium value
+    constant CFG_CRITERION_VALUE_WIDTH    : integer := 14; -- Number of bits of each criterion value
     constant CFG_WEIGHT_WIDTH             : integer := 19; -- integer from 0 to 2^CFG_WEIGHT_WIDTH-1
+    constant CFG_QUERY_ID_WIDTH           : integer :=  8; -- Used only internally
     --
     constant CFG_MEM_ADDR_WIDTH           : integer := 15;
     --

@@ -129,7 +129,6 @@ architecture behavioural of top is
     type weight_array       is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of integer;
     type mem_addr_array     is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
     type mem_data_array     is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of std_logic_vector(CFG_EDGE_BRAM_WIDTH - 1 downto 0);
-    --
     type query_buffer_array is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of query_buffer_type;
     --
     signal prev_empty    : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
@@ -224,6 +223,7 @@ gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
     port map
     (
         clk_i           => clk_i,
+        rd_en_i         => mem_en(I),
         rd_addr_i       => mem_addr(I),
         rd_data_o       => uram_rd_data(I),
         wr_en_i         => mem_wren_i(I),
@@ -277,8 +277,9 @@ reducer : result_reducer port map
 -- if host's often not ready (result_ready_i), deploy a fifo so the last level is less often blocked
 
 -- ORIGIN
-sig_origin_node.pointer <= (others => '0');
-prev_empty(0) <= '0';
+sig_origin_node.pointer  <= (others => '0');
+sig_origin_node.query_id <= query(0).query_id;
+prev_empty(0) <= query_empty(0);
 prev_data(0)  <= sig_origin_node;
 
 -- LAST

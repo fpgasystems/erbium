@@ -95,6 +95,8 @@ begin
                     v.query := query_i;
                     v.read_en := '1';
                 else
+                    -- This case should never happen: if previous level has access to a query, this 
+                    --     one as well! (except the first one?)
                     v.flow_ctrl := FLW_CTRL_BUFFER;
                 end if;
 
@@ -124,8 +126,7 @@ end process;
 
 prev_read_o <= fetch_r.buffer_rd_en;
 mem_addr_o  <= fetch_r.mem_addr;
-mem_en_o    <= '1' when fetch_r.flow_ctrl = FLW_CTRL_MEM else
-               '0';
+mem_en_o    <= fetch_r.mem_rd_en;
 
 fetch_comb: process(fetch_r, mem_edge_i.last, prev_data_i, prev_empty_i, next_full_i, query_empty_i, mem_r.valid)
     variable v       : fetch_out_type;
@@ -154,7 +155,6 @@ begin
 
       when FLW_CTRL_MEM =>
 
-            
             if mem_edge_i.last = '1' and mem_r.valid = '1' then
 
                 if v_stall = '0' then

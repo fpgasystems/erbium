@@ -9,6 +9,7 @@ package engine_pkg is
     constant CFG_CRITERION_VALUE_WIDTH    : integer := 14; -- Number of bits of each criterion value
     constant CFG_WEIGHT_WIDTH             : integer := 19; -- integer from 0 to 2^CFG_WEIGHT_WIDTH-1
     constant CFG_QUERY_ID_WIDTH           : integer :=  8; -- Used only internally
+    constant CFG_FIRST_CRITERION_LOOKUP   : boolean := true; -- lookup table of first criterion
     --
     constant CFG_MEM_ADDR_WIDTH           : integer := 15;
     --
@@ -16,10 +17,10 @@ package engine_pkg is
     --
     constant CFG_EDGE_BUFFERS_DEPTH       : integer := CFG_ENGINE_NCRITERIA;
     constant CFG_EDGE_BRAM_DEPTH          : integer := 32768;--30690;
-    constant CFG_EDGE_BRAM_WIDTH          : integer := 64;
+    constant CFG_EDGE_BRAM_WIDTH          : integer := 64; -- bits
     --
     -- Number of bits for each criterion (hence, for two values) coming from memory (top level)
-    constant CFG_RAW_QUERY_WIDTH          : integer := 32;
+    constant CFG_RAW_QUERY_WIDTH          : integer := 32; -- bits
 
     -- MEMORY DATA SLICE RANGES
     subtype RNG_BRAM_EDGE_STORE_OPERAND_A is natural range CFG_CRITERION_VALUE_WIDTH - 1 downto 0;

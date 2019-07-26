@@ -277,7 +277,6 @@ reducer : result_reducer port map
 -- if host's often not ready (result_ready_i), deploy a fifo so the last level is less often blocked
 
 -- ORIGIN
-sig_origin_node.pointer  <= (others => '0');
 sig_origin_node.query_id <= query(0).query_id;
 prev_empty(0) <= query_empty(0);
 prev_data(0)  <= sig_origin_node;
@@ -286,5 +285,14 @@ prev_data(0)  <= sig_origin_node;
 query_ready_o  <= not query_full(CFG_ENGINE_NCRITERIA - 1);
 next_full(CFG_ENGINE_NCRITERIA - 1) <= not resred_ready;
 result_value_o <= resred_value.pointer;
+
+-- ORIGIN LOOK-UP
+gen_lookup : if CFG_FIRST_CRITERION_LOOKUP generate
+    sig_origin_node.pointer  <= query(0).operand_a;
+end generate gen_lookup;
+
+gen_lookup_n : if not CFG_FIRST_CRITERION_LOOKUP generate
+    sig_origin_node.pointer  <= (others => '0');
+end generate gen_lookup_n;
 
 end architecture behavioural;

@@ -7,39 +7,6 @@ library tools;
 PACKAGE std_pkg IS
 
 ----------------------------------------------------------------------------------------------------
--- COMPONENTS IN std_pkg.vhd                                                                      --
-----------------------------------------------------------------------------------------------------
-
-    component uram_wrapper is
-    generic (
-        G_RAM_WIDTH : integer := 64;                   -- Specify RAM witdh (number of bits per row)
-        G_RAM_DEPTH : integer := 1024                  -- Specify RAM depth (number of entries)
-    );
-    port (
-        clk_i        :  in std_logic;
-        rd_en_i      :  in std_logic;
-        rd_addr_i    :  in std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
-        rd_data_o    : out std_logic_vector(G_RAM_WIDTH-1 downto 0);
-        wr_en_i      :  in std_logic;
-        wr_addr_i    :  in std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
-        wr_data_i    :  in std_logic_vector(G_RAM_WIDTH-1 downto 0)
-    );
-    end component;
-
-
-    component simple_counter is
-    generic (
-        G_WIDTH   : integer := 8
-    );
-    port (
-        clk_i     :  in std_logic;
-        rst_i     :  in std_logic;
-        enable_i  :  in std_logic;
-        counter_o : out std_logic_vector(G_WIDTH - 1 downto 0)
-    );
-    end component;
-
-----------------------------------------------------------------------------------------------------
 -- FUNCTIONS IN std_pkg.vhd                                                                       --
 ----------------------------------------------------------------------------------------------------
 
@@ -59,6 +26,40 @@ PACKAGE std_pkg IS
     function shift_right(value : std_logic_vector(31 downto 0); shamt : std_logic_vector(4 downto 0); padding: std_logic) return std_logic_vector;
     function FLOOR (X : real ) return integer;
         -- returns largest integer value (as real) not greater than X
+    function clogb2 (depth: in natural) return integer;
+
+----------------------------------------------------------------------------------------------------
+-- COMPONENTS IN std_pkg.vhd                                                                      --
+----------------------------------------------------------------------------------------------------
+
+    component uram_wrapper is
+    generic (
+        G_RAM_WIDTH : integer := 64;                   -- Specify RAM witdh (number of bits per row)
+        G_RAM_DEPTH : integer := 1024                  -- Specify RAM depth (number of entries)
+    );
+    port (
+        clk_i        :  in std_logic;
+        rd_en_i      :  in std_logic;
+        rd_addr_i    :  in std_logic_vector((clogb2(G_RAM_DEPTH)-1) downto 0);
+        rd_data_o    : out std_logic_vector(G_RAM_WIDTH-1 downto 0);
+        wr_en_i      :  in std_logic;
+        wr_addr_i    :  in std_logic_vector((clogb2(G_RAM_DEPTH)-1) downto 0);
+        wr_data_i    :  in std_logic_vector(G_RAM_WIDTH-1 downto 0)
+    );
+    end component;
+
+
+    component simple_counter is
+    generic (
+        G_WIDTH   : integer := 8
+    );
+    port (
+        clk_i     :  in std_logic;
+        rst_i     :  in std_logic;
+        enable_i  :  in std_logic;
+        counter_o : out std_logic_vector(G_WIDTH - 1 downto 0)
+    );
+    end component;
 
 end std_pkg;
 
@@ -271,6 +272,22 @@ PACKAGE BODY std_pkg IS
                 end if;
             end if;
         end if;
-  end floor;
+    end floor;
+
+    function clogb2( depth : natural) return integer is
+        variable temp    : integer := depth;
+        variable ret_val : integer := 0;
+    begin
+        while temp > 1 loop
+            ret_val := ret_val + 1;
+            temp    := temp / 2;
+        end loop;
+
+        if (depth mod 2) = 1 then
+            ret_val := ret_val + 1;
+        end if;
+
+        return ret_val;
+    end function;
 
 end std_pkg;

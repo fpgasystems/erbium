@@ -5,6 +5,9 @@ library bre;
 use bre.engine_pkg.all;
 use bre.core_pkg.all;
 
+library tools;
+use tools.std_pkg.all;
+
 entity top is
     port (
         clk_i          :  in std_logic;
@@ -288,7 +291,7 @@ result_value_o <= resred_value.pointer;
 
 -- ORIGIN LOOK-UP
 gen_lookup : if CFG_FIRST_CRITERION_LOOKUP generate
-    sig_origin_node.pointer  <= query(0).operand_a;
+    sig_origin_node.pointer  <= '0' & query(0).operand_a;
 end generate gen_lookup;
 
 gen_lookup_n : if not CFG_FIRST_CRITERION_LOOKUP generate

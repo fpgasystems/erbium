@@ -67,6 +67,7 @@ package core_pkg is
     type mem_delay_type is record
         valid           : std_logic;
         rden_dlay       : std_logic;
+        last_dlay       : std_logic;
     end record;
 
     type mem_out_type is record

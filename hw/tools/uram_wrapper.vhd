@@ -25,7 +25,7 @@ Library xpm;
 use xpm.vcomponents.all;
 
 library tools;
-use tools.ram_pkg.all;
+use tools.std_pkg.all;
 
 entity uram_wrapper is
     generic (

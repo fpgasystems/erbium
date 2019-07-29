@@ -124,7 +124,7 @@ end process;
 -- FETCH                                                                                          --
 ----------------------------------------------------------------------------------------------------
 
-prev_read_o <= fetch_r.buffer_rd_en;
+prev_read_o <= fetch_r.buffer_rd_en and not prev_empty_i;
 mem_addr_o  <= fetch_r.mem_addr;
 mem_en_o    <= fetch_r.mem_rd_en;
 
@@ -155,7 +155,9 @@ begin
 
       when FLW_CTRL_MEM =>
 
-            if mem_edge_i.last = '1' and mem_r.valid = '1' then
+            if prev_empty_i = '1' and fetch_r.buffer_rd_en = '1' then
+                v.flow_ctrl    := FLW_CTRL_BUFFER;
+            elsif mem_edge_i.last = '1' and mem_r.valid = '1' then
 
                 if v_stall = '0' then
                     v.buffer_rd_en := '1';
@@ -203,16 +205,23 @@ begin
 
     -- delay it
     v.rden_dlay := fetch_r.mem_rd_en;
+    v.last_dlay := mem_edge_i.last and mem_r.valid;
 
-    if mem_r.rden_dlay = '1' then
-        if mem_edge_i.last = '1' and mem_r.valid = '1' then
-            v.valid := '0';
-        else
-            v.valid := '1';
-        end if;
+    if (mem_edge_i.last = '1' and mem_r.valid = '1') or mem_r.last_dlay = '1' then
+        v.valid := '0';
     else
-        v.valid     := '0';
+        v.valid := mem_r.rden_dlay;
     end if;
+
+    -- if mem_r.rden_dlay = '1' then
+    --     if mem_edge_i.last = '1' and mem_r.valid = '1' then
+    --         v.valid := '0';
+    --     else
+    --         v.valid := '1';
+    --     end if;
+    -- else
+    --     v.valid     := '0';
+    -- end if;
 
     mem_rin <= v;
 end process;
@@ -223,6 +232,7 @@ begin
         if rst_i = '0' then
             mem_r.valid     <= '0';
             mem_r.rden_dlay <= '0';
+            mem_r.last_dlay <= '0';
         else
             mem_r <= mem_rin;
         end if;

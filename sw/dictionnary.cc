@@ -8,7 +8,8 @@ Dictionnary::Dictionnary(const rulePack_s& rulepack)
 {
     for (auto& aux : rulepack.m_ruleType.m_criterionDefinition)
     {
-        m_dic_criteria[aux.m_index]["*"] = 0;
+        if (!aux.m_isMandatory)
+            m_dic_criteria[aux.m_index]["*"] = 0;
     }
     
     // scan rules
@@ -37,10 +38,12 @@ Dictionnary::Dictionnary(const rulePack_s& rulepack)
     uint buff;
     for (auto& aux : rulepack.m_ruleType.m_criterionDefinition)
     {
-
-        buff = m_dic_criteria[aux.m_index].begin()->second;
-        m_dic_criteria[aux.m_index].begin()->second = m_dic_criteria[aux.m_index]["*"];
-        m_dic_criteria[aux.m_index]["*"] = buff;
+        if (!aux.m_isMandatory)
+        {
+            buff = m_dic_criteria[aux.m_index].begin()->second;
+            m_dic_criteria[aux.m_index].begin()->second = m_dic_criteria[aux.m_index]["*"];
+            m_dic_criteria[aux.m_index]["*"] = buff;
+        }
     }
 
     // sorting map

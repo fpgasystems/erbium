@@ -366,6 +366,7 @@ bool export_parameters(const std::string& filename)
 void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePack_s& rulepack)
 {
     std::ofstream outfile(filename, std::ios::binary | std::ios::out | std::ios::trunc);
+    // std::ofstream hrfile(filename.substr(filename.length()-4)+".txt", std::ios::out | std::ios::trunc);
     
     unsigned short int mem_opa;
     unsigned short int mem_opb;
@@ -418,8 +419,11 @@ void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePac
             }
             write_longlongint(&outfile, mem_opa);
             write_longlongint(&outfile, mem_opb);
+            // hrfile.write(aux_criterion.m_value.c_str(), aux_criterion.m_value.length());
+            // hrfile.write(" ", 1);
             the_level++;
-        }            
+        }
+        // hrfile.write("\n", 1);
 
         // padding
         mem_opa = 0;
@@ -428,6 +432,7 @@ void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePac
     }
 
     outfile.close();
+    // hrfile.close();
 }
 
 } // namespace nfa_bre

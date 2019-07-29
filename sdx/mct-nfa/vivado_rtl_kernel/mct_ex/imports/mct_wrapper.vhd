@@ -21,7 +21,7 @@ use bre.core_pkg.all;
 entity mct_wrapper is
     generic (
         G_DATA_BUS_WIDTH : integer := 512
-    )
+    );
     port (
         clk_i        :  in std_logic;
         rst_i        :  in std_logic;
@@ -77,7 +77,7 @@ architecture rtl of mct_wrapper is
 
 begin
 
-rd_ready_o <= query_rin.ready or nfa_rin.ready;
+rd_ready_o <= query_r.ready or nfa_rin.ready;
 
 ----------------------------------------------------------------------------------------------------
 -- QUERY DESERIALISER                                                                             --
@@ -85,7 +85,7 @@ rd_ready_o <= query_rin.ready or nfa_rin.ready;
 -- extract input query criteria from the rd_data_i bus. each query has CFG_ENGINE_NCRITERIA criteria
 -- and each criterium has two operands of CFG_CRITERION_VALUE_WIDTH width
 
-query_comb : process(query_r, rd_stype_i, rd_valid_i, rd_data_i, sig_query_ready)
+query_comb : process(query_r, rd_stype_i, rd_valid_i, rd_data_i, sig_query_ready, sig_query_id)
     constant C_SLICES_REM     : integer := CFG_ENGINE_NCRITERIA / C_QUERY_PARTITIONS;
     constant C_SLICES_MOD     : integer := CFG_ENGINE_NCRITERIA mod C_QUERY_PARTITIONS;
     --

@@ -16,7 +16,7 @@
       </binaryContainers>
     </lastBuildOptions>
   </configuration>
-  <configuration name="Emulation-HW" id="com.xilinx.sdx.opencl.config.hw_emu.317529911" dirty="true">
+  <configuration name="Emulation-HW" id="com.xilinx.sdx.opencl.config.hw_emu.317529911">
     <configBuildOptions xsi:type="openclProject:OpenCLOptions" kernelDebug="true" target="hw_emu">
       <binaryContainers name="binary_container_1">
         <precompiledKernels name="mct" sourceFile="src/sdx_rtl_kernel/mct/mct.xo"/>

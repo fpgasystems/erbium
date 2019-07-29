@@ -653,7 +653,7 @@ void load_nfa_from_file(char* file_name,
     }
 }
 
-void load_queries_from_file(char* file_name, uint* queries_data, uint& queries_size)
+void load_queries_from_file(char* file_name, unsigned short int* queries_data, uint& queries_size)
 {
     std::ifstream* file = new std::ifstream(file_name, std::ios::in | std::ios::binary);
     if(file->is_open())
@@ -780,7 +780,7 @@ int main(int argc, char** argv)
     queries_size = queries_size * num_queries * C_CACHELINE_SIZE;
     unsigned int nfa_size;
 
-    std::vector<unsigned int, aligned_allocator<unsigned int>> queries(queries_size);
+    std::vector<unsigned short int, aligned_allocator<unsigned short int>> queries(queries_size);
     std::vector<unsigned int, aligned_allocator<unsigned int>> results(results_size);
     std::vector<unsigned long int, aligned_allocator<unsigned long int>>* nfa_data;
 

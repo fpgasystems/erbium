@@ -26,7 +26,7 @@ begin
         if rst_i = '0' then
             count <= (others => '0');
         elsif enable_i = '1' then
-            count <= íncrement(count);
+            count <= increment(count);
         end if;
     end if;
 end process;

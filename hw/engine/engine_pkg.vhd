@@ -7,15 +7,15 @@ package engine_pkg is
     -- MAIN PARAMETERS
     constant CFG_ENGINE_NCRITERIA         : integer := 22; -- Number of criteria
     constant CFG_CRITERION_VALUE_WIDTH    : integer := 14; -- Number of bits of each criterion value
-    constant CFG_WEIGHT_WIDTH             : integer := 19; -- integer from 0 to 2^CFG_WEIGHT_WIDTH-1
+    constant CFG_WEIGHT_WIDTH             : integer := 20; -- integer from 0 to 2^CFG_WEIGHT_WIDTH-1
     constant CFG_QUERY_ID_WIDTH           : integer :=  8; -- Used only internally
-    constant CFG_FIRST_CRITERION_LOOKUP   : boolean := true; -- lookup table of first criterion
+    constant CFG_FIRST_CRITERION_LOOKUP   : boolean := false; -- lookup table of first criterion
     --
     constant CFG_MEM_ADDR_WIDTH           : integer := 15;
     --
     constant CFG_QUERY_BUFFER_DEPTH       : integer := CFG_ENGINE_NCRITERIA;
     --
-    constant CFG_EDGE_BUFFERS_DEPTH       : integer := CFG_ENGINE_NCRITERIA;
+    constant CFG_EDGE_BUFFERS_DEPTH       : integer := 4;--CFG_ENGINE_NCRITERIA+2;
     constant CFG_EDGE_BRAM_DEPTH          : integer := 32768;--30690;
     constant CFG_EDGE_BRAM_WIDTH          : integer := 64; -- bits
     --

@@ -36,6 +36,8 @@ architecture rtl of buffer_edge is
     signal sig_full      : std_logic;
     signal sig_empty     : std_logic;
 
+    signal sig_satur     : std_logic; -- saturation (strictly full)
+
 begin
  
 p_ctrl : process (clk_i) is
@@ -55,7 +57,7 @@ begin
             end if;
  
             -- Keeps track of the write index (and controls roll-over)
-            if (wr_en_i = '1' and sig_full = '0') then
+            if (wr_en_i = '1' and sig_satur = '0') then
                 if wr_index_reg = G_DEPTH-1 then
                     wr_index_reg <= 0;
                 else
@@ -83,7 +85,12 @@ end process p_ctrl;
 
 rd_data_o <= fifo_data_reg(rd_index_reg);
  
-sig_full  <= '1' when fifo_cntr_reg = G_DEPTH else '0';
+sig_full  <= '1' when fifo_cntr_reg = G_DEPTH   or 
+                      fifo_cntr_reg = G_DEPTH-1 or 
+                      fifo_cntr_reg = G_DEPTH-2 or
+                      fifo_cntr_reg = G_DEPTH-3 
+                 else '0';
+sig_satur <= '1' when fifo_cntr_reg = G_DEPTH else '0';
 sig_empty <= '1' when fifo_cntr_reg = 0       else '0';
  
 full_o  <= sig_full;
@@ -94,7 +101,7 @@ empty_o <= sig_empty;
 p_assert : process (clk_i) is
 begin
     if rising_edge(clk_i) then
-        if wr_en_i = '1' and sig_full = '1' then
+        if wr_en_i = '1' and sig_satur = '1' then
             report "ASSERT FAILURE - MODULE_REGISTER_FIFO: FIFO IS FULL AND BEING WRITTEN " severity failure;
         end if;
  

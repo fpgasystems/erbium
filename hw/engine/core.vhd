@@ -262,7 +262,7 @@ port map
     match_result_o  => sig_exe_match_result
 );
 
-execute_comb : process(execute_r, weight_filter_i, sig_exe_match_result, fetch_r, mem_r.valid, mem_edge_i, next_full_i)
+execute_comb : process(execute_r, weight_filter_i, sig_exe_match_result, fetch_r, mem_r.valid, mem_edge_i)
     variable v : execute_out_type;
     variable v_weight_check : std_logic;
 begin
@@ -276,7 +276,7 @@ begin
     end if;
 
     -- result of EXE
-    v.inference_res := sig_exe_match_result and v_weight_check and mem_r.valid and not next_full_i;
+    v.inference_res := sig_exe_match_result and v_weight_check and mem_r.valid;
     v.writing_edge.pointer  := mem_edge_i.pointer;
     v.writing_edge.query_id := fetch_r.query_id;
     --v.writing_edge.weight := computed_weight;

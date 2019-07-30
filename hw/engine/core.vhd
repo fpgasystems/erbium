@@ -25,7 +25,8 @@ entity core is
         G_MATCH_STRCT         : match_structure_type := STRCT_SIMPLE;
         G_MATCH_FUNCTION_A    : match_simp_function  := FNCTR_SIMP_NOP;
         G_MATCH_FUNCTION_B    : match_simp_function  := FNCTR_SIMP_NOP;
-        G_MATCH_FUNCTION_PAIR : match_pair_function  := FNCTR_PAIR_NOP
+        G_MATCH_FUNCTION_PAIR : match_pair_function  := FNCTR_PAIR_NOP;
+        G_WEIGHT              : integer              := 0
     );
     port (
         clk_i           :  in std_logic;

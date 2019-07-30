@@ -24,6 +24,7 @@ class NFAHandler {
     void export_dot_file(const std::string& filename);
     void memory_dump(const std::string& filename, const rulePack_s& rulepack);
     void dump_mirror_workload(const std::string& filename, const rulePack_s& rulepack);
+    void dump_core_parameters(const std::string& filename, const rulePack_s& rulepack);
 
     bool import_parameters(const std::string& filename);
     bool export_parameters(const std::string& filename);

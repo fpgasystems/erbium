@@ -24,7 +24,7 @@ package core_pkg is
     type core_flow_control is (FLW_CTRL_BUFFER, FLW_CTRL_MEM);
 
     type edge_store_type is record
-        weight          : integer range 0 to 2**CFG_WEIGHT_WIDTH - 1;
+        weight          : integer range 0 to 2**CFG_WEIGHT_WIDTH-1;
         operand_a       : std_logic_vector(CFG_CRITERION_VALUE_WIDTH - 1 downto 0);
         operand_b       : std_logic_vector(CFG_CRITERION_VALUE_WIDTH - 1 downto 0);
         pointer         : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
@@ -34,7 +34,7 @@ package core_pkg is
     type edge_buffer_type is record
         pointer         : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
         query_id        : integer range 0 to 2**CFG_QUERY_ID_WIDTH - 1;
-        weight          : integer;
+        weight          : integer range 0 to 2**CFG_WEIGHT_WIDTH-1;
     end record;
 
     type query_buffer_type is record
@@ -61,7 +61,7 @@ package core_pkg is
     type execute_out_type is record
         inference_res   : std_logic;
         writing_edge    : edge_buffer_type;
-        weight_filter   : integer;
+        weight_filter   : integer range 0 to 2**CFG_WEIGHT_WIDTH-1;
     end record;
 
     type mem_delay_type is record
@@ -76,6 +76,15 @@ package core_pkg is
         wr_addr         : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
         wr_en           : std_logic;
         wr_data         : edge_store_type;
+    end record;
+
+    type core_parameters_type is record
+        G_RAM_DEPTH           : integer;
+        G_MATCH_STRCT         : match_structure_type;
+        G_MATCH_FUNCTION_A    : match_simp_function;
+        G_MATCH_FUNCTION_B    : match_simp_function;
+        G_MATCH_FUNCTION_PAIR : match_pair_function;
+        G_WEIGHT              : integer range 0 to 2**CFG_WEIGHT_WIDTH-1;
     end record;
 
 ----------------------------------------------------------------------------------------------------
@@ -132,7 +141,8 @@ package core_pkg is
             G_MATCH_STRCT         : match_structure_type := STRCT_SIMPLE;
             G_MATCH_FUNCTION_A    : match_simp_function  := FNCTR_SIMP_NOP;
             G_MATCH_FUNCTION_B    : match_simp_function  := FNCTR_SIMP_NOP;
-            G_MATCH_FUNCTION_PAIR : match_pair_function  := FNCTR_PAIR_NOP
+            G_MATCH_FUNCTION_PAIR : match_pair_function  := FNCTR_PAIR_NOP;
+            G_WEIGHT              : integer              := 0
         );
         port (
             clk_i           :  in std_logic;

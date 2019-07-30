@@ -15,7 +15,7 @@ package engine_pkg is
     --
     constant CFG_QUERY_BUFFER_DEPTH       : integer := CFG_ENGINE_NCRITERIA;
     --
-    constant CFG_EDGE_BUFFERS_DEPTH       : integer := 4;--CFG_ENGINE_NCRITERIA+2;
+    constant CFG_EDGE_BUFFERS_DEPTH       : integer := CFG_ENGINE_NCRITERIA+2;
     constant CFG_EDGE_BRAM_DEPTH          : integer := 32768;--30690;
     constant CFG_EDGE_BRAM_WIDTH          : integer := 64; -- bits
     --

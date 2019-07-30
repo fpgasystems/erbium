@@ -28,104 +28,193 @@ entity top is
 end top;
 
 architecture behavioural of top is
-    -- GENERICS
-    type MATCH_STRCT_ARRAY          is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of match_structure_type;
-    type MATCH_SIMP_FUNCTION_ARRAY  is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of match_simp_function;
-    type MATCH_PAIR_FUNCTION_ARRAY  is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of match_pair_function;
-    type RAM_DEPTH_ARRAY            is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of integer;
-    --
-    constant ary_match_struct        : MATCH_STRCT_ARRAY := (STRCT_SIMPLE,
-                                                             STRCT_SIMPLE,
-                                                             STRCT_SIMPLE,
-                                                             STRCT_SIMPLE,
-                                                             STRCT_SIMPLE,
-                                                             STRCT_SIMPLE,
-                                                             STRCT_SIMPLE,
-                                                             STRCT_SIMPLE,
-                                                             STRCT_SIMPLE,
-                                                             STRCT_SIMPLE,
-                                                             STRCT_SIMPLE,
-                                                             STRCT_SIMPLE,
-                                                             STRCT_SIMPLE,
-                                                             STRCT_PAIR,
-                                                             STRCT_SIMPLE,
-                                                             STRCT_SIMPLE,
-                                                             STRCT_PAIR,
-                                                             STRCT_PAIR,
-                                                             STRCT_SIMPLE,
-                                                             STRCT_SIMPLE,
-                                                             STRCT_SIMPLE,
-                                                             STRCT_SIMPLE);
-    constant ary_match_function_a    : MATCH_SIMP_FUNCTION_ARRAY := (FNCTR_SIMP_EQU,
-                                                                     FNCTR_SIMP_EQU,
-                                                                     FNCTR_SIMP_EQU,
-                                                                     FNCTR_SIMP_EQU,
-                                                                     FNCTR_SIMP_EQU,
-                                                                     FNCTR_SIMP_EQU,
-                                                                     FNCTR_SIMP_EQU,
-                                                                     FNCTR_SIMP_EQU,
-                                                                     FNCTR_SIMP_EQU,
-                                                                     FNCTR_SIMP_EQU,
-                                                                     FNCTR_SIMP_EQU,
-                                                                     FNCTR_SIMP_EQU,
-                                                                     FNCTR_SIMP_EQU,
-                                                                     FNCTR_SIMP_GEQ,
-                                                                     FNCTR_SIMP_EQU,
-                                                                     FNCTR_SIMP_EQU,
-                                                                     FNCTR_SIMP_GEQ,
-                                                                     FNCTR_SIMP_GEQ,
-                                                                     FNCTR_SIMP_EQU,
-                                                                     FNCTR_SIMP_EQU,
-                                                                     FNCTR_SIMP_EQU,
-                                                                     FNCTR_SIMP_EQU);
-    constant ary_match_function_b    : MATCH_SIMP_FUNCTION_ARRAY := (FNCTR_SIMP_NOP,
-                                                                     FNCTR_SIMP_NOP,
-                                                                     FNCTR_SIMP_NOP,
-                                                                     FNCTR_SIMP_NOP,
-                                                                     FNCTR_SIMP_NOP,
-                                                                     FNCTR_SIMP_NOP,
-                                                                     FNCTR_SIMP_NOP,
-                                                                     FNCTR_SIMP_NOP,
-                                                                     FNCTR_SIMP_NOP,
-                                                                     FNCTR_SIMP_NOP,
-                                                                     FNCTR_SIMP_NOP,
-                                                                     FNCTR_SIMP_NOP,
-                                                                     FNCTR_SIMP_NOP,
-                                                                     FNCTR_SIMP_LEQ,
-                                                                     FNCTR_SIMP_NOP,
-                                                                     FNCTR_SIMP_NOP,
-                                                                     FNCTR_SIMP_LEQ,
-                                                                     FNCTR_SIMP_LEQ,
-                                                                     FNCTR_SIMP_NOP,
-                                                                     FNCTR_SIMP_NOP,
-                                                                     FNCTR_SIMP_NOP,
-                                                                     FNCTR_SIMP_NOP);
-    constant ary_match_function_pair : MATCH_PAIR_FUNCTION_ARRAY := (FNCTR_PAIR_NOP,
-                                                                     FNCTR_PAIR_NOP,
-                                                                     FNCTR_PAIR_NOP,
-                                                                     FNCTR_PAIR_NOP,
-                                                                     FNCTR_PAIR_NOP,
-                                                                     FNCTR_PAIR_NOP,
-                                                                     FNCTR_PAIR_NOP,
-                                                                     FNCTR_PAIR_NOP,
-                                                                     FNCTR_PAIR_NOP,
-                                                                     FNCTR_PAIR_NOP,
-                                                                     FNCTR_PAIR_NOP,
-                                                                     FNCTR_PAIR_NOP,
-                                                                     FNCTR_PAIR_NOP,
-                                                                     FNCTR_PAIR_AND,
-                                                                     FNCTR_PAIR_NOP,
-                                                                     FNCTR_PAIR_NOP,
-                                                                     FNCTR_PAIR_AND,
-                                                                     FNCTR_PAIR_AND,
-                                                                     FNCTR_PAIR_NOP,
-                                                                     FNCTR_PAIR_NOP,
-                                                                     FNCTR_PAIR_NOP,
-                                                                     FNCTR_PAIR_NOP);
---    constant ary_ram_depth : RAM_DEPTH_ARRAY := (
---                                                
---                                                );
-    --
+    type CORE_PARAM_ARRAY is array (0 to CFG_ENGINE_NCRITERIA - 1) of core_parameters_type;
+
+    -- CORE PARAMETERS
+    constant CORE_PARAM_0 : core_parameters_type := (
+        G_RAM_DEPTH           => 4096,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_WEIGHT              => 0
+    );
+    constant CORE_PARAM_1 : core_parameters_type := (
+        G_RAM_DEPTH           => 4096,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_WEIGHT              => 0
+    );
+    constant CORE_PARAM_2 : core_parameters_type := (
+        G_RAM_DEPTH           => 8192,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_WEIGHT              => 512
+    );
+    constant CORE_PARAM_3 : core_parameters_type := (
+        G_RAM_DEPTH           => 8192,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_WEIGHT              => 524288
+    );
+    constant CORE_PARAM_4 : core_parameters_type := (
+        G_RAM_DEPTH           => 16384,
+        G_MATCH_STRCT         => STRCT_PAIR,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND,
+        G_WEIGHT              => 256
+    );
+    constant CORE_PARAM_5 : core_parameters_type := (
+        G_RAM_DEPTH           => 32768,
+        G_MATCH_STRCT         => STRCT_PAIR,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND,
+        G_WEIGHT              => 262144
+    );
+    constant CORE_PARAM_6 : core_parameters_type := (
+        G_RAM_DEPTH           => 16384,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_WEIGHT              => 65536
+    );
+    constant CORE_PARAM_7 : core_parameters_type := (
+        G_RAM_DEPTH           => 16384,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_WEIGHT              => 64
+    );
+    constant CORE_PARAM_8 : core_parameters_type := (
+        G_RAM_DEPTH           => 16384,
+        G_MATCH_STRCT         => STRCT_PAIR,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND,
+        G_WEIGHT              => 1
+    );
+    constant CORE_PARAM_9 : core_parameters_type := (
+        G_RAM_DEPTH           => 32768,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_WEIGHT              => 128
+    );
+    constant CORE_PARAM_10 : core_parameters_type := (
+        G_RAM_DEPTH           => 32768,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_WEIGHT              => 131072
+    );
+    constant CORE_PARAM_11 : core_parameters_type := (
+        G_RAM_DEPTH           => 32768,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_WEIGHT              => 16
+    );
+    constant CORE_PARAM_12 : core_parameters_type := (
+        G_RAM_DEPTH           => 16384,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_WEIGHT              => 16384
+    );
+    constant CORE_PARAM_13 : core_parameters_type := (
+        G_RAM_DEPTH           => 8192,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_WEIGHT              => 2
+    );
+    constant CORE_PARAM_14 : core_parameters_type := (
+        G_RAM_DEPTH           => 16384,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_WEIGHT              => 4
+    );
+    constant CORE_PARAM_15 : core_parameters_type := (
+        G_RAM_DEPTH           => 16384,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_WEIGHT              => 4096
+    );
+    constant CORE_PARAM_16 : core_parameters_type := (
+        G_RAM_DEPTH           => 8192,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_WEIGHT              => 2048
+    );
+    constant CORE_PARAM_17 : core_parameters_type := (
+        G_RAM_DEPTH           => 4096,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_WEIGHT              => 32768
+    );
+    constant CORE_PARAM_18 : core_parameters_type := (
+        G_RAM_DEPTH           => 4096,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_WEIGHT              => 32
+    );
+    constant CORE_PARAM_19 : core_parameters_type := (
+        G_RAM_DEPTH           => 8192,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_WEIGHT              => 0
+    );
+    constant CORE_PARAM_20 : core_parameters_type := (
+        G_RAM_DEPTH           => 1024,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_WEIGHT              => 8192
+    );
+    constant CORE_PARAM_21 : core_parameters_type := (
+        G_RAM_DEPTH           => 512,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_WEIGHT              => 8
+    );
+
+    constant CFG_CORE_PARAM_ARRAY : CORE_PARAM_ARRAY := (
+        CORE_PARAM_0,  CORE_PARAM_1,  CORE_PARAM_2,  CORE_PARAM_3,  CORE_PARAM_4,  CORE_PARAM_5, 
+        CORE_PARAM_6,  CORE_PARAM_7,  CORE_PARAM_8,  CORE_PARAM_9,  CORE_PARAM_10, CORE_PARAM_11,
+        CORE_PARAM_12, CORE_PARAM_13, CORE_PARAM_14, CORE_PARAM_15, CORE_PARAM_16, CORE_PARAM_17,
+        CORE_PARAM_18, CORE_PARAM_19, CORE_PARAM_20, CORE_PARAM_21
+    );
+
     -- CORE INTERFACE ARRAYS
     type edge_buffer_array  is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of edge_buffer_type;
     type edge_store_array   is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of edge_store_type;
@@ -188,10 +277,11 @@ gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
 
     pe_g : core generic map
     (
-        G_MATCH_STRCT         => ary_match_struct(I),
-        G_MATCH_FUNCTION_A    => ary_match_function_a(I),
-        G_MATCH_FUNCTION_B    => ary_match_function_b(I),
-        G_MATCH_FUNCTION_PAIR => ary_match_function_pair(I)
+        G_MATCH_STRCT         => CFG_CORE_PARAM_ARRAY(I).G_MATCH_STRCT,
+        G_MATCH_FUNCTION_A    => CFG_CORE_PARAM_ARRAY(I).G_MATCH_FUNCTION_A,
+        G_MATCH_FUNCTION_B    => CFG_CORE_PARAM_ARRAY(I).G_MATCH_FUNCTION_B,
+        G_MATCH_FUNCTION_PAIR => CFG_CORE_PARAM_ARRAY(I).G_MATCH_FUNCTION_PAIR,
+        G_WEIGHT              => CFG_CORE_PARAM_ARRAY(I).G_WEIGHT
     )
     port map
     (
@@ -221,16 +311,16 @@ gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
     uram_g : uram_wrapper generic map
     (
         G_RAM_WIDTH     => CFG_EDGE_BRAM_WIDTH,
-        G_RAM_DEPTH     => CFG_EDGE_BRAM_DEPTH
+        G_RAM_DEPTH     => CFG_CORE_PARAM_ARRAY(I).G_RAM_DEPTH
     )
     port map
     (
         clk_i           => clk_i,
         rd_en_i         => mem_en(I),
-        rd_addr_i       => mem_addr(I),
+        rd_addr_i       => mem_addr(I)(clogb2(CFG_CORE_PARAM_ARRAY(I).G_RAM_DEPTH)-1 downto 0),
         rd_data_o       => uram_rd_data(I),
         wr_en_i         => mem_wren_i(I),
-        wr_addr_i       => mem_addr_i,
+        wr_addr_i       => mem_addr_i(clogb2(CFG_CORE_PARAM_ARRAY(I).G_RAM_DEPTH)-1 downto 0),
         wr_data_i       => mem_i
     );
     

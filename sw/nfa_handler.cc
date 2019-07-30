@@ -225,6 +225,8 @@ void NFAHandler::memory_dump(const std::string& filename, const rulePack_s& rule
                 m_graph[vert].dump_pointer = n_edges;
                 n_edges_max = m_graph[vert].children.size();
 
+                // TODO why this? last level is not used
+                // does it work for conflict rules for ex?
                 if (n_edges_max == 0)
                     n_edges++;
                 else
@@ -424,6 +426,90 @@ void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePac
 
     outfile.close();
     // hrfile.close();
+}
+
+void NFAHandler::dump_core_parameters(const std::string& filename, const rulePack_s& rulepack)
+{
+    std::ofstream outfile(filename, std::ios::out | std::ios::trunc);
+
+    std::vector<uint> edges_per_level(m_vertexes.size()+1);
+    edges_per_level[0] = m_graph[0].children.size();
+    for (auto& level : m_vertexes)
+    {
+        edges_per_level[level.first+1] = 0;
+        for (auto& value : m_vertexes[level.first])
+        {
+            for (auto& vert : m_vertexes[level.first][value.first])
+            {
+                edges_per_level[level.first+1] += m_graph[vert].children.size();
+            }
+        }
+    }
+
+    const criterionDefinition_s* criterion_def;
+    char buffer[1024];
+    std::string func_a, func_b, func_pair;
+    uint the_level = 0;
+    for (auto& ord : m_dic->m_sorting_map)
+    {
+        criterion_def = &(*std::next(rulepack.m_ruleType.m_criterionDefinition.begin(), ord));
+
+
+        switch(criterion_def->m_functor)
+        {
+            case  60 : // criterionType_alphanumstring3-3.xml
+            case  67 : // criterionType_alphanumstring2-2.xml
+            case 273 : // criterionType_alphastring2-2.xml
+            case 316 : // criterionType_alphanumstring1-3.xml
+            case 408 : // criterionType_integer0-9999_408.xml
+                func_a    = "FNCTR_SIMP_EQU";
+                func_b    = "FNCTR_SIMP_NOP";
+                func_pair = "FNCTR_PAIR_NOP";
+                break;
+            case 212 : // criterionType_pairofdates.xml
+            case 412 : // criterionType_integerrange4-digits_412.xml
+                func_a    = "FNCTR_SIMP_GEQ";
+                func_b    = "FNCTR_SIMP_LEQ";
+                func_pair = "FNCTR_PAIR_AND";
+                break;
+            default:
+                std::cout << "[!] functor #" << criterion_def->m_functor << " is unknown\n";
+                func_a    = "FNCTR_SIMP_NOP";
+                func_b    = "FNCTR_SIMP_NOP";
+                func_pair = "FNCTR_PAIR_NOP";
+        }
+
+        std::cout << "edges_per_level[" << the_level << "] = " << edges_per_level[the_level] << std::endl;
+        sprintf(buffer, "    constant CORE_PARAM_%u : core_parameters_type := (\n"
+                        "        G_RAM_DEPTH           => %u,\n"
+                        "        G_MATCH_STRCT         => %s,\n"
+                        "        G_MATCH_FUNCTION_A    => %s,\n"
+                        "        G_MATCH_FUNCTION_B    => %s,\n"
+                        "        G_MATCH_FUNCTION_PAIR => %s,\n"
+                        "        G_WEIGHT              => %lu\n"
+                        "    );\n",
+            the_level,
+            1 << ((uint)ceil(log2(edges_per_level[the_level]))),
+            (criterion_def->m_isPair) ? "STRCT_PAIR" : "STRCT_SIMPLE",
+            func_a.c_str(),
+            func_b.c_str(),
+            func_pair.c_str(),
+            criterion_def->m_weight);
+
+        outfile << buffer;        
+        the_level++;
+    }
+    outfile << "    constant CFG_CORE_PARAM_ARRAY : CORE_PARAM_ARRAY := (\n";
+    for (the_level = 0; the_level < m_vertexes.size()-1; the_level++)
+    {
+        outfile << "        CORE_PARAM_" << the_level;
+        if (the_level != m_vertexes.size()-2)
+            outfile << ",\n";
+        else
+            outfile << "\n    );";
+    }
+
+    outfile.close();
 }
 
 } // namespace nfa_bre

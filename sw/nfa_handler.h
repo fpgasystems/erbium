@@ -6,6 +6,7 @@
 
 #include <string>
 #include <iterator>
+#include <algorithm>
 #include <fstream>
 #include <cstdint>
 
@@ -21,7 +22,7 @@ class NFAHandler {
     void deletion();
     uint print_stats(); // returns n_bram_edges_max
     void export_dot_file(const std::string& filename);
-    void memory_dump(const std::string& filename);
+    void memory_dump(const std::string& filename, const rulePack_s& rulepack);
     void dump_mirror_workload(const std::string& filename, const rulePack_s& rulepack);
 
     bool import_parameters(const std::string& filename);
@@ -32,6 +33,16 @@ class NFAHandler {
 
     template<typename T>
     void write_longlongint(std::ofstream* outfile, const T& value);
+    void dump_nfa_state(std::ofstream* outfile,
+                        const uint& vertex_id,
+                        std::map<std::string, uint>* dic,
+                        const criterionDefinition_s* criterion_def);
+    void dump_padding(std::ofstream* outfile, const uint& slices);
+    void parse_value(const std::string& value,
+                     const uint& value_id,
+                     unsigned short int* operand_a,
+                     unsigned short int* operand_b,
+                     const criterionDefinition_s* criterion_def);
 
     bool m_imported_param;
 
@@ -49,21 +60,30 @@ class NFAHandler {
                                         unsigned short int m,
                                         unsigned short int y) /* Rata Die day one is 0001-01-01 */
     {
-        const unsigned long int JANFIRST9999  = 3651695; // 1st Jan 9999 - infinity up
+        /*  0       wildcard '*': it matches anything
+         *  1       infinity down   e.g. 1st Jan 1990
+         *  2       start date      e.g. 1st Jan 2006
+         *  ...
+         *  2^14-2  end date        e.g. 6th Nov 2050
+         *  2^14-1  infinity up     e.g. 1st Jan 9999
+         * 
+         *  16,381 days period
+         */
         const unsigned long int JANFIRST1990  =  726468; // 1st Jan 1990 - infinity down
         const unsigned long int JANFIRST2006  =  732312; // 1st Jan 2006 - start date
-        const unsigned long int NOVNINETH2050 =  748695; // 9th Nov 2050 - end date
+        const unsigned long int NOVNINETH2050 =  748692; // 6th Nov 2050 - end date
+        const unsigned long int JANFIRST9999  = 3651695; // 1st Jan 9999 - infinity up
         
         unsigned long int interim = full_rata_die_day(d, m, y);
 
         if (interim == JANFIRST1990)
         {
-            return 0;
+            return 1;
         }
         else if (interim < JANFIRST2006)
         {
             printf("[!] Minimal date is Jan 1st 2006, got: m=%d d=%d y=%d\n", m, d, y);
-            return 0;
+            return 1;
         }
         else if (interim == JANFIRST9999)
         {
@@ -71,11 +91,11 @@ class NFAHandler {
         }
         else if (interim > NOVNINETH2050)
         {
-            printf("[!] Maximal date is Nov 9th 2050, got: m=%d d=%d y=%d\n", m, d, y);
+            printf("[!] Maximal date is Nov 6th 2050, got: m=%d d=%d y=%d\n", m, d, y);
             return USHRT_MAX;
         }
         else
-            return interim - JANFIRST2006;
+            return interim - JANFIRST2006 + 2;
     }
 
     unsigned short int get_month_number(const std::string& month_code)
@@ -120,13 +140,14 @@ class NFAHandler {
         //printf("> [%s] is a=%u, b=%u\n", value.c_str(), *operand_a, *operand_b);
     }
 
-    void parse_pairOfFlights(const char* value,
+    void parse_pairOfFlights(std::string value_raw,
                              unsigned short int* operand_a,
                              unsigned short int* operand_b)
     {
+        std::replace(value_raw.begin(), value_raw.end(), '/', ' ');
         char* p_end;
-        *operand_a = strtoul(value, &p_end, 10);
-        *operand_a = strtoul(p_end, &p_end, 10);
+        *operand_a = strtoul(value_raw.c_str(), &p_end, 10);
+        *operand_b = strtoul(p_end, &p_end, 10);
     }
 };
 

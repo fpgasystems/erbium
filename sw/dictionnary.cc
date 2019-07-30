@@ -51,7 +51,7 @@ Dictionnary::Dictionnary(const rulePack_s& rulepack)
         m_sorting_map.push_back(criterion.first);
 }
 
-std::vector<unsigned short int> Dictionnary::sort_by_n_of_values(const SortOrder order, std::vector<unsigned short int>* arbitrary)
+std::vector<unsigned short int> Dictionnary::sort_by_n_of_values(const SortOrder order, std::vector<short int>* arbitrary)
 {
     std::vector<std::pair<uint, uint>> the_map;     // list of pair <(#diff values) & (criteria_id)>
     
@@ -96,7 +96,7 @@ std::vector<unsigned short int> Dictionnary::sort_by_n_of_values(const SortOrder
 
     return m_sorting_map;
 }
-bool Dictionnary::exists_in_vector(const std::vector<unsigned short int> vec, const unsigned short int& point)
+bool Dictionnary::exists_in_vector(const std::vector<short int> vec, const short int& point)
 {
     for (auto& aux : vec)
     {

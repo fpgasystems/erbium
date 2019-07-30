@@ -10,6 +10,26 @@
 
 namespace nfa_bre {
 
+const unsigned short int C_CACHE_LINE_WIDTH = 512;
+const unsigned short int C_EDGES_PER_CACHE_LINE = C_CACHE_LINE_WIDTH / 64;
+
+// TODO a parameters struct and handle imports, exports, checks etc
+const uint CFG_ENGINE_CRITERION_WIDTH = 14;
+const uint CFG_WEIGHT_WIDTH           = 19;
+const uint CFG_MEM_ADDR_WIDTH         = 15;  // ceil(log2(n_bram_edges_max));
+
+const unsigned long long int MASK_WEIGHT     = 0x7FFFF;
+const unsigned long long int MASK_POINTER    = 0x7FFF;
+const unsigned long long int MASK_OPERAND_B  = 0x3FFF; // depends on CFG_ENGINE_CRITERION_WIDTH
+const unsigned long long int MASK_OPERAND_A  = 0x3FFF; // depends on CFG_ENGINE_CRITERION_WIDTH
+const unsigned long long int SHIFT_LAST      = CFG_WEIGHT_WIDTH+CFG_MEM_ADDR_WIDTH+2*CFG_ENGINE_CRITERION_WIDTH;
+const unsigned long long int SHIFT_WEIGHT    = CFG_MEM_ADDR_WIDTH+2*CFG_ENGINE_CRITERION_WIDTH;
+const unsigned long long int SHIFT_POINTER   = 2*CFG_ENGINE_CRITERION_WIDTH;
+const unsigned long long int SHIFT_OPERAND_B = CFG_ENGINE_CRITERION_WIDTH;
+const unsigned long long int SHIFT_OPERAND_A = 0;
+
+
+
 enum SortOrder { Ascending, Descending };
 
 struct criterionDefinition_s

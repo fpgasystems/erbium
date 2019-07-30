@@ -153,7 +153,7 @@ int main()
     nfa_bre::Dictionnary the_dictionnary(rp);
 
     // // arbitrary criteria order
-    // std::vector<int> arbitrary;
+    // std::vector<short int> arbitrary;            // key=position; value=criteria_id
     // for (auto& aux : rp.m_ruleType.m_criterionDefinition)
     //     arbitrary.push_back(-1);
     // arbitrary[0] = rp.m_ruleType.get_criterion_id("MCT_OFF");
@@ -163,7 +163,32 @@ int main()
     // arbitrary[arbitrary.size()-1] = rp.m_ruleType.get_criteriON_id("IN_FLT_RG");
     // the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending, &arbitrary);
 
-    the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending);
+    std::vector<unsigned short int> sorting_map(22);
+    sorting_map[ 0] = rp.m_ruleType.get_criterion_id("MCT_OFF");
+    sorting_map[ 1] = rp.m_ruleType.get_criterion_id("MCT_BRD");
+    sorting_map[ 2] = rp.m_ruleType.get_criterion_id("IN_FLT_NB");
+    sorting_map[ 3] = rp.m_ruleType.get_criterion_id("OUT_FLT_NB");
+    sorting_map[ 4] = rp.m_ruleType.get_criterion_id("IN_FLT_RG");
+    sorting_map[ 5] = rp.m_ruleType.get_criterion_id("OUT_FLT_RG");
+    sorting_map[ 6] = rp.m_ruleType.get_criterion_id("NXT_APT");
+    sorting_map[ 7] = rp.m_ruleType.get_criterion_id("PRV_APT");
+    sorting_map[ 8] = rp.m_ruleType.get_criterion_id("MCT_PRD");
+    sorting_map[ 9] = rp.m_ruleType.get_criterion_id("IN_CRR");
+    sorting_map[10] = rp.m_ruleType.get_criterion_id("OUT_CRR");
+    sorting_map[11] = rp.m_ruleType.get_criterion_id("PRV_CTRY");
+    sorting_map[12] = rp.m_ruleType.get_criterion_id("NXT_CTRY");
+    sorting_map[13] = rp.m_ruleType.get_criterion_id("IN_EQP");
+    sorting_map[14] = rp.m_ruleType.get_criterion_id("IN_TER");
+    sorting_map[15] = rp.m_ruleType.get_criterion_id("OUT_TER");
+    sorting_map[16] = rp.m_ruleType.get_criterion_id("OUT_EQP");
+    sorting_map[17] = rp.m_ruleType.get_criterion_id("NXT_STATE");
+    sorting_map[18] = rp.m_ruleType.get_criterion_id("PRV_STATE");
+    sorting_map[19] = rp.m_ruleType.get_criterion_id("CTN_TYPE");
+    sorting_map[20] = rp.m_ruleType.get_criterion_id("NXT_AREA");
+    sorting_map[21] = rp.m_ruleType.get_criterion_id("PRV_AREA");
+    the_dictionnary.m_sorting_map = sorting_map;
+
+    //the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending);
     
     finish = std::chrono::high_resolution_clock::now();
 
@@ -256,35 +281,32 @@ int main()
     std::cout << "# MEMORY DUMP" << std::endl;
 
     const uint CFG_ENGINE_NCRITERIA       = rp.m_ruleType.m_criterionDefinition.size();
-    const uint CFG_ENGINE_CRITERION_WIDTH = 14;
-    const uint CFG_WEIGHT_WIDTH           = 19;
-    const uint CFG_MEM_ADDR_WIDTH         = 15; // ceil(log2(n_bram_edges_max));
     const uint CFG_EDGE_BUFFERS_DEPTH     = 5;
-    const uint CFG_EDGE_BRAM_DEPTH        = (1 << (CFG_MEM_ADDR_WIDTH + 1)) - 1;
-    const uint BRAM_USED_BITS             = CFG_WEIGHT_WIDTH + CFG_MEM_ADDR_WIDTH + CFG_ENGINE_CRITERION_WIDTH + CFG_ENGINE_CRITERION_WIDTH + 1;
+    const uint CFG_EDGE_BRAM_DEPTH        = (1 << (nfa_bre::CFG_MEM_ADDR_WIDTH + 1)) - 1;
+    const uint BRAM_USED_BITS             = nfa_bre::CFG_WEIGHT_WIDTH + nfa_bre::CFG_MEM_ADDR_WIDTH + 2*nfa_bre::CFG_ENGINE_CRITERION_WIDTH + 1;
     const uint CFG_EDGE_BRAM_WIDTH        = 1 << ((uint)ceil(log2(BRAM_USED_BITS)));
 
     std::cout << "constant CFG_ENGINE_NCRITERIA         : integer := " << CFG_ENGINE_NCRITERIA << "; -- Number of criteria\n";
-    std::cout << "constant CFG_ENGINE_CRITERION_WIDTH   : integer := " << CFG_ENGINE_CRITERION_WIDTH << "; -- Number of bits of each criterion value\n";
-    std::cout << "constant CFG_WEIGHT_WIDTH             : integer := " << CFG_WEIGHT_WIDTH << "; -- integer from 0 to 2^CFG_WEIGHT_WIDTH-1\n";
+    std::cout << "constant CFG_ENGINE_CRITERION_WIDTH   : integer := " << nfa_bre::CFG_ENGINE_CRITERION_WIDTH << "; -- Number of bits of each criterion value\n";
+    std::cout << "constant CFG_WEIGHT_WIDTH             : integer := " << nfa_bre::CFG_WEIGHT_WIDTH << "; -- integer from 0 to 2^CFG_WEIGHT_WIDTH-1\n";
     std::cout << "--\n";
-    std::cout << "constant CFG_MEM_ADDR_WIDTH           : integer := " << CFG_MEM_ADDR_WIDTH << ";\n";
+    std::cout << "constant CFG_MEM_ADDR_WIDTH           : integer := " << nfa_bre::CFG_MEM_ADDR_WIDTH << ";\n";
     std::cout << "--\n";
     std::cout << "constant CFG_EDGE_BUFFERS_DEPTH       : integer := " << CFG_EDGE_BUFFERS_DEPTH << ";\n";
     std::cout << "constant CFG_EDGE_BRAM_DEPTH          : integer := " << CFG_EDGE_BRAM_DEPTH << ";\n";
     std::cout << "constant CFG_EDGE_BRAM_WIDTH          : integer := " << CFG_EDGE_BRAM_WIDTH << ";\n";
     std::cout << "BRAM_USED_BITS                        : integer := " << BRAM_USED_BITS << ";\n";
 
-    if (ceil(log2(n_bram_edges_max)) > CFG_MEM_ADDR_WIDTH)
+    if (ceil(log2(n_bram_edges_max)) > nfa_bre::CFG_MEM_ADDR_WIDTH)
     {
         std::cout << "[!] Required address space for " << n_bram_edges_max << " is ";
         std::cout << ceil(log2(n_bram_edges_max)) << " bits (CFG_MEM_ADDR_WIDTH = ";
-        std::cout << CFG_MEM_ADDR_WIDTH << " bits;\n";
+        std::cout << nfa_bre::CFG_MEM_ADDR_WIDTH << " bits;\n";
     }
 
     start = std::chrono::high_resolution_clock::now();
 
-    the_nfa.memory_dump("mem_edges.bin");
+    the_nfa.memory_dump("mem_edges.bin", rp);
 
     finish = std::chrono::high_resolution_clock::now();
 

@@ -31,12 +31,14 @@ use tools.std_pkg.all;
 
 entity functor is
     generic (
-        G_FUNCTION      : match_simp_function := FNCTR_SIMP_NOP
+        G_FUNCTION      : match_simp_function := FNCTR_SIMP_NOP;
+        G_WILDCARD      : std_logic           := '0'
     );
     port (
         rule_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
         query_i         :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
-        funct_o         : out std_logic
+        funct_o         : out std_logic;
+        wildcard_o      : out std_logic
     );
 end functor;
 
@@ -52,7 +54,16 @@ architecture behavioural of functor is
     signal sig_result : std_logic;
 begin
 
-funct_o <= sig_wildchar or sig_result;
+gen_wildcard : if G_WILDCARD = '1' generate
+    funct_o    <= sig_wildchar or sig_result;
+    wildcard_o <= sig_wildchar;
+end generate;
+
+gen_wildcard_n : if G_WILDCARD = '0' generate
+    funct_o    <= sig_result;
+    wildcard_o <= '0';
+end generate;
+
 
 with G_FUNCTION select sig_result <=
     sig_res_equ when FNCTR_SIMP_EQU,

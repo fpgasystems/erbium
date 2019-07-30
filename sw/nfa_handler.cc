@@ -479,14 +479,15 @@ void NFAHandler::dump_core_parameters(const std::string& filename, const rulePac
                 func_pair = "FNCTR_PAIR_NOP";
         }
 
-        std::cout << "edges_per_level[" << the_level << "] = " << edges_per_level[the_level] << std::endl;
+        // std::cout << "edges_per_level[" << the_level << "] = " << edges_per_level[the_level] << std::endl;
         sprintf(buffer, "    constant CORE_PARAM_%u : core_parameters_type := (\n"
                         "        G_RAM_DEPTH           => %u,\n"
                         "        G_MATCH_STRCT         => %s,\n"
                         "        G_MATCH_FUNCTION_A    => %s,\n"
                         "        G_MATCH_FUNCTION_B    => %s,\n"
                         "        G_MATCH_FUNCTION_PAIR => %s,\n"
-                        "        G_WEIGHT              => %lu\n"
+                        "        G_WEIGHT              => %lu,\n"
+                        "        G_WILDCARD_ENABLED    => '%u'\n"
                         "    );\n",
             the_level,
             1 << ((uint)ceil(log2(edges_per_level[the_level]))),
@@ -494,7 +495,8 @@ void NFAHandler::dump_core_parameters(const std::string& filename, const rulePac
             func_a.c_str(),
             func_b.c_str(),
             func_pair.c_str(),
-            criterion_def->m_weight);
+            criterion_def->m_weight,
+            !criterion_def->m_isMandatory);
 
         outfile << buffer;        
         the_level++;

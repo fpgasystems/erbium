@@ -26,7 +26,8 @@ entity core is
         G_MATCH_FUNCTION_A    : match_simp_function  := FNCTR_SIMP_NOP;
         G_MATCH_FUNCTION_B    : match_simp_function  := FNCTR_SIMP_NOP;
         G_MATCH_FUNCTION_PAIR : match_pair_function  := FNCTR_PAIR_NOP;
-        G_WEIGHT              : integer              := 0
+        G_WEIGHT              : integer              :=  0;
+        G_WILDCARD_ENABLED    : std_logic            := '0'
     );
     port (
         clk_i           :  in std_logic;
@@ -55,6 +56,7 @@ end core;
 
 architecture behavioural of core is
     signal sig_exe_match_result   : std_logic;
+    signal sig_exe_match_wildcard : std_logic;
     signal fetch_r, fetch_rin     : fetch_out_type;
     signal execute_r, execute_rin : execute_out_type;
     signal query_r, query_rin     : query_flow_type;
@@ -152,6 +154,7 @@ begin
                 v.flow_ctrl    := FLW_CTRL_MEM;
                 v.mem_addr     := prev_data_i.pointer;
                 v.query_id     := prev_data_i.query_id;
+                v.weight       := prev_data_i.weight;
             end if;
 
       when FLW_CTRL_MEM =>
@@ -166,6 +169,7 @@ begin
                     v.flow_ctrl    := FLW_CTRL_MEM;
                     v.mem_addr     := prev_data_i.pointer;
                     v.query_id     := prev_data_i.query_id;
+                    v.weight       := prev_data_i.weight;
                 else
                     v.flow_ctrl := FLW_CTRL_BUFFER;
                     v.query_id  := 0;
@@ -214,16 +218,6 @@ begin
         v.valid := mem_r.rden_dlay;
     end if;
 
-    -- if mem_r.rden_dlay = '1' then
-    --     if mem_edge_i.last = '1' and mem_r.valid = '1' then
-    --         v.valid := '0';
-    --     else
-    --         v.valid := '1';
-    --     end if;
-    -- else
-    --     v.valid     := '0';
-    -- end if;
-
     mem_rin <= v;
 end process;
 
@@ -252,7 +246,8 @@ exe_matcher: matcher generic map
     G_STRUCTURE     => G_MATCH_STRCT,
     G_FUNCTION_A    => G_MATCH_FUNCTION_A,
     G_FUNCTION_B    => G_MATCH_FUNCTION_B,
-    G_FUNCTION_PAIR => G_MATCH_FUNCTION_PAIR
+    G_FUNCTION_PAIR => G_MATCH_FUNCTION_PAIR,
+    G_WILDCARD      => G_WILDCARD_ENABLED
 )
 port map
 (
@@ -260,27 +255,34 @@ port map
     opA_query_i     => query_r.query.operand_a,
     opB_rule_i      => mem_edge_i.operand_b,
     opB_query_i     => query_r.query.operand_b,
-    match_result_o  => sig_exe_match_result
+    match_result_o  => sig_exe_match_result,
+    wildcard_o      => sig_exe_match_wildcard
 );
 
 execute_comb : process(execute_r, weight_filter_i, sig_exe_match_result, fetch_r, mem_r.valid, mem_edge_i)
     variable v : execute_out_type;
-    variable v_weight_check : std_logic;
+    variable v_wildcard : std_logic;
 begin
     v := execute_r;
 
-    -- weight_control
-    if mem_edge_i.weight >= weight_filter_i then
-        v_weight_check := '1';
-    else
-        v_weight_check := '0';
-    end if;
+    -- weight_control    
+    -- if mem_edge_i.weight >= weight_filter_i then
+    --     v_weight_check := '1';
+    -- else
+    --     v_weight_check := '0';
+    -- end if;
+    -- v.inference_res := sig_exe_match_result and v_weight_check and mem_r.valid;
 
     -- result of EXE
-    v.inference_res := sig_exe_match_result and v_weight_check and mem_r.valid;
+    v.inference_res         := sig_exe_match_result and mem_r.valid;
     v.writing_edge.pointer  := mem_edge_i.pointer;
     v.writing_edge.query_id := fetch_r.query_id;
-    --v.writing_edge.weight := computed_weight;
+
+    if v.inference_res = '1' and sig_exe_match_wildcard = '0' then
+        v.writing_edge.weight := fetch_r.weight + G_WEIGHT;
+    else
+        v.writing_edge.weight := fetch_r.weight;
+    end if;
 
     -- effectively used only in the last level instance
     if v.inference_res = '1' then

@@ -55,7 +55,7 @@ begin
     if interim_valid_i = '1' then
 
         if result_r.interim.query_id = interim_data_i.query_id then
-            if result_r.interim.weight >= interim_data_i.weight then
+            if interim_data_i.weight >= result_r.interim.weight then
                 v.interim := interim_data_i;
             end if;
         else

@@ -37,7 +37,8 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_WEIGHT              => 0
+        G_WEIGHT              => 0,
+        G_WILDCARD_ENABLED    => '0'
     );
     constant CORE_PARAM_1 : core_parameters_type := (
         G_RAM_DEPTH           => 4096,
@@ -45,7 +46,8 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_WEIGHT              => 0
+        G_WEIGHT              => 0,
+        G_WILDCARD_ENABLED    => '0'
     );
     constant CORE_PARAM_2 : core_parameters_type := (
         G_RAM_DEPTH           => 8192,
@@ -53,7 +55,8 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_WEIGHT              => 512
+        G_WEIGHT              => 512,
+        G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_3 : core_parameters_type := (
         G_RAM_DEPTH           => 8192,
@@ -61,7 +64,8 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_WEIGHT              => 524288
+        G_WEIGHT              => 524288,
+        G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_4 : core_parameters_type := (
         G_RAM_DEPTH           => 16384,
@@ -69,7 +73,8 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND,
-        G_WEIGHT              => 256
+        G_WEIGHT              => 256,
+        G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_5 : core_parameters_type := (
         G_RAM_DEPTH           => 32768,
@@ -77,7 +82,8 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND,
-        G_WEIGHT              => 262144
+        G_WEIGHT              => 262144,
+        G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_6 : core_parameters_type := (
         G_RAM_DEPTH           => 16384,
@@ -85,7 +91,8 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_WEIGHT              => 65536
+        G_WEIGHT              => 65536,
+        G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_7 : core_parameters_type := (
         G_RAM_DEPTH           => 16384,
@@ -93,7 +100,8 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_WEIGHT              => 64
+        G_WEIGHT              => 64,
+        G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_8 : core_parameters_type := (
         G_RAM_DEPTH           => 16384,
@@ -101,7 +109,8 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND,
-        G_WEIGHT              => 1
+        G_WEIGHT              => 1,
+        G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_9 : core_parameters_type := (
         G_RAM_DEPTH           => 32768,
@@ -109,7 +118,8 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_WEIGHT              => 128
+        G_WEIGHT              => 128,
+        G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_10 : core_parameters_type := (
         G_RAM_DEPTH           => 32768,
@@ -117,7 +127,8 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_WEIGHT              => 131072
+        G_WEIGHT              => 131072,
+        G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_11 : core_parameters_type := (
         G_RAM_DEPTH           => 32768,
@@ -125,7 +136,8 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_WEIGHT              => 16
+        G_WEIGHT              => 16,
+        G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_12 : core_parameters_type := (
         G_RAM_DEPTH           => 16384,
@@ -133,7 +145,8 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_WEIGHT              => 16384
+        G_WEIGHT              => 16384,
+        G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_13 : core_parameters_type := (
         G_RAM_DEPTH           => 8192,
@@ -141,7 +154,8 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_WEIGHT              => 2
+        G_WEIGHT              => 2,
+        G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_14 : core_parameters_type := (
         G_RAM_DEPTH           => 16384,
@@ -149,7 +163,8 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_WEIGHT              => 4
+        G_WEIGHT              => 4,
+        G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_15 : core_parameters_type := (
         G_RAM_DEPTH           => 16384,
@@ -157,7 +172,8 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_WEIGHT              => 4096
+        G_WEIGHT              => 4096,
+        G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_16 : core_parameters_type := (
         G_RAM_DEPTH           => 8192,
@@ -165,7 +181,8 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_WEIGHT              => 2048
+        G_WEIGHT              => 2048,
+        G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_17 : core_parameters_type := (
         G_RAM_DEPTH           => 4096,
@@ -173,7 +190,8 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_WEIGHT              => 32768
+        G_WEIGHT              => 32768,
+        G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_18 : core_parameters_type := (
         G_RAM_DEPTH           => 4096,
@@ -181,7 +199,8 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_WEIGHT              => 32
+        G_WEIGHT              => 32,
+        G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_19 : core_parameters_type := (
         G_RAM_DEPTH           => 8192,
@@ -189,7 +208,8 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_WEIGHT              => 0
+        G_WEIGHT              => 0,
+        G_WILDCARD_ENABLED    => '0'
     );
     constant CORE_PARAM_20 : core_parameters_type := (
         G_RAM_DEPTH           => 1024,
@@ -197,7 +217,8 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_WEIGHT              => 8192
+        G_WEIGHT              => 8192,
+        G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_21 : core_parameters_type := (
         G_RAM_DEPTH           => 512,
@@ -205,7 +226,8 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_WEIGHT              => 8
+        G_WEIGHT              => 8,
+        G_WILDCARD_ENABLED    => '1'
     );
 
     constant CFG_CORE_PARAM_ARRAY : CORE_PARAM_ARRAY := (
@@ -281,7 +303,8 @@ gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
         G_MATCH_FUNCTION_A    => CFG_CORE_PARAM_ARRAY(I).G_MATCH_FUNCTION_A,
         G_MATCH_FUNCTION_B    => CFG_CORE_PARAM_ARRAY(I).G_MATCH_FUNCTION_B,
         G_MATCH_FUNCTION_PAIR => CFG_CORE_PARAM_ARRAY(I).G_MATCH_FUNCTION_PAIR,
-        G_WEIGHT              => CFG_CORE_PARAM_ARRAY(I).G_WEIGHT
+        G_WEIGHT              => CFG_CORE_PARAM_ARRAY(I).G_WEIGHT,
+        G_WILDCARD_ENABLED    => CFG_CORE_PARAM_ARRAY(I).G_WILDCARD_ENABLED
     )
     port map
     (
@@ -371,6 +394,7 @@ reducer : result_reducer port map
 
 -- ORIGIN
 sig_origin_node.query_id <= query(0).query_id;
+sig_origin_node.weight   <= 0;
 prev_empty(0) <= query_empty(0);
 prev_data(0)  <= sig_origin_node;
 

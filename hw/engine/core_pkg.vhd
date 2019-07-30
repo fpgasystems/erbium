@@ -24,7 +24,7 @@ package core_pkg is
     type core_flow_control is (FLW_CTRL_BUFFER, FLW_CTRL_MEM);
 
     type edge_store_type is record
-        weight          : integer range 0 to 2**CFG_WEIGHT_WIDTH-1;
+        weight          : integer range 0 to 2**CFG_WEIGHT_WIDTH - 1;
         operand_a       : std_logic_vector(CFG_CRITERION_VALUE_WIDTH - 1 downto 0);
         operand_b       : std_logic_vector(CFG_CRITERION_VALUE_WIDTH - 1 downto 0);
         pointer         : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
@@ -34,7 +34,7 @@ package core_pkg is
     type edge_buffer_type is record
         pointer         : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
         query_id        : integer range 0 to 2**CFG_QUERY_ID_WIDTH - 1;
-        weight          : integer range 0 to 2**CFG_WEIGHT_WIDTH-1;
+        weight          : integer range 0 to 2**CFG_WEIGHT_WIDTH - 1;
     end record;
 
     type query_buffer_type is record
@@ -56,12 +56,13 @@ package core_pkg is
         mem_addr        : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
         flow_ctrl       : core_flow_control;
         query_id        : integer range 0 to 2**CFG_QUERY_ID_WIDTH - 1;
+        weight          : integer range 0 to 2**CFG_WEIGHT_WIDTH - 1;
     end record;
 
     type execute_out_type is record
         inference_res   : std_logic;
         writing_edge    : edge_buffer_type;
-        weight_filter   : integer range 0 to 2**CFG_WEIGHT_WIDTH-1;
+        weight_filter   : integer range 0 to 2**CFG_WEIGHT_WIDTH - 1;
     end record;
 
     type mem_delay_type is record
@@ -84,7 +85,8 @@ package core_pkg is
         G_MATCH_FUNCTION_A    : match_simp_function;
         G_MATCH_FUNCTION_B    : match_simp_function;
         G_MATCH_FUNCTION_PAIR : match_pair_function;
-        G_WEIGHT              : integer range 0 to 2**CFG_WEIGHT_WIDTH-1;
+        G_WEIGHT              : integer range 0 to 2**CFG_WEIGHT_WIDTH - 1;
+        G_WILDCARD_ENABLED    : std_logic;
     end record;
 
 ----------------------------------------------------------------------------------------------------
@@ -93,28 +95,32 @@ package core_pkg is
 
     component functor is
         generic (
-            G_FUNCTION          : match_simp_function := FNCTR_SIMP_NOP
+            G_FUNCTION          : match_simp_function  := FNCTR_SIMP_NOP;
+            G_WILDCARD          : std_logic            := '0'
         );
         port (
             rule_i              :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
             query_i             :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
-            funct_o             : out std_logic
+            funct_o             : out std_logic;
+            wildcard_o          : out std_logic
         );
     end component;
 
     component matcher is
         generic (
             G_STRUCTURE         : match_structure_type := STRCT_SIMPLE;
-            G_FUNCTION_A        : match_simp_function := FNCTR_SIMP_NOP;
-            G_FUNCTION_B        : match_simp_function := FNCTR_SIMP_NOP;
-            G_FUNCTION_PAIR     : match_pair_function := FNCTR_PAIR_NOP
+            G_FUNCTION_A        : match_simp_function  := FNCTR_SIMP_NOP;
+            G_FUNCTION_B        : match_simp_function  := FNCTR_SIMP_NOP;
+            G_FUNCTION_PAIR     : match_pair_function  := FNCTR_PAIR_NOP;
+            G_WILDCARD          : std_logic            := '0'
         );
         port (
             opA_rule_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
             opA_query_i         :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
             opB_rule_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
             opB_query_i         :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
-            match_result_o      : out std_logic
+            match_result_o      : out std_logic;
+            wildcard_o          : out std_logic
         );
     end component;
 
@@ -142,7 +148,8 @@ package core_pkg is
             G_MATCH_FUNCTION_A    : match_simp_function  := FNCTR_SIMP_NOP;
             G_MATCH_FUNCTION_B    : match_simp_function  := FNCTR_SIMP_NOP;
             G_MATCH_FUNCTION_PAIR : match_pair_function  := FNCTR_PAIR_NOP;
-            G_WEIGHT              : integer              := 0
+            G_WEIGHT              : integer              :=  0;
+            G_WILDCARD_ENABLED    : std_logic            := '0'
         );
         port (
             clk_i           :  in std_logic;

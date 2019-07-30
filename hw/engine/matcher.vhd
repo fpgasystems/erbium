@@ -28,16 +28,18 @@ use bre.core_pkg.all;
 entity matcher is
     generic (
         G_STRUCTURE         : match_structure_type := STRCT_SIMPLE;
-        G_FUNCTION_A        : match_simp_function := FNCTR_SIMP_NOP;
-        G_FUNCTION_B        : match_simp_function := FNCTR_SIMP_NOP;
-        G_FUNCTION_PAIR     : match_pair_function := FNCTR_PAIR_NOP
+        G_FUNCTION_A        : match_simp_function  := FNCTR_SIMP_NOP;
+        G_FUNCTION_B        : match_simp_function  := FNCTR_SIMP_NOP;
+        G_FUNCTION_PAIR     : match_pair_function  := FNCTR_PAIR_NOP;
+        G_WILDCARD          : std_logic            := '0'
     );
     port (
         opA_rule_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
         opA_query_i         :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
         opB_rule_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
         opB_query_i         :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
-        match_result_o      : out std_logic
+        match_result_o      : out std_logic;
+        wildcard_o          : out std_logic
     );
 end matcher;
 
@@ -46,12 +48,17 @@ architecture behavioural of matcher is
     signal sig_functorA      : std_logic;
     signal sig_functorB      : std_logic;
     --
+    signal sig_wildcard_a    : std_logic;
+    signal sig_wildcard_b    : std_logic;
+    --
     signal sig_res_and       : std_logic;
     signal sig_res_or        : std_logic;
     signal sig_res_xor       : std_logic;
     signal sig_res_nand      : std_logic;
     signal sig_res_nor       : std_logic;
 begin
+
+wildcard_o   <= sig_wildcard_a or sig_wildcard_b;
 
 sig_res_and  <= sig_functorA and  sig_functorB;
 
@@ -80,24 +87,28 @@ with G_STRUCTURE select match_result_o <=
 
 opA: functor generic map
 (
-    G_FUNCTION   => G_FUNCTION_A
+    G_FUNCTION   => G_FUNCTION_A,
+    G_WILDCARD   => G_WILDCARD
 )
 port map
 (
     rule_i       => opA_rule_i,
     query_i      => opA_query_i,
-    funct_o      => sig_functorA
+    funct_o      => sig_functorA,
+    wildcard_o   => sig_wildcard_a
 );
 
 opB: functor generic map
 (
-    G_FUNCTION   => G_FUNCTION_B
+    G_FUNCTION   => G_FUNCTION_B,
+    G_WILDCARD   => G_WILDCARD
 )
 port map
 (
     rule_i       => opB_rule_i,
     query_i      => opB_query_i,
-    funct_o      => sig_functorB
+    funct_o      => sig_functorB,
+    wildcard_o   => sig_wildcard_b
 );
 
 end behavioural;

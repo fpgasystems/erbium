@@ -26,8 +26,9 @@ entity core is
         G_MATCH_FUNCTION_A    : match_simp_function  := FNCTR_SIMP_NOP;
         G_MATCH_FUNCTION_B    : match_simp_function  := FNCTR_SIMP_NOP;
         G_MATCH_FUNCTION_PAIR : match_pair_function  := FNCTR_PAIR_NOP;
+        G_MATCH_MODE          : match_mode_type      := MODE_FULL_ITERATION;
         G_WEIGHT              : integer              :=  0;
-        G_WILDCARD_ENABLED    : std_logic            := '0'
+        G_WILDCARD_ENABLED    : std_logic            := '1'
     );
     port (
         clk_i           :  in std_logic;
@@ -57,6 +58,7 @@ end core;
 architecture behavioural of core is
     signal sig_exe_match_result   : std_logic;
     signal sig_exe_match_wildcard : std_logic;
+    signal sig_exe_branch         : std_logic;
     signal fetch_r, fetch_rin     : fetch_out_type;
     signal execute_r, execute_rin : execute_out_type;
     signal query_r, query_rin     : query_flow_type;
@@ -69,7 +71,7 @@ begin
 
 query_read_o <= query_r.read_en;
 
-query_comb: process(query_empty_i, fetch_r.buffer_rd_en, query_i, query_r)
+query_comb: process(query_empty_i, fetch_r.buffer_rd_en, query_i, query_r, prev_empty_i, prev_data_i)
     variable v : query_flow_type;
 begin
 
@@ -91,7 +93,7 @@ begin
 
       when FLW_CTRL_MEM =>
 
-            if fetch_r.buffer_rd_en = '1' and prev_data_i.query_id /= query_r.query.query_id then
+            if fetch_r.buffer_rd_en = '1' and prev_empty_i = '0' and prev_data_i.query_id /= query_r.query.query_id then
 
                 if query_empty_i = '0' then
                     v.flow_ctrl := FLW_CTRL_MEM;
@@ -131,7 +133,7 @@ prev_read_o <= fetch_r.buffer_rd_en and not prev_empty_i;
 mem_addr_o  <= fetch_r.mem_addr;
 mem_en_o    <= fetch_r.mem_rd_en;
 
-fetch_comb: process(fetch_r, mem_edge_i.last, prev_data_i, prev_empty_i, next_full_i, query_empty_i, mem_r.valid)
+fetch_comb: process(fetch_r, mem_edge_i.last, prev_data_i, prev_empty_i, next_full_i, query_empty_i, mem_r.valid, sig_exe_branch)
     variable v       : fetch_out_type;
     variable v_stall : std_logic;
 begin
@@ -160,8 +162,10 @@ begin
       when FLW_CTRL_MEM =>
 
             if prev_empty_i = '1' and fetch_r.buffer_rd_en = '1' then
+
                 v.flow_ctrl    := FLW_CTRL_BUFFER;
-            elsif mem_edge_i.last = '1' and mem_r.valid = '1' then
+
+            elsif (mem_edge_i.last = '1' and mem_r.valid = '1') or sig_exe_branch = '1' then
 
                 if v_stall = '0' then
                     v.buffer_rd_en := '1';
@@ -172,12 +176,13 @@ begin
                     v.weight       := prev_data_i.weight;
                 else
                     v.flow_ctrl := FLW_CTRL_BUFFER;
-                    v.query_id  := 0;
                 end if;
 
             elsif next_full_i = '0' then
+
                 v.mem_addr  := increment(fetch_r.mem_addr);
                 v.mem_rd_en := '1';
+
             end if;
 
     end case;
@@ -303,5 +308,25 @@ begin
         end if;
     end if;
 end process;
+
+----------------------------------------------------------------------------------------------------
+-- MATCH MODE                                                                                     --
+----------------------------------------------------------------------------------------------------
+
+gen_mode_strict_match : if G_MATCH_MODE = MODE_STRICT_MATCH generate
+
+    -- if mandatory: to only one match (strict match)
+    -- if non-mandatory: to only two (wildcard and strict match)
+    --    wildcard for mandatory is always '0'
+    sig_exe_branch <= sig_exe_match_result and mem_r.valid and not sig_exe_match_wildcard;
+
+end generate;
+
+gen_mode_full_iteration : if G_MATCH_MODE = MODE_FULL_ITERATION generate
+
+    -- if numeric: no limit
+    sig_exe_branch <= '0';
+
+end generate;
 
 end architecture behavioural;

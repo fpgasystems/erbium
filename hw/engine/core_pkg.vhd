@@ -20,6 +20,7 @@ package core_pkg is
     type match_structure_type is (STRCT_SIMPLE, STRCT_PAIR);
     type match_pair_function is (FNCTR_PAIR_NOP, FNCTR_PAIR_AND, FNCTR_PAIR_OR, FNCTR_PAIR_XOR, FNCTR_PAIR_NAND, FNCTR_PAIR_NOR);
     type match_simp_function is (FNCTR_SIMP_NOP, FNCTR_SIMP_EQU, FNCTR_SIMP_NEQ, FNCTR_SIMP_GRT, FNCTR_SIMP_GEQ, FNCTR_SIMP_LES, FNCTR_SIMP_LEQ);
+    type match_mode_type is (MODE_STRICT_MATCH, MODE_FULL_ITERATION);
 
     type core_flow_control is (FLW_CTRL_BUFFER, FLW_CTRL_MEM);
 
@@ -85,6 +86,7 @@ package core_pkg is
         G_MATCH_FUNCTION_A    : match_simp_function;
         G_MATCH_FUNCTION_B    : match_simp_function;
         G_MATCH_FUNCTION_PAIR : match_pair_function;
+        G_MATCH_MODE          : match_mode_type;
         G_WEIGHT              : integer range 0 to 2**CFG_WEIGHT_WIDTH - 1;
         G_WILDCARD_ENABLED    : std_logic;
     end record;
@@ -148,8 +150,9 @@ package core_pkg is
             G_MATCH_FUNCTION_A    : match_simp_function  := FNCTR_SIMP_NOP;
             G_MATCH_FUNCTION_B    : match_simp_function  := FNCTR_SIMP_NOP;
             G_MATCH_FUNCTION_PAIR : match_pair_function  := FNCTR_PAIR_NOP;
+            G_MATCH_MODE          : match_mode_type      := MODE_FULL_ITERATION;
             G_WEIGHT              : integer              :=  0;
-            G_WILDCARD_ENABLED    : std_logic            := '0'
+            G_WILDCARD_ENABLED    : std_logic            := '1'
         );
         port (
             clk_i           :  in std_logic;

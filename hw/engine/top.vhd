@@ -37,6 +37,7 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
         G_WEIGHT              => 0,
         G_WILDCARD_ENABLED    => '0'
     );
@@ -46,6 +47,7 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
         G_WEIGHT              => 0,
         G_WILDCARD_ENABLED    => '0'
     );
@@ -55,6 +57,7 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
         G_WEIGHT              => 512,
         G_WILDCARD_ENABLED    => '1'
     );
@@ -64,6 +67,7 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
         G_WEIGHT              => 524288,
         G_WILDCARD_ENABLED    => '1'
     );
@@ -73,6 +77,7 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND,
+        G_MATCH_MODE          => MODE_FULL_ITERATION,
         G_WEIGHT              => 256,
         G_WILDCARD_ENABLED    => '1'
     );
@@ -82,6 +87,7 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND,
+        G_MATCH_MODE          => MODE_FULL_ITERATION,
         G_WEIGHT              => 262144,
         G_WILDCARD_ENABLED    => '1'
     );
@@ -91,6 +97,7 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
         G_WEIGHT              => 65536,
         G_WILDCARD_ENABLED    => '1'
     );
@@ -100,6 +107,7 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
         G_WEIGHT              => 64,
         G_WILDCARD_ENABLED    => '1'
     );
@@ -109,6 +117,7 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND,
+        G_MATCH_MODE          => MODE_FULL_ITERATION,
         G_WEIGHT              => 1,
         G_WILDCARD_ENABLED    => '1'
     );
@@ -118,6 +127,7 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
         G_WEIGHT              => 128,
         G_WILDCARD_ENABLED    => '1'
     );
@@ -127,6 +137,7 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
         G_WEIGHT              => 131072,
         G_WILDCARD_ENABLED    => '1'
     );
@@ -136,6 +147,7 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
         G_WEIGHT              => 16,
         G_WILDCARD_ENABLED    => '1'
     );
@@ -145,6 +157,7 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
         G_WEIGHT              => 16384,
         G_WILDCARD_ENABLED    => '1'
     );
@@ -154,6 +167,7 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
         G_WEIGHT              => 2,
         G_WILDCARD_ENABLED    => '1'
     );
@@ -163,6 +177,7 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
         G_WEIGHT              => 4,
         G_WILDCARD_ENABLED    => '1'
     );
@@ -172,6 +187,7 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
         G_WEIGHT              => 4096,
         G_WILDCARD_ENABLED    => '1'
     );
@@ -181,6 +197,7 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
         G_WEIGHT              => 2048,
         G_WILDCARD_ENABLED    => '1'
     );
@@ -190,6 +207,7 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
         G_WEIGHT              => 32768,
         G_WILDCARD_ENABLED    => '1'
     );
@@ -199,6 +217,7 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
         G_WEIGHT              => 32,
         G_WILDCARD_ENABLED    => '1'
     );
@@ -208,6 +227,7 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
         G_WEIGHT              => 0,
         G_WILDCARD_ENABLED    => '0'
     );
@@ -217,6 +237,7 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
         G_WEIGHT              => 8192,
         G_WILDCARD_ENABLED    => '1'
     );
@@ -226,6 +247,7 @@ architecture behavioural of top is
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
         G_WEIGHT              => 8,
         G_WILDCARD_ENABLED    => '1'
     );
@@ -303,6 +325,7 @@ gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
         G_MATCH_FUNCTION_A    => CFG_CORE_PARAM_ARRAY(I).G_MATCH_FUNCTION_A,
         G_MATCH_FUNCTION_B    => CFG_CORE_PARAM_ARRAY(I).G_MATCH_FUNCTION_B,
         G_MATCH_FUNCTION_PAIR => CFG_CORE_PARAM_ARRAY(I).G_MATCH_FUNCTION_PAIR,
+        G_MATCH_MODE          => CFG_CORE_PARAM_ARRAY(I).G_MATCH_MODE,
         G_WEIGHT              => CFG_CORE_PARAM_ARRAY(I).G_WEIGHT,
         G_WILDCARD_ENABLED    => CFG_CORE_PARAM_ARRAY(I).G_WILDCARD_ENABLED
     )

@@ -9,7 +9,7 @@ package engine_pkg is
     constant CFG_CRITERION_VALUE_WIDTH    : integer := 14; -- Number of bits of each criterion value
     constant CFG_WEIGHT_WIDTH             : integer := 20; -- integer from 0 to 2^CFG_WEIGHT_WIDTH-1
     constant CFG_QUERY_ID_WIDTH           : integer :=  8; -- Used only internally
-    constant CFG_FIRST_CRITERION_LOOKUP   : boolean := false; -- lookup table of first criterion
+    constant CFG_FIRST_CRITERION_LOOKUP   : boolean := true; -- lookup table of first criterion
     --
     constant CFG_MEM_ADDR_WIDTH           : integer := 15;
     --

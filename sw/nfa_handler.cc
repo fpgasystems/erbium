@@ -448,7 +448,7 @@ void NFAHandler::dump_core_parameters(const std::string& filename, const rulePac
 
     const criterionDefinition_s* criterion_def;
     char buffer[1024];
-    std::string func_a, func_b, func_pair;
+    std::string func_a, func_b, func_pair, match_mode;
     uint the_level = 0;
     for (auto& ord : m_dic->m_sorting_map)
     {
@@ -462,21 +462,24 @@ void NFAHandler::dump_core_parameters(const std::string& filename, const rulePac
             case 273 : // criterionType_alphastring2-2.xml
             case 316 : // criterionType_alphanumstring1-3.xml
             case 408 : // criterionType_integer0-9999_408.xml
-                func_a    = "FNCTR_SIMP_EQU";
-                func_b    = "FNCTR_SIMP_NOP";
-                func_pair = "FNCTR_PAIR_NOP";
+                func_a     = "FNCTR_SIMP_EQU";
+                func_b     = "FNCTR_SIMP_NOP";
+                func_pair  = "FNCTR_PAIR_NOP";
+                match_mode = "MODE_STRICT_MATCH"
                 break;
             case 212 : // criterionType_pairofdates.xml
             case 412 : // criterionType_integerrange4-digits_412.xml
-                func_a    = "FNCTR_SIMP_GEQ";
-                func_b    = "FNCTR_SIMP_LEQ";
-                func_pair = "FNCTR_PAIR_AND";
+                func_a     = "FNCTR_SIMP_GEQ";
+                func_b     = "FNCTR_SIMP_LEQ";
+                func_pair  = "FNCTR_PAIR_AND";
+                match_mode = "MODE_FULL_ITERATION";
                 break;
             default:
                 std::cout << "[!] functor #" << criterion_def->m_functor << " is unknown\n";
-                func_a    = "FNCTR_SIMP_NOP";
-                func_b    = "FNCTR_SIMP_NOP";
-                func_pair = "FNCTR_PAIR_NOP";
+                func_a     = "FNCTR_SIMP_NOP";
+                func_b     = "FNCTR_SIMP_NOP";
+                func_pair  = "FNCTR_PAIR_NOP";
+                match_mode = "MODE_FULL_ITERATION";
         }
 
         // std::cout << "edges_per_level[" << the_level << "] = " << edges_per_level[the_level] << std::endl;
@@ -486,6 +489,7 @@ void NFAHandler::dump_core_parameters(const std::string& filename, const rulePac
                         "        G_MATCH_FUNCTION_A    => %s,\n"
                         "        G_MATCH_FUNCTION_B    => %s,\n"
                         "        G_MATCH_FUNCTION_PAIR => %s,\n"
+                        "        G_MATCH_MODE          => %s,\n"
                         "        G_WEIGHT              => %lu,\n"
                         "        G_WILDCARD_ENABLED    => '%u'\n"
                         "    );\n",

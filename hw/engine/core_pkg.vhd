@@ -46,8 +46,6 @@ package core_pkg is
     type query_in_array_type is array(0 to CFG_ENGINE_NCRITERIA - 1) of query_buffer_type;
 
     type query_flow_type is record
-        flow_ctrl       : core_flow_control;
-        query           : query_buffer_type;
         read_en         : std_logic;
     end record;
 

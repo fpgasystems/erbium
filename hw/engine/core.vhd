@@ -71,42 +71,16 @@ begin
 
 query_read_o <= query_r.read_en;
 
-query_comb: process(query_r, prev_data_i, query_empty_i, fetch_r.buffer_rd_en, query_i)
+query_comb: process(query_r, prev_data_i, fetch_r.buffer_rd_en, query_i)
     variable v : query_flow_type;
 begin
     v := query_r;
 
-    -- default
-    v.read_en := '0';
-
-    -- state machine
-    case query_r.flow_ctrl is
-
-      when FLW_CTRL_BUFFER =>
-
-            if query_empty_i = '0' then
-                v.flow_ctrl := FLW_CTRL_MEM;
-                v.query := query_i;
-                v.read_en := '1';
-            end if;
-
-      when FLW_CTRL_MEM =>
-
-            if fetch_r.buffer_rd_en = '1' and prev_data_i.query_id /= query_r.query.query_id then
-
-                if query_empty_i = '0' then
-                    v.flow_ctrl := FLW_CTRL_MEM;
-                    v.query := query_i;
-                    v.read_en := '1';
-                else
-                    -- This case should never happen: if previous level has access to a query, this 
-                    --     one as well! (except the first one?)
-                    v.flow_ctrl := FLW_CTRL_BUFFER;
-                end if;
-
-            end if;
-
-    end case;
+    if fetch_r.buffer_rd_en = '1' and prev_data_i.query_id /= query_i.query_id then
+        v.read_en := '1';
+    else
+        v.read_en := '0';
+    end if;
     
     query_rin <= v;
 end process;
@@ -115,9 +89,7 @@ query_seq: process(clk_i)
 begin
     if rising_edge(clk_i) then
         if rst_i = '0' then
-            query_r.flow_ctrl       <= FLW_CTRL_BUFFER;
-            query_r.query.query_id  <= 0;
-            query_r.read_en         <= '0';
+            query_r.read_en <= '0';
         else
             query_r <= query_rin;
         end if;
@@ -139,7 +111,7 @@ fetch_comb: process(fetch_r, prev_data_i, prev_empty_i, query_r.valid, mem_edge_
 begin
     v := fetch_r;
 
-    v_empty  := prev_empty_i or query_empty_i; -- replace query_empty_i by query_r.valid (create the latter)
+    v_empty  := prev_empty_i or query_empty_i;
     v_branch := (mem_edge_i.last and mem_r.valid) or sig_exe_branch;
 
     -- state machine
@@ -253,9 +225,9 @@ exe_matcher: matcher generic map
 port map
 (
     opA_rule_i      => mem_edge_i.operand_a,
-    opA_query_i     => query_r.query.operand_a,
+    opA_query_i     => query_i.operand_a,
     opB_rule_i      => mem_edge_i.operand_b,
-    opB_query_i     => query_r.query.operand_b,
+    opB_query_i     => query_i.operand_b,
     match_result_o  => sig_exe_match_result,
     wildcard_o      => sig_exe_match_wildcard
 );
@@ -328,6 +300,15 @@ end generate;
 end architecture behavioural;
 
 ----------------------------------------------------------------------------------------------------
+-- QUERY                                                                                          --
+----------------------------------------------------------------------------------------------------
+-- buf_rd | v_new | v_read
+--   0        0   |   0   
+--   0        1   |   0   
+--   1        0   |   0   
+--   1        1   |   1   
+
+----------------------------------------------------------------------------------------------------
 -- FETCH                                                                                          --
 ----------------------------------------------------------------------------------------------------
 --  state | v_branch | v_empty | n_full | v_buff | v_mem | v_flow | addr
@@ -348,8 +329,13 @@ end architecture behavioural;
 --   MEM  |     1         1        0    |   0    |   0   |  BUFF  | --     
 --   MEM  |     1         1        1    |   0    |   0   |  BUFF  | --     
 -- 
--- ADDR AAA BBB CCC AAA BBB CCC
--- DATA ... ... AAA ... ... AAA
--- LAST ... ...  1  ... ...  1 
--- VALD  0   0   1   0   0   1 
--- BUFF  1   0   0   1   0   0 
+-- 
+-- ADDR ... ... AAA BBB CCC AAA BBB CCC AAA BBB CCC ... AAA BBB CCC      -- fetch_r.mem_addr
+-- DATA ... ... ... ... AAA ... ... AAA ... ... AAA ... ... ... AAA      -- mem_i
+-- LAST ... ... ... ...  1  ... ...  1  ... ...  1  ... ... ...  1       -- mem_i.last
+-- VALD  0   0   0   0   1   0   0   1   0   0   1   0   0   0   1       -- fetch_r.mem_rd_en
+-- BUFF  0   0   1   0   0   1   0   0   1   0   0   0   1   0   0       -- fetch_r.buffer_rd_en
+-- MPTY  1   0   0   0   0   0   0   0   0   1   1   0   0   1   1       -- v_empty
+-- QERY ... AAA AAA AAA AAA AAA AAA BBB BBB BBB CCC CCC CCC CCC DDD      -- query_i
+-- EDGE ... AAA AAA BBB BBB BBB CCC CCC CCC ... ... DDD DDD ... ...      -- prev_data_i
+-- FETC ... ... AAA AAA AAA BBB BBB BBB CCC CCC CCC ... DDD DDD DDD      -- fetch_r.query

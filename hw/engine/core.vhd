@@ -71,10 +71,9 @@ begin
 
 query_read_o <= query_r.read_en;
 
-query_comb: process(query_empty_i, fetch_r.buffer_rd_en, query_i, query_r, prev_empty_i, prev_data_i)
+query_comb: process(query_r, prev_data_i, query_empty_i, fetch_r.buffer_rd_en, query_i)
     variable v : query_flow_type;
 begin
-
     v := query_r;
 
     -- default
@@ -93,7 +92,7 @@ begin
 
       when FLW_CTRL_MEM =>
 
-            if fetch_r.buffer_rd_en = '1' and prev_empty_i = '0' and prev_data_i.query_id /= query_r.query.query_id then
+            if fetch_r.buffer_rd_en = '1' and prev_data_i.query_id /= query_r.query.query_id then
 
                 if query_empty_i = '0' then
                     v.flow_ctrl := FLW_CTRL_MEM;
@@ -129,60 +128,57 @@ end process;
 -- FETCH                                                                                          --
 ----------------------------------------------------------------------------------------------------
 
-prev_read_o <= fetch_r.buffer_rd_en and not prev_empty_i;
+prev_read_o <= fetch_r.buffer_rd_en;
 mem_addr_o  <= fetch_r.mem_addr;
 mem_en_o    <= fetch_r.mem_rd_en;
 
-fetch_comb: process(fetch_r, mem_edge_i.last, prev_data_i, prev_empty_i, next_full_i, query_empty_i, mem_r.valid, sig_exe_branch)
-    variable v       : fetch_out_type;
-    variable v_stall : std_logic;
+fetch_comb: process(fetch_r, prev_data_i, prev_empty_i, query_r.valid, mem_edge_i.last, mem_r.valid, sig_exe_branch, next_full_i)
+    variable v        : fetch_out_type;
+    variable v_empty  : std_logic;
+    variable v_branch : std_logic;
 begin
     v := fetch_r;
 
-    -- default
-    v.buffer_rd_en := '0';
-    v.mem_rd_en    := '0';
-
-    v_stall := prev_empty_i or next_full_i or query_empty_i;
+    v_empty  := prev_empty_i or query_empty_i; -- replace query_empty_i by query_r.valid (create the latter)
+    v_branch := (mem_edge_i.last and mem_r.valid) or sig_exe_branch;
 
     -- state machine
     case fetch_r.flow_ctrl is
 
       when FLW_CTRL_BUFFER =>
 
-            if v_stall = '0' then
+            v.buffer_rd_en := '0';
+            v.mem_rd_en    := '0';
+
+            if v_empty = '0' then
                 v.buffer_rd_en := '1';
-                v.mem_rd_en    := '1';
-                v.flow_ctrl    := FLW_CTRL_MEM;
+                v.mem_rd_en    := not next_full_i;
                 v.mem_addr     := prev_data_i.pointer;
                 v.query_id     := prev_data_i.query_id;
                 v.weight       := prev_data_i.weight;
+                v.flow_ctrl    := FLW_CTRL_MEM;
             end if;
 
       when FLW_CTRL_MEM =>
 
-            if prev_empty_i = '1' and fetch_r.buffer_rd_en = '1' then
-
-                v.flow_ctrl    := FLW_CTRL_BUFFER;
-
-            elsif (mem_edge_i.last = '1' and mem_r.valid = '1') or sig_exe_branch = '1' then
-
-                if v_stall = '0' then
-                    v.buffer_rd_en := '1';
-                    v.mem_rd_en    := '1';
-                    v.flow_ctrl    := FLW_CTRL_MEM;
-                    v.mem_addr     := prev_data_i.pointer;
-                    v.query_id     := prev_data_i.query_id;
-                    v.weight       := prev_data_i.weight;
+            if v_branch = '1' then
+                v.buffer_rd_en := not v_empty;
+                v.mem_rd_en    := not (v_empty or next_full_i);
+                v.mem_addr     := prev_data_i.pointer;
+                v.query_id     := prev_data_i.query_id;
+                v.weight       := prev_data_i.weight;
+                if v_empty = '0' then
+                    v.flow_ctrl := FLW_CTRL_MEM;
                 else
                     v.flow_ctrl := FLW_CTRL_BUFFER;
                 end if;
-
-            elsif next_full_i = '0' then
-
-                v.mem_addr  := increment(fetch_r.mem_addr);
-                v.mem_rd_en := '1';
-
+            else
+                v.buffer_rd_en := '0';
+                v.mem_rd_en    := not next_full_i;
+                v.flow_ctrl    := FLW_CTRL_MEM;
+                if next_full_i = '0' then
+                    v.mem_addr  := increment(fetch_r.mem_addr);
+                end if;
             end if;
 
     end case;
@@ -330,3 +326,30 @@ gen_mode_full_iteration : if G_MATCH_MODE = MODE_FULL_ITERATION generate
 end generate;
 
 end architecture behavioural;
+
+----------------------------------------------------------------------------------------------------
+-- FETCH                                                                                          --
+----------------------------------------------------------------------------------------------------
+--  state | v_branch | v_empty | n_full | v_buff | v_mem | v_flow | addr
+--   BUF  |     0         0        0    |   1    |   1   |  MEM   | POINTER
+--   BUF  |     0         0        1    |   1    |   0   |  MEM   | POINTER
+--   BUF  |     0         1        0    |   0    |   0   |  BUFF  | --     
+--   BUF  |     0         1        1    |   0    |   0   |  BUFF  | --     
+--   BUF  |     1         0        0    |  xxx   |  xxx  |  xxx   | xxx    
+--   BUF  |     1         0        1    |  xxx   |  xxx  |  xxx   | xxx    
+--   BUF  |     1         1        0    |  xxx   |  xxx  |  xxx   | xxx    
+--   BUF  |     1         1        1    |  xxx   |  xxx  |  xxx   | xxx    
+--   MEM  |     0         0        0    |   0    |   1   |  MEM   | INC    
+--   MEM  |     0         0        1    |   0    |   0   |  MEM   | KEEP   
+--   MEM  |     0         1        0    |   0    |   1   |  MEM   | INC    
+--   MEM  |     0         1        1    |   0    |   0   |  MEM   | KEEP   
+--   MEM  |     1         0        0    |   1    |   1   |  MEM   | POINTER
+--   MEM  |     1         0        1    |   1    |   0   |  MEM   | POINTER
+--   MEM  |     1         1        0    |   0    |   0   |  BUFF  | --     
+--   MEM  |     1         1        1    |   0    |   0   |  BUFF  | --     
+-- 
+-- ADDR AAA BBB CCC AAA BBB CCC
+-- DATA ... ... AAA ... ... AAA
+-- LAST ... ...  1  ... ...  1 
+-- VALD  0   0   1   0   0   1 
+-- BUFF  1   0   0   1   0   0 

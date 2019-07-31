@@ -88,7 +88,8 @@ rd_data_o <= fifo_data_reg(rd_index_reg);
 sig_full  <= '1' when fifo_cntr_reg = G_DEPTH   or 
                       fifo_cntr_reg = G_DEPTH-1 or 
                       fifo_cntr_reg = G_DEPTH-2 or
-                      fifo_cntr_reg = G_DEPTH-3 
+                      fifo_cntr_reg = G_DEPTH-3 or
+                      fifo_cntr_reg = G_DEPTH-4 
                  else '0';
 sig_satur <= '1' when fifo_cntr_reg = G_DEPTH else '0';
 sig_empty <= '1' when fifo_cntr_reg = 0       else '0';

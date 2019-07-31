@@ -208,7 +208,7 @@ end process;
 -- MEMORY DELAY (2 CYCLES)                                                                        --
 ----------------------------------------------------------------------------------------------------
 
-mem_comb: process(mem_r, fetch_r.mem_rd_en, mem_edge_i.last)
+mem_comb: process(mem_r, fetch_r.mem_rd_en, mem_edge_i.last, sig_exe_branch)
     variable v : mem_delay_type;
 begin
     v := mem_rin;
@@ -217,7 +217,7 @@ begin
     v.rden_dlay := fetch_r.mem_rd_en;
     v.last_dlay := mem_edge_i.last and mem_r.valid;
 
-    if (mem_edge_i.last = '1' and mem_r.valid = '1') or mem_r.last_dlay = '1' then
+    if (mem_edge_i.last = '1' and mem_r.valid = '1') or mem_r.last_dlay = '1' or sig_exe_branch = '1' then
         v.valid := '0';
     else
         v.valid := mem_r.rden_dlay;

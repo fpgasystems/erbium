@@ -619,13 +619,13 @@ static double get_time()
 //                                                                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-unsigned short int number_of_lines(const uint& data_size, const unsigned short int& line_size)
+uint32_t number_of_lines(const uint32_t& data_size, const unsigned short int& line_size)
 {
     return data_size / line_size + ((data_size % line_size) ? 1 : 0);
 }
 
 void load_nfa_from_file(char* file_name, 
-    std::vector<unsigned long int, aligned_allocator<unsigned long int>>** nfa_data, uint* raw_size)
+    std::vector<unsigned long int, aligned_allocator<unsigned long int>>** nfa_data, uint32_t* raw_size)
 {
     std::ifstream* file = new std::ifstream(file_name, std::ios::in | std::ios::binary);
     if(file->is_open())
@@ -653,55 +653,52 @@ void load_nfa_from_file(char* file_name,
     }
 }
 
-void load_queries_from_file(char* file_name, unsigned short int* queries_data, uint& queries_size)
+void load_queries_from_file(char* file_name,
+    std::vector<unsigned short int, aligned_allocator<unsigned short int>>** queries_data,
+    uint32_t* queries_size, uint32_t* results_size, uint32_t* num_queries)
 {
     std::ifstream* file = new std::ifstream(file_name, std::ios::in | std::ios::binary);
     if(file->is_open())
     {
         file->seekg(0, std::ios::end);
-        uint raw_size = file->tellg();
+        uint raw_size = file->tellg() - 3 * sizeof(*queries_size);
 
-        if (raw_size != queries_size)
-        {
-            printf("[!] QUERIES .bin file has unexpected size\n     - expected: %u\n     - actual: %u\n",
-                    queries_size, raw_size); fflush(stdout);
-        }
-        else
-        {
-            char* file_buffer = new char[raw_size];
-            file->seekg(0, std::ios::beg);
-            file->read(file_buffer, raw_size);
+        file->read(reinterpret_cast<char *>(queries_size), sizeof(*queries_size));
+        file->read(reinterpret_cast<char *>(results_size), sizeof(*results_size));
+        file->read(reinterpret_cast<char *>(num_queries),  sizeof(*num_queries));
 
-            memcpy(queries_data, file_buffer, raw_size);
-            delete [] file_buffer;
+        char* file_buffer = new char[raw_size];
+        file->seekg(3*sizeof(*queries_size), std::ios::beg);
+        file->read(file_buffer, raw_size);
 
-            printf("Opened QUERIES .bin file of size: %u\n", raw_size); fflush(stdout);
-        }
+        *queries_data =
+               new std::vector<unsigned short int, aligned_allocator<unsigned short int>>(raw_size);
+        memcpy((*queries_data)->data(), file_buffer, raw_size);
+        delete [] file_buffer;
+
+        printf("Opened QUERIES .bin file of size: %u\n", raw_size); fflush(stdout);
     }
     else
         printf("[!] Failed to open QUERIES .bin file\n"); fflush(stdout);
 }
 
 void run_nfabre_kernel(cl_command_queue queue, xcl_world world, cl_program program, cl_kernel kernel, 
-                void* nfa, void* queries, void* results, 
-                unsigned char& num_criteria, uint& nfa_size, uint& queries_size, uint& results_size)
+                void* nfa, void* queries, void* results, unsigned char& num_criteria,
+                uint32_t& nfadata_size, uint32_t& queries_size, uint32_t& results_size)
 {
     printf("run_nfabre_kernel()\n"); fflush(stdout);
 
-    unsigned int nfadata_cls = nfa_size / C_CACHELINE_SIZE;
-    unsigned int queries_cls = queries_size / C_CACHELINE_SIZE;
-    unsigned int results_cls = number_of_lines(results_size, C_CACHELINE_SIZE);
+    uint32_t nfadata_cls = nfadata_size / C_CACHELINE_SIZE;
+    uint32_t queries_cls = queries_size / C_CACHELINE_SIZE;
+    uint32_t results_cls = number_of_lines(results_size, C_CACHELINE_SIZE);
 
     cl_mem buffer_queries, buffer_nfadata, buffer_results;
     size_t global = 1, local = 1;    
 
     // data buffers
-    buffer_nfadata = clCreateBuffer(world.context, CL_MEM_READ_ONLY  | CL_MEM_USE_HOST_PTR, nfa_size, nfa, NULL);
+    buffer_nfadata = clCreateBuffer(world.context, CL_MEM_READ_ONLY  | CL_MEM_USE_HOST_PTR, nfadata_size, nfa, NULL);
     buffer_queries = clCreateBuffer(world.context, CL_MEM_READ_ONLY  | CL_MEM_USE_HOST_PTR, queries_size, queries, NULL);
     buffer_results = clCreateBuffer(world.context, CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR, results_size, results, NULL);
-
-    /*printf("Buffers created: nfa=%p, queries=%p, results=%p\n",
-           buffer_nfadata, buffer_queries, buffer_results); fflush(stdout);*/
 
     OCL_CHECK(clEnqueueMigrateMemObjects(queue, 1, &buffer_nfadata, 0, 0, NULL, NULL));
     clFinish(queue);
@@ -746,15 +743,9 @@ int main(int argc, char** argv)
     // PARAMETERS                                                                                 //
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    // if (argc < 2) {
-    //    printf("Usage: %s NUM_TUPLES NUM_TREES DEPTH TIMER_SET OVERLAP NUM_QUERIES\n", argv[0]);
-    //    return EXIT_FAILURE;
-    // }
-
-    unsigned int  num_queries       = 136002; // atoi(argv[1]);
-    unsigned char num_criteria      = 22; // atoi(argv[2]);
-    char          nfa_file[100]     = "/home/maschif/gitlab/nfa-bre/sw/mem_edges.bin";
+    char          nfadata_file[100] = "/home/maschif/gitlab/nfa-bre/sw/mem_edges.bin";
     char          queries_file[100] = "/home/maschif/gitlab/nfa-bre/sw/workload.bin";
+    char          results_file[100] = "/home/maschif/gitlab/nfa-bre/data/results.txt";
     // TODO print parameters for structure check!
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -775,17 +766,18 @@ int main(int argc, char** argv)
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     printf(">> Setup data\n"); fflush(stdout);
-    unsigned int results_size = num_queries * C_RESULT_SIZE;
-    unsigned int queries_size = number_of_lines(num_criteria * C_CRITERION_SIZE, C_CACHELINE_SIZE);
-    queries_size = queries_size * num_queries * C_CACHELINE_SIZE;
-    unsigned int nfa_size;
+    uint32_t nfadata_size; // in bytes with padding
+    uint32_t queries_size; // in bytes with padding
+    uint32_t results_size; // in bytes without padding
+    uint32_t num_queries; 
 
-    std::vector<unsigned short int, aligned_allocator<unsigned short int>> queries(queries_size);
-    std::vector<unsigned int, aligned_allocator<unsigned int>> results(results_size);
+    std::vector<unsigned short int, aligned_allocator<unsigned short int>>* queries;
     std::vector<unsigned long int, aligned_allocator<unsigned long int>>* nfa_data;
 
-    load_queries_from_file(queries_file, queries.data(), queries_size);
-    load_nfa_from_file(nfa_file, &nfa_data, &nfa_size);
+    load_queries_from_file(queries_file, &queries, &queries_size, &results_size, &num_queries);
+    load_nfa_from_file(nfadata_file, &nfa_data, &nfadata_size);
+
+    std::vector<uint16_t, aligned_allocator<uint16_t>> results(results_size);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // KERNEL EXECUTION                                                                           //
@@ -795,14 +787,14 @@ int main(int argc, char** argv)
     cl_command_queue queue  = world.command_queue;
 
     run_nfabre_kernel(queue, world, program, kernel, nfa_data->data(), queries.data(), results.data(), 
-                      num_criteria, nfa_size, queries_size, results_size);
+                      num_criteria, nfadata_size, queries_size, results_size);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // RESULTS                                                                                    //
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::ofstream file;
-    file.open("results.txt");
+    file.open(results_file);
 
     for (uint i = 0; i < num_queries; ++i)
         file << (results.data())[i] << "\n";

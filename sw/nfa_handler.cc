@@ -385,13 +385,28 @@ void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePac
     std::ofstream outfile(filename, std::ios::binary | std::ios::out | std::ios::trunc);
     // std::ofstream hrfile(filename.substr(filename.length()-4)+".txt", std::ios::out | std::ios::trunc);
     
-    const uint SLICES_PER_LINE = C_CACHE_LINE_WIDTH / 32;
+    const uint SLICES_PER_LINE = C_CACHE_LINE_WIDTH / C_RAW_CRITERION_SIZE;
     unsigned short int mem_opa;
     unsigned short int mem_opb;
 
     uint padding_slices = (rulepack.m_ruleType.m_criterionDefinition.size()) % SLICES_PER_LINE;
     padding_slices = (padding_slices == 0) ? 0 : SLICES_PER_LINE - padding_slices;
-    padding_slices = 2 * padding_slices;
+    padding_slices = 2 * padding_slices; // so it writes two operands per padding slice
+
+    // file header
+    uint32_t queries_size; // in bytes with padding
+    uint32_t results_size; // in bytes without padding
+    uint32_t num_queries;
+
+    num_queries = rulepack.m_rules.size();
+    results_size = num_queries * C_RESULTS_SIZE;
+    queries_size = rulepack.m_ruleType.m_criterionDefinition.size() * C_RAW_CRITERION_SIZE;
+    queries_size += queries_size / C_CACHE_LINE_WIDTH + ((queries_size % C_CACHE_LINE_WIDTH) ? 1 : 0);
+    queries_size = queries_size * num_queries * C_CACHE_LINE_WIDTH;
+
+    outfile.write(reinterpret_cast<char *>(queries_size), sizeof(*queries_size));
+    outfile.write(reinterpret_cast<char *>(results_size), sizeof(*results_size));
+    outfile.write(reinterpret_cast<char *>(num_queries),  sizeof(*num_queries));
 
     uint the_level;
     const criterion_s* aux_criterion;

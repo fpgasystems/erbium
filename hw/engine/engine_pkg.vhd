@@ -22,6 +22,9 @@ package engine_pkg is
     -- Number of bits for each criterion (hence, for two values) coming from memory (top level)
     constant CFG_RAW_QUERY_WIDTH          : integer := 32; -- bits
 
+    -- Number of bits for each result value going back to the memory (wrapper level)
+    constant CFG_RAW_RESULTS_WIDTH        : integer := 16; -- bits
+
     -- MEMORY DATA SLICE RANGES
     subtype RNG_BRAM_EDGE_STORE_OPERAND_A is natural range CFG_CRITERION_VALUE_WIDTH - 1 downto 0;
     subtype RNG_BRAM_EDGE_STORE_OPERAND_B is natural range CFG_CRITERION_VALUE_WIDTH*2 - 1 downto CFG_CRITERION_VALUE_WIDTH;

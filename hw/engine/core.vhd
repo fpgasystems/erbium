@@ -177,15 +177,18 @@ end process;
 ----------------------------------------------------------------------------------------------------
 
 mem_comb: process(mem_r, fetch_r.mem_rd_en, mem_edge_i.last, sig_exe_branch)
-    variable v : mem_delay_type;
+    variable v        : mem_delay_type;
+    variable v_branch : std_logic;
 begin
     v := mem_rin;
+
+    v_branch := (mem_edge_i.last and mem_r.valid) or sig_exe_branch;
 
     -- delay it
     v.rden_dlay := fetch_r.mem_rd_en;
     v.last_dlay := mem_edge_i.last and mem_r.valid;
 
-    if (mem_edge_i.last = '1' and mem_r.valid = '1') or mem_r.last_dlay = '1' or sig_exe_branch = '1' then
+    if (v_branch or mem_r.last_dlay) = '1' then
         v.valid := '0';
     else
         v.valid := mem_r.rden_dlay;
@@ -297,6 +300,24 @@ gen_mode_full_iteration : if G_MATCH_MODE = MODE_FULL_ITERATION generate
 
 end generate;
 
+
+----------------------------------------------------------------------------------------------------
+-- FAILURE CHECKS                                                                                 --
+----------------------------------------------------------------------------------------------------
+
+-- synthesis translate_off 
+p_assert : process (clk_i) is
+begin
+    if rising_edge(clk_i) then
+        if mem_r.valid = '1' then -- fetch_r.buffer_rd_en = '0' and query_r.read_en = '0' and
+            if query_i.query_id =/ fetch_r.query.query_id then
+                report "ASSERT FAILURE - QUERY AND EDGE ARE NOT SYNCHRONISED! " severity failure;
+            end if;
+        end if;
+    end if;
+end process p_assert
+-- synthesis translate_on
+
 end architecture behavioural;
 
 ----------------------------------------------------------------------------------------------------
@@ -335,6 +356,7 @@ end architecture behavioural;
 -- LAST ... ... ... ...  1  ... ...  1  ... ...  1  ... ... ...  1       -- mem_i.last
 -- VALD  0   0   0   0   1   0   0   1   0   0   1   0   0   0   1       -- fetch_r.mem_rd_en
 -- BUFF  0   0   1   0   0   1   0   0   1   0   0   0   1   0   0       -- fetch_r.buffer_rd_en
+-- QRRD  0   0   0   0   0   0   1   0   0   1   0   0   0   1   0       -- query_r.read_en 
 -- MPTY  1   0   0   0   0   0   0   0   0   1   1   0   0   1   1       -- v_empty
 -- QERY ... AAA AAA AAA AAA AAA AAA BBB BBB BBB CCC CCC CCC CCC DDD      -- query_i
 -- EDGE ... AAA AAA BBB BBB BBB CCC CCC CCC ... ... DDD DDD ... ...      -- prev_data_i

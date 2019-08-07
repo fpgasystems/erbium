@@ -39,17 +39,17 @@ entity ederah_wrapper is
 end ederah_wrapper;
 
 architecture rtl of ederah_wrapper is
-    constant CFG_RD_TYPE_NFA    : std_logic := '0'; -- related to rd_stype_i
-    constant CFG_RD_TYPE_QUERY  : std_logic := '1'; -- related to rd_stype_i
-    constant C_QUERY_PARTITIONS : integer := G_DATA_BUS_WIDTH / CFG_RAW_QUERY_WIDTH;
-    constant C_EDGES_PARTITIONS : integer := G_DATA_BUS_WIDTH / CFG_EDGE_BRAM_WIDTH;
+    constant CFG_RD_TYPE_NFA      : std_logic := '0'; -- related to rd_stype_i
+    constant CFG_RD_TYPE_QUERY    : std_logic := '1'; -- related to rd_stype_i
+    constant C_QUERY_PARTITIONS   : integer := G_DATA_BUS_WIDTH / CFG_RAW_QUERY_WIDTH;
+    constant C_EDGES_PARTITIONS   : integer := G_DATA_BUS_WIDTH / CFG_EDGE_BRAM_WIDTH;
+    constant C_RESULTS_PARTITIONS : integer := G_DATA_BUS_WIDTH / CFG_RAW_RESULTS_WIDTH;
     --
     signal sig_query_ready    : std_logic;
-    signal sig_result_ready   : std_logic;
     signal sig_result_valid   : std_logic;
     signal sig_result_value   : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
     signal sig_query_id       : std_logic_vector(CFG_QUERY_ID_WIDTH - 1 downto 0);
-
+    
     type flow_ctrl_type is (FLW_CTRL_WAIT, FLW_CTRL_READ, FLW_CTRL_WRITE);
     
     type query_reg_type is record
@@ -72,8 +72,17 @@ architecture rtl of ederah_wrapper is
         engine_rst      : std_logic;
     end record;
 
-    signal query_r, query_rin : query_reg_type;
-    signal nfa_r, nfa_rin     : nfa_reg_type;
+    type result_reg_type is record
+        flow_ctrl       : flow_ctrl_type;
+        value           : std_logic_vector(G_DATA_BUS_WIDTH - 1 downto 0);
+        valid           : std_logic;
+        slice           : integer range 0 to C_RESULTS_PARTITIONS;
+        ready           : std_logic;
+    end record;
+
+    signal query_r, query_rin   : query_reg_type;
+    signal nfa_r, nfa_rin       : nfa_reg_type;
+    signal result_r, result_rin : result_reg_type;
 
 begin
 
@@ -293,13 +302,181 @@ begin
 end process;
 
 ----------------------------------------------------------------------------------------------------
--- OUTPUT RESULT                                                                                  --
+-- RESULT OUTPUT SERIALISER                                                                       --
 ----------------------------------------------------------------------------------------------------
 -- consume the outputed sig_result_value and fill in a cache line to write back on the wr_data_o bus
 -- A query result consists of the index of the content it points to. This result value occupies
--- CFG_MEM_ADDR_WIDTH bits
+-- CFG_MEM_ADDR_WIDTH bits (into a CFG_RAW_RESULTS_WIDTH bits field).
 
-wr_data_o <= (G_DATA_BUS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+-- wr_data_o    : out std_logic_vector(G_DATA_BUS_WIDTH - 1 downto 0);
+-- wr_valid_o   : out std_logic;
+
+wr_data_o  <= result_r.value;
+wr_valid_o <= result_r.valid;
+
+result_comb : process(result_r, sig_result_valid, sig_result_value, wr_ready_i)
+    variable v : result_reg_type;
+begin
+    v := result_r;
+
+    case result_r.flow_ctrl is
+
+      when FLW_CTRL_READ =>
+
+            v.ready := '1';
+            v.valid := '0';
+
+            if sig_result_valid = '1' then
+
+                v.slice := result_r.slice + 1;
+
+                -- this is ugly, but it's a Xilinx problem
+                -- https://forums.xilinx.com/t5/Synthesis/Vivado2013-2-Synth-8-27-complex-assignment-not-supported/td-p/345805
+                case result_r.slice is
+                  when  0 =>
+                        v.value(CFG_RAW_RESULTS_WIDTH - 1 downto  0)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when  1 =>
+                        v.value(( 1 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  1 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when  2 =>
+                        v.value(( 2 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  2 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when  3 =>
+                        v.value(( 3 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  3 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when  4 =>
+                        v.value(( 4 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  4 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when  5 =>
+                        v.value(( 5 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  5 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when  6 =>
+                        v.value(( 6 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  6 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when  7 =>
+                        v.value(( 7 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  7 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when  8 =>
+                        v.value(( 8 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  8 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when  9 =>
+                        v.value(( 9 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  9 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when 10 =>
+                        v.value((10 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 10 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when 11 =>
+                        v.value((11 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 11 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when 12 =>
+                        v.value((12 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 12 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when 13 =>
+                        v.value((13 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 13 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when 14 =>
+                        v.value((14 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 14 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when 15 =>
+                        v.value((15 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 15 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when 16 =>
+                        v.value((16 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 16 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when 17 =>
+                        v.value((17 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 17 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when 18 =>
+                        v.value((18 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 18 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when 19 =>
+                        v.value((19 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 19 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when 20 =>
+                        v.value((20 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 20 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when 21 =>
+                        v.value((21 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 21 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when 22 =>
+                        v.value((22 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 22 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when 23 =>
+                        v.value((23 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 23 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when 24 =>
+                        v.value((24 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 24 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when 25 =>
+                        v.value((25 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 25 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when 26 =>
+                        v.value((26 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 26 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when 27 =>
+                        v.value((27 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 27 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when 28 =>
+                        v.value((28 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 28 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when 29 =>
+                        v.value((29 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 29 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when 30 =>
+                        v.value((30 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 30 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when 31 =>
+                        v.value((31 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 31 * CFG_RAW_RESULTS_WIDTH)
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                  when 32 =>
+                end case;
+
+                if v.slice = C_RESULTS_PARTITIONS then
+                    v.ready := '0';
+                    v.valid := '1';
+                    v.flow_ctrl := FLW_CTRL_WRITE;
+                end if;
+
+            end if;
+
+      when FLW_CTRL_WRITE =>
+
+            v.ready := '0';
+            v.slice :=  0 ;
+            v.valid := '1';
+
+            if wr_ready_i = '1' then
+                v.valid     := '0';
+                v.flow_ctrl := FLW_CTRL_READ;
+            end if;
+        
+      when others =>
+
+            v.ready := '0';
+            v.slice :=  0 ;
+            v.valid := '0';
+            v.flow_ctrl := FLW_CTRL_READ;
+
+    end case;
+
+    result_rin <= v;
+end process;
+
+result_seq : process(clk_i)
+begin
+    if rising_edge(clk_i) then
+        if rst_i = '0' then
+            -- default rst
+            result_r.ready     <= '0';
+            result_r.slice     <=  0 ;
+            result_r.valid     <= '0';
+            result_r.flow_ctrl <= FLW_CTRL_READ;
+        else
+            result_r <= result_rin;
+        end if;
+    end if;
+end process;
 
 ----------------------------------------------------------------------------------------------------
 -- NFA-BRE ENGINE TOP                                                                             --
@@ -317,8 +494,8 @@ mct_engine_top: entity bre.top port map
     mem_wren_i      => nfa_r.mem_wren,
     mem_addr_i      => nfa_r.mem_addr,
     --
-    result_ready_i  => wr_ready_i,
-    result_valid_o  => wr_valid_o,
+    result_ready_i  => result_r.ready,
+    result_valid_o  => sig_result_valid,
     result_value_o  => sig_result_value
 );
 

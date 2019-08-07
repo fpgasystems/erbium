@@ -409,7 +409,7 @@ reducer : result_reducer port map
     interim_data_i  => next_data(CFG_ENGINE_NCRITERIA - 1),
     interim_ready_o => resred_ready,
     -- final result to TOP
-    result_ready_i  => result_ready_i, -- TODO not used yet
+    result_ready_i  => result_ready_i,
     result_data_o   => resred_value,
     result_valid_o  => result_valid_o
 );

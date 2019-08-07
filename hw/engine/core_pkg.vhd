@@ -47,6 +47,8 @@ package core_pkg is
 
     type query_flow_type is record
         read_en         : std_logic;
+        query           : query_buffer_type;
+        valid           : std_logic;
     end record;
 
     type fetch_out_type is record

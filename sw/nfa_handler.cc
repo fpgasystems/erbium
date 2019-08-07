@@ -273,7 +273,6 @@ void NFAHandler::memory_dump(const std::string& filename, const rulePack_s& rule
         if (level.second == m_vertexes[m_vertexes.size()-2])
             break;  // skip content
 
-
         mem_int = edges_per_level[level.first];
         write_longlongint(&outfile, mem_int);        
 
@@ -399,14 +398,18 @@ void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePac
     uint32_t num_queries;
 
     num_queries = rulepack.m_rules.size();
-    results_size = num_queries * C_RESULTS_SIZE;
+    results_size = num_queries * C_RAW_RESUTLS_SIZE;
     queries_size = rulepack.m_ruleType.m_criterionDefinition.size() * C_RAW_CRITERION_SIZE;
-    queries_size += queries_size / C_CACHE_LINE_WIDTH + ((queries_size % C_CACHE_LINE_WIDTH) ? 1 : 0);
+    queries_size = queries_size / C_CACHE_LINE_WIDTH + ((queries_size % C_CACHE_LINE_WIDTH) ? 1 : 0);
     queries_size = queries_size * num_queries * C_CACHE_LINE_WIDTH;
 
-    outfile.write(reinterpret_cast<char *>(queries_size), sizeof(*queries_size));
-    outfile.write(reinterpret_cast<char *>(results_size), sizeof(*results_size));
-    outfile.write(reinterpret_cast<char *>(num_queries),  sizeof(*num_queries));
+    outfile.write(reinterpret_cast<char *>(&queries_size), sizeof(queries_size));
+    outfile.write(reinterpret_cast<char *>(&results_size), sizeof(results_size));
+    outfile.write(reinterpret_cast<char *>(&num_queries),  sizeof(num_queries));
+
+    std::cout << "> queries_size = " << queries_size << std::endl;
+    std::cout << "> results_size = " << results_size << std::endl;
+    std::cout << "> num_queries = " << num_queries << std::endl;
 
     uint the_level;
     const criterion_s* aux_criterion;
@@ -480,7 +483,7 @@ void NFAHandler::dump_core_parameters(const std::string& filename, const rulePac
                 func_a     = "FNCTR_SIMP_EQU";
                 func_b     = "FNCTR_SIMP_NOP";
                 func_pair  = "FNCTR_PAIR_NOP";
-                match_mode = "MODE_STRICT_MATCH"
+                match_mode = "MODE_STRICT_MATCH";
                 break;
             case 212 : // criterionType_pairofdates.xml
             case 412 : // criterionType_integerrange4-digits_412.xml
@@ -514,6 +517,7 @@ void NFAHandler::dump_core_parameters(const std::string& filename, const rulePac
             func_a.c_str(),
             func_b.c_str(),
             func_pair.c_str(),
+            match_mode.c_str(),
             criterion_def->m_weight,
             !criterion_def->m_isMandatory);
 

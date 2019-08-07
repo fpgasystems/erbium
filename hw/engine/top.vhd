@@ -290,7 +290,7 @@ architecture behavioural of top is
     signal uram_rd_data  : mem_data_array;
     --
     -- CORNER CASE SIGNALS
-    signal sig_origin_node : edge_buffer_type;
+    signal sig_origin_node     : edge_buffer_type;
 begin
 
 ----------------------------------------------------------------------------------------------------
@@ -434,5 +434,6 @@ end generate gen_lookup;
 gen_lookup_n : if not CFG_FIRST_CRITERION_LOOKUP generate
     sig_origin_node.pointer  <= (others => '0');
 end generate gen_lookup_n;
+
 
 end architecture behavioural;

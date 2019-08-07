@@ -70,16 +70,25 @@ begin
 ----------------------------------------------------------------------------------------------------
 
 query_read_o <= query_r.read_en;
+-- query_read_o <= fetch_r.buffer_rd_en when prev_data_i.query_id /= query_i.query_id else
+--                 '0';
 
-query_comb: process(query_r, prev_data_i, fetch_r.buffer_rd_en, query_i)
+query_comb: process(query_r, prev_data_i, fetch_r.buffer_rd_en, query_i, query_empty_i)
     variable v : query_flow_type;
 begin
     v := query_r;
 
-    if fetch_r.buffer_rd_en = '1' and prev_data_i.query_id /= query_i.query_id then
-        v.read_en := '1';
-    else
-        v.read_en := '0';
+    v.read_en := '0';
+    if query_empty_i = '0' then
+        if query_r.valid = '0' then
+            v.read_en := '1';
+            v.query   := query_i;
+            v.valid   := '1';
+        elsif fetch_r.buffer_rd_en = '1' and prev_data_i.query_id /= query_r.query.query_id then
+            v.read_en := '1';
+            v.query   := query_i;
+            v.valid   := '1';
+        end if;
     end if;
     
     query_rin <= v;
@@ -90,6 +99,7 @@ begin
     if rising_edge(clk_i) then
         if rst_i = '0' then
             query_r.read_en <= '0';
+            query_r.valid   <= '0';
         else
             query_r <= query_rin;
         end if;
@@ -104,7 +114,7 @@ prev_read_o <= fetch_r.buffer_rd_en;
 mem_addr_o  <= fetch_r.mem_addr;
 mem_en_o    <= fetch_r.mem_rd_en;
 
-fetch_comb: process(fetch_r, prev_data_i, prev_empty_i, query_r.valid, mem_edge_i.last, mem_r.valid, sig_exe_branch, next_full_i)
+fetch_comb: process(fetch_r, prev_data_i, prev_empty_i, query_empty_i, mem_edge_i.last, mem_r.valid, sig_exe_branch, next_full_i)
     variable v        : fetch_out_type;
     variable v_empty  : std_logic;
     variable v_branch : std_logic;
@@ -122,9 +132,9 @@ begin
             v.buffer_rd_en := '0';
             v.mem_rd_en    := '0';
 
-            if v_empty = '0' then
+            if v_empty = '0' and next_full_i = '0' then
                 v.buffer_rd_en := '1';
-                v.mem_rd_en    := not next_full_i;
+                v.mem_rd_en    := '1';
                 v.mem_addr     := prev_data_i.pointer;
                 v.query_id     := prev_data_i.query_id;
                 v.weight       := prev_data_i.weight;
@@ -134,15 +144,17 @@ begin
       when FLW_CTRL_MEM =>
 
             if v_branch = '1' then
-                v.buffer_rd_en := not v_empty;
-                v.mem_rd_en    := not (v_empty or next_full_i);
-                v.mem_addr     := prev_data_i.pointer;
-                v.query_id     := prev_data_i.query_id;
-                v.weight       := prev_data_i.weight;
-                if v_empty = '0' then
-                    v.flow_ctrl := FLW_CTRL_MEM;
+                if (v_empty or next_full_i) = '0' then
+                    v.buffer_rd_en := '1';
+                    v.mem_rd_en    := '1';
+                    v.mem_addr     := prev_data_i.pointer;
+                    v.query_id     := prev_data_i.query_id;
+                    v.weight       := prev_data_i.weight;
+                    v.flow_ctrl    := FLW_CTRL_MEM;
                 else
-                    v.flow_ctrl := FLW_CTRL_BUFFER;
+                    v.buffer_rd_en := '0';
+                    v.mem_rd_en    := '0';
+                    v.flow_ctrl    := FLW_CTRL_BUFFER;
                 end if;
             else
                 v.buffer_rd_en := '0';
@@ -186,7 +198,7 @@ begin
 
     -- delay it
     v.rden_dlay := fetch_r.mem_rd_en;
-    v.last_dlay := mem_edge_i.last and mem_r.valid;
+    v.last_dlay := v_branch;
 
     if (v_branch or mem_r.last_dlay) = '1' then
         v.valid := '0';
@@ -228,9 +240,9 @@ exe_matcher: matcher generic map
 port map
 (
     opA_rule_i      => mem_edge_i.operand_a,
-    opA_query_i     => query_i.operand_a,
+    opA_query_i     => query_r.query.operand_a,
     opB_rule_i      => mem_edge_i.operand_b,
-    opB_query_i     => query_i.operand_b,
+    opB_query_i     => query_r.query.operand_b,
     match_result_o  => sig_exe_match_result,
     wildcard_o      => sig_exe_match_wildcard
 );
@@ -305,36 +317,27 @@ end generate;
 -- FAILURE CHECKS                                                                                 --
 ----------------------------------------------------------------------------------------------------
 
--- synthesis translate_off 
-p_assert : process (clk_i) is
-begin
-    if rising_edge(clk_i) then
-        if mem_r.valid = '1' then -- fetch_r.buffer_rd_en = '0' and query_r.read_en = '0' and
-            if query_i.query_id =/ fetch_r.query.query_id then
-                report "ASSERT FAILURE - QUERY AND EDGE ARE NOT SYNCHRONISED! " severity failure;
-            end if;
-        end if;
-    end if;
-end process p_assert
--- synthesis translate_on
+-- -- synthesis translate_off 
+-- p_assert : process (clk_i) is
+-- begin
+--     if rising_edge(clk_i) then
+--         if mem_r.valid = '1' then -- fetch_r.buffer_rd_en = '0' and query_r.read_en = '0' and
+--             if query_i.query_id /= fetch_r.query_id then
+--                 report "ASSERT FAILURE - QUERY AND EDGE ARE NOT SYNCHRONISED! " severity failure;
+--             end if;
+--         end if;
+--     end if;
+-- end process p_assert;
+-- -- synthesis translate_on
 
 end architecture behavioural;
-
-----------------------------------------------------------------------------------------------------
--- QUERY                                                                                          --
-----------------------------------------------------------------------------------------------------
--- buf_rd | v_new | v_read
---   0        0   |   0   
---   0        1   |   0   
---   1        0   |   0   
---   1        1   |   1   
 
 ----------------------------------------------------------------------------------------------------
 -- FETCH                                                                                          --
 ----------------------------------------------------------------------------------------------------
 --  state | v_branch | v_empty | n_full | v_buff | v_mem | v_flow | addr
 --   BUF  |     0         0        0    |   1    |   1   |  MEM   | POINTER
---   BUF  |     0         0        1    |   1    |   0   |  MEM   | POINTER
+--   BUF  |     0         0        1    |   0    |   0   |  BUFF  | --     
 --   BUF  |     0         1        0    |   0    |   0   |  BUFF  | --     
 --   BUF  |     0         1        1    |   0    |   0   |  BUFF  | --     
 --   BUF  |     1         0        0    |  xxx   |  xxx  |  xxx   | xxx    
@@ -346,7 +349,7 @@ end architecture behavioural;
 --   MEM  |     0         1        0    |   0    |   1   |  MEM   | INC    
 --   MEM  |     0         1        1    |   0    |   0   |  MEM   | KEEP   
 --   MEM  |     1         0        0    |   1    |   1   |  MEM   | POINTER
---   MEM  |     1         0        1    |   1    |   0   |  MEM   | POINTER
+--   MEM  |     1         0        1    |   0    |   0   |  BUFF  | --
 --   MEM  |     1         1        0    |   0    |   0   |  BUFF  | --     
 --   MEM  |     1         1        1    |   0    |   0   |  BUFF  | --     
 -- 

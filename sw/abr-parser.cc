@@ -112,21 +112,13 @@ int main()
 
         for (int i=6; i<aux; i++)
         {
+            nfa_bre::criterion_s ct;
+            ct.m_index = i-6;
             if (!row.m_data[i].empty())
-            {
-                nfa_bre::criterion_s ct;
-                ct.m_index = i-6;
                 ct.m_value = row.get_value(i);
-                rl.m_criteria.insert(ct);
-            }
             else
-            {
-                // IF NO VALUE, USE "*"
-                nfa_bre::criterion_s ct;
-                ct.m_index = i-6;
                 ct.m_value = "*";
-                rl.m_criteria.insert(ct);
-            }
+            rl.m_criteria.insert(ct);
         }
 
         if (row.m_data[aux+2] == "\"TRUE\"")
@@ -231,6 +223,13 @@ int main()
     std::cout << "# NFA COMPLETED in " << elapsed.count() << " s\n";
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
+    // DROOLS                                                                                     //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
+    std::cout << "# DROOLS" << std::endl;
+    the_nfa.dump_drools_rules("Rule.drl", rp);
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
     // OPTIMISATIONS                                                                              //
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -289,7 +288,7 @@ int main()
 
     const uint CFG_ENGINE_NCRITERIA       = rp.m_ruleType.m_criterionDefinition.size();
     const uint CFG_EDGE_BUFFERS_DEPTH     = 5;
-    const uint CFG_EDGE_BRAM_DEPTH        = (1 << (nfa_bre::CFG_MEM_ADDR_WIDTH + 1)) - 1;
+    //const uint CFG_EDGE_BRAM_DEPTH        = (1 << (nfa_bre::CFG_MEM_ADDR_WIDTH + 1)) - 1;
     const uint BRAM_USED_BITS             = nfa_bre::CFG_WEIGHT_WIDTH + nfa_bre::CFG_MEM_ADDR_WIDTH + 2*nfa_bre::CFG_ENGINE_CRITERION_WIDTH + 1;
     const uint CFG_EDGE_BRAM_WIDTH        = 1 << ((uint)ceil(log2(BRAM_USED_BITS)));
 
@@ -300,7 +299,7 @@ int main()
     std::cout << "constant CFG_MEM_ADDR_WIDTH           : integer := " << nfa_bre::CFG_MEM_ADDR_WIDTH << ";\n";
     std::cout << "--\n";
     std::cout << "constant CFG_EDGE_BUFFERS_DEPTH       : integer := " << CFG_EDGE_BUFFERS_DEPTH << ";\n";
-    std::cout << "constant CFG_EDGE_BRAM_DEPTH          : integer := " << CFG_EDGE_BRAM_DEPTH << ";\n";
+    //std::cout << "constant CFG_EDGE_BRAM_DEPTH          : integer := " << CFG_EDGE_BRAM_DEPTH << ";\n";
     std::cout << "constant CFG_EDGE_BRAM_WIDTH          : integer := " << CFG_EDGE_BRAM_WIDTH << ";\n";
     std::cout << "BRAM_USED_BITS                        : integer := " << BRAM_USED_BITS << ";\n";
 

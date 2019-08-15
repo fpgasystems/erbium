@@ -12,7 +12,7 @@ namespace nfa_bre {
 
 const unsigned short int C_CACHE_LINE_WIDTH = 64;
 const unsigned short int C_EDGES_PER_CACHE_LINE = C_CACHE_LINE_WIDTH / sizeof(uint64_t);
-const unsigned short int C_RAW_CRITERION_SIZE = sizeof(uint32_t);
+const unsigned short int C_RAW_CRITERION_SIZE = sizeof(uint16_t);
 const unsigned short int C_RAW_RESUTLS_SIZE = sizeof(uint16_t);
 
 // TODO a parameters struct and handle imports, exports, checks etc

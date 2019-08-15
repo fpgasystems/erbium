@@ -39,8 +39,7 @@ package core_pkg is
     end record;
 
     type query_buffer_type is record
-        operand_a       : std_logic_vector(CFG_CRITERION_VALUE_WIDTH - 1 downto 0);
-        operand_b       : std_logic_vector(CFG_CRITERION_VALUE_WIDTH - 1 downto 0);
+        operand         : std_logic_vector(CFG_CRITERION_VALUE_WIDTH - 1 downto 0);
         query_id        : integer range 0 to 2**CFG_QUERY_ID_WIDTH - 1;
     end record;
     type query_in_array_type is array(0 to CFG_ENGINE_NCRITERIA - 1) of query_buffer_type;
@@ -117,10 +116,9 @@ package core_pkg is
             G_WILDCARD          : std_logic            := '0'
         );
         port (
-            opA_rule_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
-            opA_query_i         :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
-            opB_rule_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
-            opB_query_i         :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
+        op_query_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
+        opA_rule_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
+        opB_rule_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
             match_result_o      : out std_logic;
             wildcard_o          : out std_logic
         );

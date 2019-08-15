@@ -428,7 +428,7 @@ result_value_o <= resred_value.pointer;
 
 -- ORIGIN LOOK-UP
 gen_lookup : if CFG_FIRST_CRITERION_LOOKUP generate
-    sig_origin_node.pointer  <= '0' & query(0).operand_a;
+    sig_origin_node.pointer  <= '0' & query(0).operand;
 end generate gen_lookup;
 
 gen_lookup_n : if not CFG_FIRST_CRITERION_LOOKUP generate

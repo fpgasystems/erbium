@@ -390,7 +390,6 @@ void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePac
 
     uint padding_slices = (rulepack.m_ruleType.m_criterionDefinition.size()) % SLICES_PER_LINE;
     padding_slices = (padding_slices == 0) ? 0 : SLICES_PER_LINE - padding_slices;
-    padding_slices = 2 * padding_slices; // so it writes two operands per padding slice
 
     // file header
     uint32_t queries_size; // in bytes with padding
@@ -429,7 +428,6 @@ void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePac
                         aux_definition);
 
             write_longlongint(&outfile, mem_opa);
-            write_longlongint(&outfile, mem_opb);
             // hrfile.write(aux_criterion->m_value.c_str(), aux_criterion->m_value.length());
             // hrfile.write(" ", 1);
             the_level++;
@@ -535,6 +533,71 @@ void NFAHandler::dump_core_parameters(const std::string& filename, const rulePac
     }
 
     outfile.close();
+}
+
+void NFAHandler::dump_drools_rules(const std::string& filename, const rulePack_s& rulepack)
+{
+    std::ofstream outfile(filename, std::ios::out | std::ios::trunc);
+
+    outfile << "package rules\n\nimport com.ethz.SK_FDF;\n";
+    outfile << "\ndialect \"java\"\n\n";
+
+    // helpers
+    unsigned short int operand_a, operand_b;
+    bool except;
+    const criterionDefinition_s* crit_def;
+    for (auto& rule : rulepack.m_rules)
+    {
+        outfile << "rule \"abr" << rule.m_ruleId << "\"\n\tsalience " << rule.m_weight;
+        outfile << "\n\twhen\n\t\trule : SK_FDF (\n";
+        except = false;
+        for (auto& criterion : rule.m_criteria)
+        {
+            if (criterion.m_value[0] != '*')
+            {
+                if (except)
+                {
+                    outfile << ",\n";
+                }
+                crit_def = &(*std::next(rulepack.m_ruleType.m_criterionDefinition.begin(), criterion.m_index));
+                outfile << "\t\t\t";
+
+                if (!crit_def->m_isPair)
+                {
+                    outfile << crit_def->m_code;
+                    outfile << " == \"" << criterion.m_value << "\"";
+                }
+                else
+                {
+                    parse_value(criterion.m_value, 0, &operand_a, &operand_b, crit_def);
+                    outfile << "(" << crit_def->m_code << " >= \"" << operand_a << "\" && ";
+                    outfile << crit_def->m_code << " <= \"" << operand_b << "\")";
+                }
+                except = true;
+            }
+        }
+
+        outfile << "\n\t\t)\n\tthen\n\tSystem.out.println(" << rule.m_content << ");\nend\n";
+    }
+
+    outfile.close();
+
+    std::ofstream secfile("SK_FDF.java", std::ios::out | std::ios::trunc);
+    secfile << "package com.sample;\n\npublic class SK_FDF {\n";
+    for (auto& crit_def : rulepack.m_ruleType.m_criterionDefinition)
+    {
+        if (!crit_def.m_isPair)
+            secfile << "\tpublic String " << crit_def.m_code << ";\n";
+        else
+            secfile << "\tpublic int " << crit_def.m_code << ";\n";
+    }
+    secfile << "}";
+    secfile.close();
+}
+
+void NFAHandler::dump_drools_workload(const std::string& filename, const rulePack_s& rulepack)
+{
+
 }
 
 } // namespace nfa_bre

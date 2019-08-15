@@ -20,8 +20,6 @@
 #define PATH_MAX 500
 
 const unsigned char C_CACHELINE_SIZE   = 64; // in bytes
-const unsigned char C_CRITERION_SIZE   =  4; // in bytes
-const unsigned char C_RESULT_SIZE      =  2; // in bytes
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //                                                                                                //
@@ -282,154 +280,154 @@ cl_program xcl_import_binary_file(xcl_world world, const char *xclbin_file_name)
     return program;
 }
 
-char *xcl_get_xclbin_name(xcl_world world, const char *xclbin_name) {
-    char *xcl_bindir = getenv("XCL_BINDIR");
-
-    // typical locations of directory containing xclbin files
-    const char *dirs[] = {
-        xcl_bindir, // $XCL_BINDIR-specified
-        "xclbin",   // command line build
-        "..",       // gui build + run
-        ".",        // gui build, run in build directory
-        NULL
-    };
-    const char **search_dirs = dirs;
-    if (xcl_bindir == NULL) {
-        search_dirs++;
-    }
-
-    char *device_name = strdup(world.device_name);
-    if (device_name == NULL) {
-        printf("Error: Out of Memory\n"); fflush(stdout);
-        exit(EXIT_FAILURE);
-    }
-
-    // fix up device name to avoid colons and dots.
-    // xilinx:xil-accel-rd-ku115:4ddr-xpr:3.2 -> xilinx_xil-accel-rd-ku115_4ddr-xpr_3_2
-    for (char *c = device_name; *c != 0; c++) {
-        if (*c == ':' || *c == '.') {
-            *c = '_';
-        }
-    }
-
-    char *device_name_versionless = strdup(world.device_name);
-    if (device_name_versionless == NULL) {
-        printf("Error: Out of Memory\n"); fflush(stdout);
-        exit(EXIT_FAILURE);
-    }
-
-    unsigned short colons = 0;
-    bool colon_exist = false;
-    for (char *c = device_name_versionless; *c != 0; c++) {
-        if (*c == ':') {
-            colons++;
-            *c = '_';
-            colon_exist = true;
-        }
-        /* Zero out version area */
-        if (colons == 3) {
-            *c = '\0';
-        }
-    }
-
-    // versionless support if colon doesn't exist in device_name
-    if(!colon_exist) {
-        int len = strlen(device_name_versionless);
-        device_name_versionless[len - 4] = '\0';
-    }
-
-    const char *aws_file_patterns[] = {
-        "%1$s/%2$s.%3$s.%4$s.awsxclbin",     // <kernel>.<target>.<device>.awsxclbin
-        "%1$s/%2$s.%3$s.%5$s.awsxclbin",     // <kernel>.<target>.<device_versionless>.awsxclbin
-        "%1$s/binary_container_1.awsxclbin", // default for gui projects
-        "%1$s/%2$s.awsxclbin",               // <kernel>.awsxclbin
-        NULL
-    };
-
-    const char *file_patterns[] = {
-        "%1$s/%2$s.%3$s.%4$s.xclbin",     // <kernel>.<target>.<device>.xclbin
-        "%1$s/%2$s.%3$s.%5$s.xclbin",     // <kernel>.<target>.<device_versionless>.xclbin
-        "%1$s/binary_container_1.xclbin", // default for gui projects
-        "%1$s/%2$s.xclbin",               // <kernel>.xclbin
-        NULL
-    };
-    char *xclbin_file_name = (char*) malloc(sizeof(char)*PATH_MAX);
-    memset(xclbin_file_name, 0, PATH_MAX);
-    ino_t aws_ino = 0; // used to avoid errors if an xclbin found via multiple/repeated paths
-    for (const char **dir = search_dirs; *dir != NULL; dir++) {
-        struct stat sb;
-        if (stat(*dir, &sb) == 0 && S_ISDIR(sb.st_mode)) {
-            for (const char **pattern = aws_file_patterns; *pattern != NULL; pattern++) {
-                char file_name[PATH_MAX];
-                memset(file_name, 0, PATH_MAX);
-                snprintf(file_name, PATH_MAX, *pattern, *dir, xclbin_name, world.mode, device_name, device_name_versionless);
-                if (stat(file_name, &sb) == 0 && S_ISREG(sb.st_mode)) {
-                    world.bindir = strdup(*dir);
-                    if (world.bindir == NULL) {
-                        printf("Error: Out of Memory\n"); fflush(stdout);
-                        exit(EXIT_FAILURE);
-                    }
-                    if (*xclbin_file_name && sb.st_ino != aws_ino) {
-                        printf("Error: multiple xclbin files discovered:\n %s\n %s\n", file_name, xclbin_file_name);
-                        fflush(stdout);
-                        exit(EXIT_FAILURE);
-                    }
-                    aws_ino = sb.st_ino;
-                    strncpy(xclbin_file_name, file_name, PATH_MAX);
-                }
-            }
-        }
-    }
-    ino_t ino = 0; // used to avoid errors if an xclbin found via multiple/repeated paths
-    // if no awsxclbin found, check for xclbin
-    if (*xclbin_file_name == '\0') {
-        for (const char **dir = search_dirs; *dir != NULL; dir++) {
-            struct stat sb;
-            if (stat(*dir, &sb) == 0 && S_ISDIR(sb.st_mode)) {
-                for (const char **pattern = file_patterns; *pattern != NULL; pattern++) {
-                    char file_name[PATH_MAX];
-                    memset(file_name, 0, PATH_MAX);
-                    snprintf(file_name, PATH_MAX, *pattern, *dir, xclbin_name, world.mode, device_name, device_name_versionless);
-                    if (stat(file_name, &sb) == 0 && S_ISREG(sb.st_mode)) {
-                        world.bindir = strdup(*dir);
-                        if (world.bindir == NULL) {
-                            printf("Error: Out of Memory\n"); fflush(stdout);
-                            exit(EXIT_FAILURE);
-                        }
-                        if (*xclbin_file_name && sb.st_ino != ino) {
-                            printf("Error: multiple xclbin files discovered:\n %s\n %s\n", file_name, xclbin_file_name);
-                            fflush(stdout);
-                            exit(EXIT_FAILURE);
-                        }
-                        ino = sb.st_ino;
-                        strncpy(xclbin_file_name, file_name, PATH_MAX);
-                    }
-                }
-            }
-        }
-
-    }
-    // if no xclbin found, preferred path for error message from xcl_import_binary_file()
-    if (*xclbin_file_name == '\0') {
-        snprintf(xclbin_file_name, PATH_MAX, file_patterns[0], *search_dirs, xclbin_name, world.mode, device_name);
-    }
-
-    free(device_name);
-
-    return xclbin_file_name;
-}
+// char *xcl_get_xclbin_name(xcl_world world, const char *xclbin_name) {
+//     char *xcl_bindir = getenv("XCL_BINDIR");
+// 
+//     // typical locations of directory containing xclbin files
+//     const char *dirs[] = {
+//         xcl_bindir, // $XCL_BINDIR-specified
+//         "xclbin",   // command line build
+//         "..",       // gui build + run
+//         ".",        // gui build, run in build directory
+//         NULL
+//     };
+//     const char **search_dirs = dirs;
+//     if (xcl_bindir == NULL) {
+//         search_dirs++;
+//     }
+// 
+//     char *device_name = strdup(world.device_name);
+//     if (device_name == NULL) {
+//         printf("Error: Out of Memory\n"); fflush(stdout);
+//         exit(EXIT_FAILURE);
+//     }
+// 
+//     // fix up device name to avoid colons and dots.
+//     // xilinx:xil-accel-rd-ku115:4ddr-xpr:3.2 -> xilinx_xil-accel-rd-ku115_4ddr-xpr_3_2
+//     for (char *c = device_name; *c != 0; c++) {
+//         if (*c == ':' || *c == '.') {
+//             *c = '_';
+//         }
+//     }
+// 
+//     char *device_name_versionless = strdup(world.device_name);
+//     if (device_name_versionless == NULL) {
+//         printf("Error: Out of Memory\n"); fflush(stdout);
+//         exit(EXIT_FAILURE);
+//     }
+// 
+//     unsigned short colons = 0;
+//     bool colon_exist = false;
+//     for (char *c = device_name_versionless; *c != 0; c++) {
+//         if (*c == ':') {
+//             colons++;
+//             *c = '_';
+//             colon_exist = true;
+//         }
+//         /* Zero out version area */
+//         if (colons == 3) {
+//             *c = '\0';
+//         }
+//     }
+// 
+//     // versionless support if colon doesn't exist in device_name
+//     if(!colon_exist) {
+//         int len = strlen(device_name_versionless);
+//         device_name_versionless[len - 4] = '\0';
+//     }
+// 
+//     const char *aws_file_patterns[] = {
+//         "%1$s/%2$s.%3$s.%4$s.awsxclbin",     // <kernel>.<target>.<device>.awsxclbin
+//         "%1$s/%2$s.%3$s.%5$s.awsxclbin",     // <kernel>.<target>.<device_versionless>.awsxclbin
+//         "%1$s/binary_container_1.awsxclbin", // default for gui projects
+//         "%1$s/%2$s.awsxclbin",               // <kernel>.awsxclbin
+//         NULL
+//     };
+// 
+//     const char *file_patterns[] = {
+//         "%1$s/%2$s.%3$s.%4$s.xclbin",     // <kernel>.<target>.<device>.xclbin
+//         "%1$s/%2$s.%3$s.%5$s.xclbin",     // <kernel>.<target>.<device_versionless>.xclbin
+//         "%1$s/binary_container_1.xclbin", // default for gui projects
+//         "%1$s/%2$s.xclbin",               // <kernel>.xclbin
+//         NULL
+//     };
+//     char *xclbin_file_name = (char*) malloc(sizeof(char)*PATH_MAX);
+//     memset(xclbin_file_name, 0, PATH_MAX);
+//     ino_t aws_ino = 0; // used to avoid errors if an xclbin found via multiple/repeated paths
+//     for (const char **dir = search_dirs; *dir != NULL; dir++) {
+//         struct stat sb;
+//         if (stat(*dir, &sb) == 0 && S_ISDIR(sb.st_mode)) {
+//             for (const char **pattern = aws_file_patterns; *pattern != NULL; pattern++) {
+//                 char file_name[PATH_MAX];
+//                 memset(file_name, 0, PATH_MAX);
+//                 snprintf(file_name, PATH_MAX, *pattern, *dir, xclbin_name, world.mode, device_name, device_name_versionless);
+//                 if (stat(file_name, &sb) == 0 && S_ISREG(sb.st_mode)) {
+//                     world.bindir = strdup(*dir);
+//                     if (world.bindir == NULL) {
+//                         printf("Error: Out of Memory\n"); fflush(stdout);
+//                         exit(EXIT_FAILURE);
+//                     }
+//                     if (*xclbin_file_name && sb.st_ino != aws_ino) {
+//                         printf("Error: multiple xclbin files discovered:\n %s\n %s\n", file_name, xclbin_file_name);
+//                         fflush(stdout);
+//                         exit(EXIT_FAILURE);
+//                     }
+//                     aws_ino = sb.st_ino;
+//                     strncpy(xclbin_file_name, file_name, PATH_MAX);
+//                 }
+//             }
+//         }
+//     }
+//     ino_t ino = 0; // used to avoid errors if an xclbin found via multiple/repeated paths
+//     // if no awsxclbin found, check for xclbin
+//     if (*xclbin_file_name == '\0') {
+//         for (const char **dir = search_dirs; *dir != NULL; dir++) {
+//             struct stat sb;
+//             if (stat(*dir, &sb) == 0 && S_ISDIR(sb.st_mode)) {
+//                 for (const char **pattern = file_patterns; *pattern != NULL; pattern++) {
+//                     char file_name[PATH_MAX];
+//                     memset(file_name, 0, PATH_MAX);
+//                     snprintf(file_name, PATH_MAX, *pattern, *dir, xclbin_name, world.mode, device_name, device_name_versionless);
+//                     if (stat(file_name, &sb) == 0 && S_ISREG(sb.st_mode)) {
+//                         world.bindir = strdup(*dir);
+//                         if (world.bindir == NULL) {
+//                             printf("Error: Out of Memory\n"); fflush(stdout);
+//                             exit(EXIT_FAILURE);
+//                         }
+//                         if (*xclbin_file_name && sb.st_ino != ino) {
+//                             printf("Error: multiple xclbin files discovered:\n %s\n %s\n", file_name, xclbin_file_name);
+//                             fflush(stdout);
+//                             exit(EXIT_FAILURE);
+//                         }
+//                         ino = sb.st_ino;
+//                         strncpy(xclbin_file_name, file_name, PATH_MAX);
+//                     }
+//                 }
+//             }
+//         }
+// 
+//     }
+//     // if no xclbin found, preferred path for error message from xcl_import_binary_file()
+//     if (*xclbin_file_name == '\0') {
+//         snprintf(xclbin_file_name, PATH_MAX, file_patterns[0], *search_dirs, xclbin_name, world.mode, device_name);
+//     }
+// 
+//     free(device_name);
+// 
+//     return xclbin_file_name;
+// }
 
 cl_program xcl_import_binary(xcl_world world, const char *xclbin_name) {
-    char* xclbin_file_name = xcl_get_xclbin_name(world, xclbin_name);
+    //char* xclbin_file_name = xcl_get_xclbin_name(world, xclbin_name);
 
-    cl_program program = xcl_import_binary_file(world, xclbin_file_name);
+    cl_program program = xcl_import_binary_file(world, xclbin_name);
 
     if(program == NULL) {
-        printf("ERROR: %s xclbin not available please build\n", xclbin_file_name); fflush(stdout);
+        printf("ERROR: %s xclbin not available please build\n", xclbin_name); fflush(stdout);
         exit(EXIT_FAILURE);
     }
 
-    free(xclbin_file_name);
+    //free(xclbin_file_name);
 
     return program;
 }
@@ -698,7 +696,10 @@ void run_nfabre_kernel(cl_command_queue queue, xcl_world world, cl_program progr
 
     uint32_t nfadata_cls = nfadata_size / C_CACHELINE_SIZE;
     uint32_t queries_cls = queries_size / C_CACHELINE_SIZE;
-    uint32_t results_cls = number_of_lines(results_size, C_CACHELINE_SIZE);
+    //uint32_t results_cls = number_of_lines(results_size, C_CACHELINE_SIZE);
+    uint32_t results_cls = results_size / C_CACHELINE_SIZE; // TODO it will ignore the last cacheline!
+    // must create a mask then
+    //uint32_t results_cls = 10; // TODO it will ignore the last cacheline!
 
     cl_mem buffer_queries, buffer_nfadata, buffer_results;
     size_t global = 1, local = 1;
@@ -707,10 +708,13 @@ void run_nfabre_kernel(cl_command_queue queue, xcl_world world, cl_program progr
     buffer_nfadata = clCreateBuffer(world.context, CL_MEM_READ_ONLY  | CL_MEM_USE_HOST_PTR, nfadata_size, nfa, NULL);
     buffer_queries = clCreateBuffer(world.context, CL_MEM_READ_ONLY  | CL_MEM_USE_HOST_PTR, queries_size, queries, NULL);
     buffer_results = clCreateBuffer(world.context, CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR, results_size, results, NULL);
-
+    
+    double stamp00 = get_time();
     OCL_CHECK(clEnqueueMigrateMemObjects(queue, 1, &buffer_nfadata, 0, 0, NULL, NULL));
     clFinish(queue);
-
+    double stamp01 = get_time();
+    printf("Time to load NFA data: %.8f Seconds\n", stamp01-stamp00); fflush(stdout);
+    
     //Set the Kernel Arguments
     uint extraParam = 0;
     xcl_set_kernel_arg(kernel, 0, 4, &nfadata_cls);
@@ -722,19 +726,15 @@ void run_nfabre_kernel(cl_command_queue queue, xcl_world world, cl_program progr
     xcl_set_kernel_arg(kernel, 6, sizeof(cl_mem), &buffer_queries);
     xcl_set_kernel_arg(kernel, 7, sizeof(cl_mem), &buffer_results);
 
-    double stamp00 = get_time();
-
+    stamp00 = get_time();
     OCL_CHECK(clEnqueueMigrateMemObjects(queue, 1, &buffer_queries, 0, 0, NULL, NULL));
-
     OCL_CHECK(clEnqueueNDRangeKernel(queue, kernel, 1, nullptr, &global, &local, 0 , NULL, NULL));
-
     OCL_CHECK(clEnqueueMigrateMemObjects(queue, 1, &buffer_results, CL_MIGRATE_MEM_OBJECT_HOST, 
         0, NULL, NULL));
-
     clFlush(queue);
     clFinish(queue);
+    stamp01 = get_time();
 
-    double stamp01 = get_time();
     printf("Time to process queries: %.8f Seconds\n", stamp01-stamp00); fflush(stdout);
 
     //Releasing mem objects and events
@@ -749,9 +749,20 @@ int main(int argc, char** argv)
     // PARAMETERS                                                                                 //
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    char          nfadata_file[100] = "/home/maschif/gitlab/nfa-bre/sw/mem_edges.bin";
-    char          queries_file[100] = "/home/maschif/gitlab/nfa-bre/sw/workload.bin";
-    char          results_file[100] = "/home/maschif/gitlab/nfa-bre/data/results.txt";
+    if (argc < 2) {
+       printf("Usage: BITSTREAM_FILE\n");
+       return EXIT_FAILURE;
+    }
+
+    char nfadata_file[100] = "/home/maschif/gitlab/nfa-bre/sw/mem_edges.bin";
+    char queries_file[100] = "/home/maschif/gitlab/nfa-bre/sw/workload.bin";
+    char results_file[100] = "/home/maschif/gitlab/nfa-bre/data/results.txt";
+    //char nfadata_file[100] = "/home/centos/ederah/mem_edges.bin";
+    //char queries_file[100] = "/home/centos/ederah/workload.bin";
+    //char results_file[100] = "/home/centos/ederah/results.txt";
+    //char nfadata_file[100] = "/home/maschif/ederah/mem_edges.bin";
+    //char queries_file[100] = "/home/maschif/ederah/workload.bin";
+    //char results_file[100] = "/home/maschif/ederah/results.txt";
     // TODO print parameters for structure check!
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -762,7 +773,7 @@ int main(int argc, char** argv)
     double stamp_p0 = get_time();
 
     xcl_world  world   = xcl_world_single();
-    cl_program program = xcl_import_binary(world, "ederah_kernel");
+    cl_program program = xcl_import_binary(world, argv[1]);
 
     double stamp_p1 = get_time();
     printf("Time to program FPGA: %.8f Seconds\n", stamp_p1-stamp_p0); fflush(stdout);

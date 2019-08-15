@@ -34,10 +34,9 @@ entity matcher is
         G_WILDCARD          : std_logic            := '0'
     );
     port (
+        op_query_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
         opA_rule_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
-        opA_query_i         :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
         opB_rule_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
-        opB_query_i         :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
         match_result_o      : out std_logic;
         wildcard_o          : out std_logic
     );
@@ -93,7 +92,7 @@ opA: functor generic map
 port map
 (
     rule_i       => opA_rule_i,
-    query_i      => opA_query_i,
+    query_i      => op_query_i,
     funct_o      => sig_functorA,
     wildcard_o   => sig_wildcard_a
 );
@@ -106,7 +105,7 @@ opB: functor generic map
 port map
 (
     rule_i       => opB_rule_i,
-    query_i      => opB_query_i,
+    query_i      => op_query_i,
     funct_o      => sig_functorB,
     wildcard_o   => sig_wildcard_b
 );

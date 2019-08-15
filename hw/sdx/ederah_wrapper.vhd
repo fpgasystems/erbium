@@ -121,49 +121,34 @@ begin
       when FLW_CTRL_READ =>
 
             v.wr_en := '0';
+            v.ready := '1';
 
             if rd_valid_i = '1' then
-                v.ready := '1';
-
                 remaining := CFG_ENGINE_NCRITERIA - query_r.counter;
                 if (remaining > C_QUERY_PARTITIONS) then
                     useful := C_QUERY_PARTITIONS;
                     -- full slices
                     for idx in 0 to C_QUERY_PARTITIONS - 1 loop
-                        v.query_array(query_r.counter + idx).operand_a := 
+                        v.query_array(query_r.counter + idx).operand := 
                             rd_data_i
                             (
                                 (idx * CFG_RAW_QUERY_WIDTH) + CFG_CRITERION_VALUE_WIDTH - 1
                                 downto
                                 (idx * CFG_RAW_QUERY_WIDTH)
                             );
-                        v.query_array(query_r.counter + idx).operand_b :=
-                             rd_data_i
-                             (
-                                (idx * CFG_RAW_QUERY_WIDTH) + 16 + CFG_CRITERION_VALUE_WIDTH - 1
-                                downto
-                                (idx * CFG_RAW_QUERY_WIDTH) + 16
-                             );
                         v.query_array(query_r.counter + idx).query_id := my_conv_integer(sig_query_id);
                     end loop;
                 else
                     useful := remaining;
                     -- total mod piece slices
                     for idx in 0 to C_SLICES_MOD - 1 loop
-                        v.query_array(query_r.counter + idx).operand_a := 
+                        v.query_array(query_r.counter + idx).operand := 
                             rd_data_i
                             (
                                 (idx * CFG_RAW_QUERY_WIDTH) + CFG_CRITERION_VALUE_WIDTH - 1
                                 downto
                                 (idx * CFG_RAW_QUERY_WIDTH)
                             );
-                        v.query_array(query_r.counter + idx).operand_b :=
-                             rd_data_i
-                             (
-                                (idx * CFG_RAW_QUERY_WIDTH) + 16 + CFG_CRITERION_VALUE_WIDTH - 1
-                                downto
-                                (idx * CFG_RAW_QUERY_WIDTH) + 16
-                             );
                         v.query_array(query_r.counter + idx).query_id := my_conv_integer(sig_query_id);
                     end loop;
                 end if;
@@ -174,8 +159,6 @@ begin
                     v.ready := '0';
                 end if;
 
-            else
-                v.ready := '0';
             end if;
 
 

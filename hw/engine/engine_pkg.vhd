@@ -16,11 +16,10 @@ package engine_pkg is
     constant CFG_QUERY_BUFFER_DEPTH       : integer := CFG_ENGINE_NCRITERIA;
     --
     constant CFG_EDGE_BUFFERS_DEPTH       : integer := CFG_ENGINE_NCRITERIA+2;
-    constant CFG_EDGE_BRAM_DEPTH          : integer := 32768;--30690;
     constant CFG_EDGE_BRAM_WIDTH          : integer := 64; -- bits
     --
-    -- Number of bits for each criterion (hence, for two values) coming from memory (top level)
-    constant CFG_RAW_QUERY_WIDTH          : integer := 32; -- bits
+    -- Number of bits for each criterion value coming from memory (top level)
+    constant CFG_RAW_QUERY_WIDTH          : integer := 16; -- bits
 
     -- Number of bits for each result value going back to the memory (wrapper level)
     constant CFG_RAW_RESULTS_WIDTH        : integer := 16; -- bits

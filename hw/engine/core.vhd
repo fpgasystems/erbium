@@ -239,10 +239,9 @@ exe_matcher: matcher generic map
 )
 port map
 (
+    op_query_i      => query_r.query.operand,
     opA_rule_i      => mem_edge_i.operand_a,
-    opA_query_i     => query_r.query.operand_a,
     opB_rule_i      => mem_edge_i.operand_b,
-    opB_query_i     => query_r.query.operand_b,
     match_result_o  => sig_exe_match_result,
     wildcard_o      => sig_exe_match_wildcard
 );

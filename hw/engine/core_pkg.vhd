@@ -36,6 +36,7 @@ package core_pkg is
         pointer         : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
         query_id        : integer range 0 to 2**CFG_QUERY_ID_WIDTH - 1;
         weight          : integer range 0 to 2**CFG_WEIGHT_WIDTH - 1;
+        clock_cycles    : std_logic_vector(CFG_DBG_N_OF_CLK_CYCS_WIDTH - 1 downto 0);
     end record;
 
     type query_buffer_type is record
@@ -47,7 +48,7 @@ package core_pkg is
     type query_flow_type is record
         read_en         : std_logic;
         query           : query_buffer_type;
-        valid           : std_logic;
+        first           : std_logic;
     end record;
 
     type fetch_out_type is record
@@ -57,6 +58,7 @@ package core_pkg is
         flow_ctrl       : core_flow_control;
         query_id        : integer range 0 to 2**CFG_QUERY_ID_WIDTH - 1;
         weight          : integer range 0 to 2**CFG_WEIGHT_WIDTH - 1;
+        clock_cycles    : std_logic_vector(CFG_DBG_N_OF_CLK_CYCS_WIDTH - 1 downto 0);
     end record;
 
     type execute_out_type is record
@@ -90,6 +92,12 @@ package core_pkg is
         G_WILDCARD_ENABLED    : std_logic;
     end record;
 
+    type result_stats_type is record
+        clock_cycle_counter   : std_logic_vector(CFG_DBG_N_OF_CLK_CYCS_WIDTH - 1 downto 0);
+        match_higher_weight   : std_logic_vector(CFG_DBG_COUNTERS_WIDTH - 1 downto 0);
+        match_lower_weight    : std_logic_vector(CFG_DBG_COUNTERS_WIDTH - 1 downto 0);
+    end record;
+
 ----------------------------------------------------------------------------------------------------
 -- COMPONENTS                                                                                     --
 ----------------------------------------------------------------------------------------------------
@@ -116,9 +124,9 @@ package core_pkg is
             G_WILDCARD          : std_logic            := '0'
         );
         port (
-        op_query_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
-        opA_rule_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
-        opB_rule_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
+            op_query_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
+            opA_rule_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
+            opB_rule_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
             match_result_o      : out std_logic;
             wildcard_o          : out std_logic
         );
@@ -186,8 +194,9 @@ package core_pkg is
         interim_data_i  :  in edge_buffer_type;
         interim_ready_o : out std_logic;
         -- final result to TOP
-        result_ready_i  :  in std_logic; -- TODO not used yet
+        result_ready_i  :  in std_logic;
         result_data_o   : out edge_buffer_type;
+        result_stats_o  : out result_stats_type;
         result_valid_o  : out std_logic
     );
     end component;

@@ -93,8 +93,8 @@ int main()
     {
         // NOT PRODUCTION
         // JUST TO FILTER WHILE IN DEV
-        //if (row.m_data[8] != "\"ZRH\"" && row.m_data[9] != "\"ZRH\"")
-        //    continue;
+        if (row.m_data[8] != "\"ZRH\"" && row.m_data[9] != "\"ZRH\"")
+            continue;
         //if (row.m_data[8] != "\"CDG\"" && row.m_data[9] != "\"CDG\"")
         //    continue;
         //if (row.m_data[8] != "\"GRU\"" && row.m_data[9] != "\"GRU\"")
@@ -227,7 +227,7 @@ int main()
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::cout << "# DROOLS" << std::endl;
-    the_nfa.dump_drools_rules("Rule.drl", rp);
+    the_nfa.dump_drools_rules("build/Rule.drl", rp);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // OPTIMISATIONS                                                                              //
@@ -271,14 +271,14 @@ int main()
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::cout << "# EXPORT CORE PARAMETERS" << std::endl;
-    the_nfa.dump_core_parameters("core_param.txt", rp);
+    the_nfa.dump_core_parameters("build/core_param.txt", rp);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // EXPORT DOT FILE                                                                            //
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::cout << "# EXPORT DOT FILE" << std::endl;
-    the_nfa.export_dot_file("automaton.dot");
+    the_nfa.export_dot_file("build/automaton.dot");
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // MEMORY DUMP                                                                                //
@@ -312,7 +312,7 @@ int main()
 
     start = std::chrono::high_resolution_clock::now();
 
-    the_nfa.memory_dump("mem_edges.bin", rp);
+    the_nfa.memory_dump("build/mem_edges.bin", rp);
 
     finish = std::chrono::high_resolution_clock::now();
 
@@ -325,7 +325,7 @@ int main()
     std::cout << "# WORKLOAD DUMP" << std::endl;
     start = std::chrono::high_resolution_clock::now();
 
-    the_nfa.dump_mirror_workload("workload.bin", rp);
+    the_nfa.dump_mirror_workload("build/workload.bin", rp);
 
     finish = std::chrono::high_resolution_clock::now();
     elapsed = finish - start;

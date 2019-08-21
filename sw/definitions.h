@@ -14,6 +14,7 @@ const unsigned short int C_CACHE_LINE_WIDTH = 64;
 const unsigned short int C_EDGES_PER_CACHE_LINE = C_CACHE_LINE_WIDTH / sizeof(uint64_t);
 const unsigned short int C_RAW_CRITERION_SIZE = sizeof(uint16_t);
 const unsigned short int C_RAW_RESUTLS_SIZE = sizeof(uint16_t);
+const unsigned short int C_RAW_RESULT_STATS_WIDTH = sizeof(uint64_t);
 
 // TODO a parameters struct and handle imports, exports, checks etc
 const uint CFG_ENGINE_CRITERION_WIDTH = 14;
@@ -29,8 +30,6 @@ const unsigned long long int SHIFT_WEIGHT    = CFG_MEM_ADDR_WIDTH+2*CFG_ENGINE_C
 const unsigned long long int SHIFT_POINTER   = 2*CFG_ENGINE_CRITERION_WIDTH;
 const unsigned long long int SHIFT_OPERAND_B = CFG_ENGINE_CRITERION_WIDTH;
 const unsigned long long int SHIFT_OPERAND_A = 0;
-
-
 
 enum SortOrder { Ascending, Descending };
 

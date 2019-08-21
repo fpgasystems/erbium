@@ -179,7 +179,8 @@ uint NFAHandler::print_stats()
     uint n_edges_max = 0;
     uint n_bram_edges_max = 0;
     uint aux;
-    std::cout << "origin: 1 states; " << m_graph[0].children.size() << " transitions; " << m_graph[0].children.size() << " max fan-out\n";
+    printf("origin  :     1 state ; %5lu transitions; %4lu max fan-out\n",
+        m_graph[0].children.size(), m_graph[0].children.size());
     for (auto& level : m_vertexes)
     {
         n_nodes = 0;
@@ -195,7 +196,8 @@ uint NFAHandler::print_stats()
                 n_edges_max = (aux > n_edges_max) ? aux : n_edges_max;
             }
         }
-        std::cout << "level " << level.first << ": " << n_nodes << " states; " << n_edges << " transitions; " << n_edges_max << " max fan-out\n";
+        printf("level %2u: %5u states; %5u transitions; %4u max fan-out\n",
+            level.first, n_nodes, n_edges, n_edges_max);
         n_bram_edges_max = (n_edges > n_bram_edges_max) ? n_edges : n_bram_edges_max;
     }
     return n_bram_edges_max;
@@ -250,7 +252,6 @@ void NFAHandler::memory_dump(const std::string& filename, const rulePack_s& rule
         }
     }
 
-    //----------------- Address pointers
     unsigned long long int mem_int;
     std::map<std::string, uint> dic;
     const criterionDefinition_s* criterion_def;
@@ -394,21 +395,25 @@ void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePac
     // file header
     uint32_t queries_size; // in bytes with padding
     uint32_t results_size; // in bytes without padding
+    uint32_t restats_size; // in bytes without padding
     uint32_t num_queries;
 
     num_queries = rulepack.m_rules.size();
     results_size = num_queries * C_RAW_RESUTLS_SIZE;
+    restats_size = num_queries * C_RAW_RESULT_STATS_WIDTH;
     queries_size = rulepack.m_ruleType.m_criterionDefinition.size() * C_RAW_CRITERION_SIZE;
     queries_size = queries_size / C_CACHE_LINE_WIDTH + ((queries_size % C_CACHE_LINE_WIDTH) ? 1 : 0);
     queries_size = queries_size * num_queries * C_CACHE_LINE_WIDTH;
 
     outfile.write(reinterpret_cast<char *>(&queries_size), sizeof(queries_size));
     outfile.write(reinterpret_cast<char *>(&results_size), sizeof(results_size));
+    outfile.write(reinterpret_cast<char *>(&restats_size), sizeof(restats_size));
     outfile.write(reinterpret_cast<char *>(&num_queries),  sizeof(num_queries));
 
-    std::cout << "> queries_size = " << queries_size << std::endl;
-    std::cout << "> results_size = " << results_size << std::endl;
-    std::cout << "> num_queries = " << num_queries << std::endl;
+    printf("> # of queries: %9u\n", num_queries);
+    printf("> Queries size: %9u bytes\n", queries_size);
+    printf("> Results size: %9u bytes\n", results_size);
+    printf("> Stats size:   %9u bytes\n", restats_size);
 
     uint the_level;
     const criterion_s* aux_criterion;
@@ -582,7 +587,7 @@ void NFAHandler::dump_drools_rules(const std::string& filename, const rulePack_s
 
     outfile.close();
 
-    std::ofstream secfile("SK_FDF.java", std::ios::out | std::ios::trunc);
+    std::ofstream secfile("build/SK_FDF.java", std::ios::out | std::ios::trunc);
     secfile << "package com.sample;\n\npublic class SK_FDF {\n";
     for (auto& crit_def : rulepack.m_ruleType.m_criterionDefinition)
     {

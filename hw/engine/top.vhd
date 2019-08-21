@@ -22,6 +22,7 @@ entity top is
         mem_addr_i     :  in std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
         --
         result_ready_i :  in std_logic;
+        result_stats_o : out result_stats_type;
         result_valid_o : out std_logic;
         result_value_o : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0)
     );
@@ -411,13 +412,15 @@ reducer : result_reducer port map
     -- final result to TOP
     result_ready_i  => result_ready_i,
     result_data_o   => resred_value,
+    result_stats_o  => result_stats_o,
     result_valid_o  => result_valid_o
 );
 -- if host's often not ready (result_ready_i), deploy a fifo so the last level is less often blocked
 
 -- ORIGIN
-sig_origin_node.query_id <= query(0).query_id;
-sig_origin_node.weight   <= 0;
+sig_origin_node.query_id     <= query(0).query_id;
+sig_origin_node.weight       <= 0;
+sig_origin_node.clock_cycles <= (others => '0');
 prev_empty(0) <= query_empty(0);
 prev_data(0)  <= sig_origin_node;
 
@@ -434,6 +437,5 @@ end generate gen_lookup;
 gen_lookup_n : if not CFG_FIRST_CRITERION_LOOKUP generate
     sig_origin_node.pointer  <= (others => '0');
 end generate gen_lookup_n;
-
 
 end architecture behavioural;

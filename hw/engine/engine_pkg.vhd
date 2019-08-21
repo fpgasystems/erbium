@@ -18,11 +18,17 @@ package engine_pkg is
     constant CFG_EDGE_BUFFERS_DEPTH       : integer := CFG_ENGINE_NCRITERIA+2;
     constant CFG_EDGE_BRAM_WIDTH          : integer := 64; -- bits
     --
+    constant CFG_DBG_N_OF_CLK_CYCS_WIDTH  : integer := 16;
+    constant CFG_DBG_COUNTERS_WIDTH       : integer := 16;
+
+
+    --
     -- Number of bits for each criterion value coming from memory (top level)
     constant CFG_RAW_QUERY_WIDTH          : integer := 16; -- bits
 
     -- Number of bits for each result value going back to the memory (wrapper level)
     constant CFG_RAW_RESULTS_WIDTH        : integer := 16; -- bits
+    constant CFG_RAW_RESULT_STATS_WIDTH   : integer := 64; -- bits (result value comprised)
 
     -- MEMORY DATA SLICE RANGES
     subtype RNG_BRAM_EDGE_STORE_OPERAND_A is natural range CFG_CRITERION_VALUE_WIDTH - 1 downto 0;

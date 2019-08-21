@@ -58,17 +58,18 @@ bool load_nfa_from_file(char* file_name,
 
 bool load_queries_from_file(char* file_name,
     std::vector<unsigned short int, aligned_allocator<unsigned short int>>** queries_data,
-    uint32_t* queries_size, uint32_t* results_size, uint32_t* num_queries)
+    uint32_t* queries_size, uint32_t* results_size, uint32_t* restats_size, uint32_t* num_queries)
 {
     std::ifstream* file = new std::ifstream(file_name, std::ios::in | std::ios::binary);
     if(file->is_open())
     {
         file->seekg(0, std::ios::end);
-        uint32_t raw_size = ((uint32_t)file->tellg()) - 3 * sizeof(*queries_size);
+        uint32_t raw_size = ((uint32_t)file->tellg()) - 4 * sizeof(*queries_size);
 
         file->seekg(0, std::ios::beg);
         file->read(reinterpret_cast<char *>(queries_size), sizeof(*queries_size));
         file->read(reinterpret_cast<char *>(results_size), sizeof(*results_size));
+        file->read(reinterpret_cast<char *>(restats_size), sizeof(*restats_size));
         file->read(reinterpret_cast<char *>(num_queries),  sizeof(*num_queries));
 
         if (*queries_size != raw_size)
@@ -104,9 +105,10 @@ int main(int argc, char** argv)
     char *nfadata_file;
     char *queries_file;
     char *results_file;
+    bool stats_on;
 
-    if (argc < 5) {
-        printf("Usage: BITSTREAM_FILE NFA.BIN QUERIES.BIN RESULTS.TXT\n");
+    if (argc < 6) {
+        printf("Usage: BITSTREAM_FILE NFA.BIN QUERIES.BIN RESULTS.TXT STATS_ON\n");
         for (int i=0; i<argc; i++)
             printf("[%u] %s\n", i, argv[i]);
         return EXIT_FAILURE;
@@ -115,9 +117,10 @@ int main(int argc, char** argv)
     nfadata_file = (char*) malloc(strlen(argv[2])+1);
     queries_file = (char*) malloc(strlen(argv[3])+1);
     results_file = (char*) malloc(strlen(argv[4])+1);
-    strcpy(nfadata_file,argv[2]);
-    strcpy(queries_file,argv[3]);
-    strcpy(results_file,argv[4]);
+    strcpy(nfadata_file, argv[2]);
+    strcpy(queries_file, argv[3]);
+    strcpy(results_file, argv[4]);
+    stats_on = (std::string(argv[5]) == "yes");
 
     // TODO print parameters for structure check!
 
@@ -136,11 +139,15 @@ int main(int argc, char** argv)
     cl::CommandQueue queue(context, device, CL_QUEUE_PROFILING_ENABLE);
     std::string device_name = device.getInfo<CL_DEVICE_NAME>(); 
 
-    cl::Program::Binaries bins = xcl::import_binary_file(argv[1]);
+    unsigned fileBufSize;
+    char* fileBuf = xcl::read_binary_file(argv[1], fileBufSize);
+    cl::Program::Binaries bins{{fileBuf, fileBufSize}};
+    //cl::Program::Binaries bins = xcl::import_binary_file(argv[1]);
     devices.resize(1);
 
+    cl_int err;
     double stamp_p0 = get_time();
-    cl::Program program(context, devices, bins);
+    OCL_CHECK(err, cl::Program program(context, devices, bins, NULL, &err));
     double stamp_p1 = get_time();
     printf("Time to program FPGA: %.8f Seconds\n", stamp_p1-stamp_p0); fflush(stdout);
 
@@ -152,21 +159,32 @@ int main(int argc, char** argv)
     uint32_t nfadata_size; // in bytes with padding
     uint32_t queries_size; // in bytes with padding
     uint32_t results_size; // in bytes without padding
+    uint32_t restats_size; // in bytes without padding
     uint32_t num_queries; 
 
     std::vector<unsigned long int, aligned_allocator<unsigned long int>>* nfa_data;
     std::vector<unsigned short int, aligned_allocator<unsigned short int>>* queries;
 
     bool suc;
-    suc = load_queries_from_file(queries_file, &queries, &queries_size, &results_size, &num_queries);
+    suc = load_queries_from_file(queries_file, &queries, &queries_size, &results_size, &restats_size, &num_queries);
     suc = suc & load_nfa_from_file(nfadata_file, &nfa_data, &nfadata_size);
+
+    printf("> # of queries: %9u\n", num_queries);
+    printf("> NFA size:     %9u bytes\n", nfadata_size);
+    printf("> Queries size: %9u bytes\n", queries_size);
+    printf("> Results size: %9u bytes\n", results_size);
+    printf("> Stats size:   %9u bytes\n", restats_size);
+    if (stats_on)
+    {
+        results_size = restats_size;
+        printf("Statistics report enabled\n");
+    }
+    else
+        printf("No statistics report\n");
+    fflush(stdout);
 
     std::vector<uint16_t, aligned_allocator<uint16_t>> results(results_size);
 
-    printf("> Number of queries: %u\n", num_queries);
-    printf("> NFA size:     %u bytes\n", nfadata_size);
-    printf("> Queries size: %u bytes\n", queries_size);
-    printf("> Results size: %u bytes\n", results_size); fflush(stdout);
 
     // cache lines
     uint32_t nfadata_cls = nfadata_size / C_CACHELINE_SIZE;
@@ -176,13 +194,13 @@ int main(int argc, char** argv)
     // must create a mask then
 
     if(!suc)
-        return 0;
+        return EXIT_FAILURE;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // KERNEL EXECUTION                                                                           //
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    cl::Kernel kernel(program, "ederah_kernel");
+    cl::Kernel kernel(program, "nfabre");
 
     // allocate memory on the FPGA
     cl::Buffer buffer_nfadata(context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_ONLY,  nfadata_size, nfa_data->data());
@@ -190,20 +208,18 @@ int main(int argc, char** argv)
     cl::Buffer buffer_results(context, CL_MEM_USE_HOST_PTR | CL_MEM_WRITE_ONLY, results_size, results.data());
 
     // load data via PCIe to the FPGA on-board DDR
-    double stamp00 = get_time();
     queue.enqueueMigrateMemObjects({buffer_nfadata}, 0/* 0 means from host*/);
-    double stamp01 = get_time();
-    printf("Time to transfer NFA data: %.8f s\n", stamp01-stamp00);
-    stamp00 = get_time();
     queue.enqueueMigrateMemObjects({buffer_queries}, 0/* 0 means from host*/);
-    stamp01 = get_time();
-    printf("Time to transfer Queries data: %.8f s\n", stamp01-stamp00);
+    double stamp00 = get_time();
+    queue.finish();
+    double stamp01 = get_time();
+    printf("Time to transfer data from CPU to DDR: %.4f ms\n", (stamp01-stamp00)*1000);
 
     // kernel arguments
     kernel.setArg(0, nfadata_cls);
     kernel.setArg(1, queries_cls);
     kernel.setArg(2, results_cls);
-    kernel.setArg(3, 0);
+    kernel.setArg(3, (stats_on) ? 1 : 0);
     kernel.setArg(4, 0);
     kernel.setArg(5, buffer_nfadata);
     kernel.setArg(6, buffer_queries);
@@ -211,12 +227,13 @@ int main(int argc, char** argv)
 
     cl::Event event;
     queue.enqueueTask(kernel, NULL, &event);
-    std::cout << "Wall Clock Time (Kernel execution): " << get_duration_ns(event) << " ns" << std::endl;
 
     // load results via PCIe from FPGA on-board DDR
     queue.enqueueMigrateMemObjects({buffer_results}, CL_MIGRATE_MEM_OBJECT_HOST);
+
     queue.finish();
 
+    std::cout << "Wall Clock Time (Kernel execution): " << get_duration_ns(event) << " ns" << std::endl;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // RESULTS                                                                                    //
@@ -225,8 +242,20 @@ int main(int argc, char** argv)
     std::ofstream file;
     file.open(results_file);
 
-    for (uint i = 0; i < num_queries; ++i)
-        file << (results.data())[i] << "\n";
+    if (stats_on)
+    {
+        file << "value_id,clock_cycles,higher_weight,lower_weight\n";
+        for (uint i = 0; i < num_queries*4; i=i+4)
+        {
+            file << (results.data())[i+3] << "," << (results.data())[i+2] << ",";
+            file << (results.data())[i+1] << "," << (results.data())[i] << "\n";
+        }    
+    }
+    else
+    {
+        for (uint i = 0; i < num_queries; ++i)
+            file << (results.data())[i] << "\n";
+    }
 
     return (0 ? EXIT_SUCCESS : EXIT_FAILURE);;
 }

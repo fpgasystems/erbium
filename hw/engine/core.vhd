@@ -70,24 +70,18 @@ begin
 ----------------------------------------------------------------------------------------------------
 
 query_read_o <= query_r.read_en;
--- query_read_o <= fetch_r.buffer_rd_en when prev_data_i.query_id /= query_i.query_id else
---                 '0';
 
-query_comb: process(query_r, prev_data_i, fetch_r.buffer_rd_en, query_i, query_empty_i)
-    variable v : query_flow_type;
+query_comb: process(query_r, prev_data_i.query_id, fetch_r.buffer_rd_en, query_i, query_empty_i)
+    variable v     : query_flow_type;
 begin
     v := query_r;
 
     v.read_en := '0';
     if query_empty_i = '0' then
-        if query_r.valid = '0' then
+        if query_r.first = '1' or (fetch_r.buffer_rd_en = '1' and prev_data_i.query_id /= query_r.query.query_id) then
             v.read_en := '1';
             v.query   := query_i;
-            v.valid   := '1';
-        elsif fetch_r.buffer_rd_en = '1' and prev_data_i.query_id /= query_r.query.query_id then
-            v.read_en := '1';
-            v.query   := query_i;
-            v.valid   := '1';
+            v.first   := '0';
         end if;
     end if;
     
@@ -99,7 +93,7 @@ begin
     if rising_edge(clk_i) then
         if rst_i = '0' then
             query_r.read_en <= '0';
-            query_r.valid   <= '0';
+            query_r.first   <= '1';
         else
             query_r <= query_rin;
         end if;
@@ -138,6 +132,7 @@ begin
                 v.mem_addr     := prev_data_i.pointer;
                 v.query_id     := prev_data_i.query_id;
                 v.weight       := prev_data_i.weight;
+                v.clock_cycles := prev_data_i.clock_cycles;
                 v.flow_ctrl    := FLW_CTRL_MEM;
             end if;
 
@@ -150,6 +145,7 @@ begin
                     v.mem_addr     := prev_data_i.pointer;
                     v.query_id     := prev_data_i.query_id;
                     v.weight       := prev_data_i.weight;
+                    v.clock_cycles := prev_data_i.clock_cycles;
                     v.flow_ctrl    := FLW_CTRL_MEM;
                 else
                     v.buffer_rd_en := '0';
@@ -161,7 +157,8 @@ begin
                 v.mem_rd_en    := not next_full_i;
                 v.flow_ctrl    := FLW_CTRL_MEM;
                 if next_full_i = '0' then
-                    v.mem_addr  := increment(fetch_r.mem_addr);
+                    v.mem_addr     := increment(fetch_r.mem_addr);
+                    v.clock_cycles := increment(fetch_r.clock_cycles);
                 end if;
             end if;
 
@@ -192,7 +189,7 @@ mem_comb: process(mem_r, fetch_r.mem_rd_en, mem_edge_i.last, sig_exe_branch)
     variable v        : mem_delay_type;
     variable v_branch : std_logic;
 begin
-    v := mem_rin;
+    v := mem_r;
 
     v_branch := (mem_edge_i.last and mem_r.valid) or sig_exe_branch;
 
@@ -246,7 +243,7 @@ port map
     wildcard_o      => sig_exe_match_wildcard
 );
 
-execute_comb : process(execute_r, weight_filter_i, sig_exe_match_result, fetch_r, mem_r.valid, mem_edge_i)
+execute_comb : process(execute_r, weight_filter_i, sig_exe_match_result, fetch_r, mem_r.valid, mem_edge_i, fetch_r.clock_cycles)
     variable v : execute_out_type;
     variable v_wildcard : std_logic;
 begin
@@ -261,9 +258,10 @@ begin
     -- v.inference_res := sig_exe_match_result and v_weight_check and mem_r.valid;
 
     -- result of EXE
-    v.inference_res         := sig_exe_match_result and mem_r.valid;
-    v.writing_edge.pointer  := mem_edge_i.pointer;
-    v.writing_edge.query_id := fetch_r.query_id;
+    v.inference_res             := sig_exe_match_result and mem_r.valid;
+    v.writing_edge.pointer      := mem_edge_i.pointer;
+    v.writing_edge.query_id     := fetch_r.query_id;
+    v.writing_edge.clock_cycles := increment(fetch_r.clock_cycles);
 
     if v.inference_res = '1' and sig_exe_match_wildcard = '0' then
         v.writing_edge.weight := fetch_r.weight + G_WEIGHT;
@@ -310,7 +308,6 @@ gen_mode_full_iteration : if G_MATCH_MODE = MODE_FULL_ITERATION generate
     sig_exe_branch <= '0';
 
 end generate;
-
 
 ----------------------------------------------------------------------------------------------------
 -- FAILURE CHECKS                                                                                 --

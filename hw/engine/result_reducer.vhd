@@ -19,6 +19,7 @@ entity result_reducer is
         -- final result to TOP
         result_ready_i  :  in std_logic;
         result_data_o   : out edge_buffer_type;
+        result_stats_o  : out result_stats_type;
         result_valid_o  : out std_logic
     );
 end result_reducer;
@@ -36,6 +37,10 @@ architecture behavioural of result_reducer is
     end record;
 
     signal result_r, result_rin : result_reg_type;
+    signal stats_r              : result_stats_type;
+    signal sig_stats_reset      : std_logic;
+    signal sig_match_higher_en  : std_logic;
+    signal sig_match_lower_en   : std_logic;
 begin
 
 ----------------------------------------------------------------------------------------------------
@@ -45,6 +50,7 @@ begin
 interim_ready_o <= result_r.ready;
 result_data_o   <= result_r.result;
 result_valid_o  <= result_r.valid;
+result_stats_o  <= stats_r;
 
 result_comb: process(result_r, interim_valid_i, interim_data_i, result_ready_i)
     variable v : result_reg_type;
@@ -58,12 +64,14 @@ begin
             v.ready := '1';
             v.valid := '0';
 
+            v.interim.clock_cycles := increment(interim_data_i.clock_cycles);
             if interim_valid_i = '1' then
 
                 if result_r.interim.query_id = interim_data_i.query_id then
                     if interim_data_i.weight >= result_r.interim.weight then
                         v.interim := interim_data_i;
                     end if;
+                    v.interim.clock_cycles := increment(interim_data_i.clock_cycles);
                 else
                     v.ready     := '0';
                     v.valid     := '1';
@@ -103,5 +111,44 @@ begin
         end if;
     end if;
 end process;
+
+----------------------------------------------------------------------------------------------------
+-- STATS                                                                                          --
+----------------------------------------------------------------------------------------------------
+
+stats_r.clock_cycle_counter <= increment(result_r.result.clock_cycles);
+
+sig_stats_reset <= rst_i when (result_r.flow_ctrl = FLW_CTRL_READ) else '0';
+
+sig_match_higher_en <= interim_valid_i when (result_r.interim.query_id = interim_data_i.query_id and
+                                             interim_data_i.weight < result_r.interim.weight)
+                       else '0';
+sig_match_lower_en  <= interim_valid_i when (result_r.interim.query_id = interim_data_i.query_id and
+                                             interim_data_i.weight > result_r.interim.weight)
+                       else '0';
+
+counter_weight_heigher: simple_counter generic map
+(
+    G_WIDTH   => CFG_DBG_COUNTERS_WIDTH
+)
+port map
+(
+    clk_i     => clk_i,
+    rst_i     => sig_stats_reset,
+    enable_i  => sig_match_higher_en,
+    counter_o => stats_r.match_higher_weight
+);
+
+counter_weight_lower: simple_counter generic map
+(
+    G_WIDTH   => CFG_DBG_COUNTERS_WIDTH
+)
+port map
+(
+    clk_i     => clk_i,
+    rst_i     => sig_stats_reset,
+    enable_i  => sig_match_lower_en,
+    counter_o => stats_r.match_lower_weight
+);
 
 end architecture behavioural;

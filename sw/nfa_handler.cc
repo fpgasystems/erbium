@@ -227,7 +227,6 @@ void NFAHandler::memory_dump(const std::string& filename, const rulePack_s& rule
                 m_graph[vert].dump_pointer = n_edges;
                 n_edges_max = m_graph[vert].children.size();
 
-                // TODO why this? last level is not used
                 // does it work for conflict rules for ex?
                 if (n_edges_max == 0)
                     n_edges++;
@@ -239,18 +238,12 @@ void NFAHandler::memory_dump(const std::string& filename, const rulePack_s& rule
     }
 
     // before-last-criterion states point to the result directly
-    auto element = m_graph[0];
     for (auto& value : m_vertexes[m_vertexes.size()-2])
     {
         for (auto& vert : m_vertexes[m_vertexes.size()-2][value.first])
-        {
-            element = m_graph[vert];
-            if (element.parents.size() != 0)
-            {
-                element.dump_pointer = m_graph[*element.children.begin()].dump_pointer;
-            }
-        }
+            m_graph[vert].dump_pointer = m_graph[*m_graph[vert].children.begin()].dump_pointer;
     }
+
 
     unsigned long long int mem_int;
     std::map<std::string, uint> dic;
@@ -421,7 +414,7 @@ void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePac
     for (auto& rule : rulepack.m_rules)
     {
         the_level = 0;
-        filecsv << rule.m_ruleId;
+        filecsv << rule.m_ruleId << "," << rule.m_weight;
         for (auto& ord : m_dic->m_sorting_map)
         {
             aux_criterion  = &(*std::next(rule.m_criteria.begin(), ord));
@@ -544,7 +537,7 @@ void NFAHandler::dump_drools_rules(const std::string& filename, const rulePack_s
 {
     std::ofstream outfile(filename, std::ios::out | std::ios::trunc);
 
-    outfile << "package rules\n\nimport com.ethz.SK_FDF;\n";
+    outfile << "package com.ethz.rules\n\nimport com.ethz.SK_FDF;\n";
     outfile << "\ndialect \"java\"\n\n";
 
     // helpers

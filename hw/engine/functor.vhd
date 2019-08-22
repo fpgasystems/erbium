@@ -54,12 +54,12 @@ architecture behavioural of functor is
     signal sig_result : std_logic;
 begin
 
-gen_wildcard : if G_WILDCARD = '1' generate
+gen_wildcard : if G_WILDCARD = '1' and G_FUNCTION /= FNCTR_SIMP_NOP generate
     funct_o    <= sig_wildchar or sig_result;
     wildcard_o <= sig_wildchar;
 end generate;
 
-gen_wildcard_n : if G_WILDCARD = '0' generate
+gen_wildcard_n : if G_WILDCARD = '0' or G_FUNCTION = FNCTR_SIMP_NOP generate
     funct_o    <= sig_result;
     wildcard_o <= '0';
 end generate;

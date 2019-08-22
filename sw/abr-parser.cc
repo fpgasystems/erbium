@@ -93,8 +93,8 @@ int main()
     {
         // NOT PRODUCTION
         // JUST TO FILTER WHILE IN DEV
-        if (row.m_data[8] != "\"ZRH\"" && row.m_data[9] != "\"ZRH\"")
-            continue;
+        // if (row.m_data[8] != "\"ZRH\"" && row.m_data[9] != "\"ZRH\"")
+        //     continue;
         //if (row.m_data[8] != "\"CDG\"" && row.m_data[9] != "\"CDG\"")
         //    continue;
         //if (row.m_data[8] != "\"GRU\"" && row.m_data[9] != "\"GRU\"")

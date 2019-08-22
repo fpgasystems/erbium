@@ -328,7 +328,7 @@ int main()
     std::cout << "# WORKLOAD DUMP" << std::endl;
     start = std::chrono::high_resolution_clock::now();
 
-    the_nfa.dump_mirror_workload("build/workload.bin", rp);
+    the_nfa.dump_mirror_workload("build/workload", rp);
 
     finish = std::chrono::high_resolution_clock::now();
     elapsed = finish - start;

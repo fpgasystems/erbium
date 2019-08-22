@@ -108,10 +108,11 @@ struct rule_s
     bool operator < (const rule_s &other) const { return m_ruleId < other.m_ruleId; }
     void print(const std::string &level) const
     {
-        printf("%s[Rule] id=%d weight=%lu\n", 
+        printf("%s[Rule] id=%d weight=%lu content=%s\n", 
             level.c_str(),
             m_ruleId,
-            m_weight);
+            m_weight,
+            m_content.c_str());
         for(auto& aux : m_criteria)
             aux.print(level + "\t");
     }

@@ -382,8 +382,8 @@ bool export_parameters(const std::string& filename)
 
 void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePack_s& rulepack)
 {
-    std::ofstream outfile(filename, std::ios::binary | std::ios::out | std::ios::trunc);
-    // std::ofstream hrfile(filename.substr(filename.length()-4)+".txt", std::ios::out | std::ios::trunc);
+    std::ofstream filebin(filename + ".bin", std::ios::out | std::ios::trunc | std::ios::binary);
+    std::ofstream filecsv(filename + ".csv", std::ios::out | std::ios::trunc);
     
     const uint SLICES_PER_LINE = C_CACHE_LINE_WIDTH / C_RAW_CRITERION_SIZE;
     unsigned short int mem_opa;
@@ -405,10 +405,10 @@ void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePac
     queries_size = queries_size / C_CACHE_LINE_WIDTH + ((queries_size % C_CACHE_LINE_WIDTH) ? 1 : 0);
     queries_size = queries_size * num_queries * C_CACHE_LINE_WIDTH;
 
-    outfile.write(reinterpret_cast<char *>(&queries_size), sizeof(queries_size));
-    outfile.write(reinterpret_cast<char *>(&results_size), sizeof(results_size));
-    outfile.write(reinterpret_cast<char *>(&restats_size), sizeof(restats_size));
-    outfile.write(reinterpret_cast<char *>(&num_queries),  sizeof(num_queries));
+    filebin.write(reinterpret_cast<char *>(&queries_size), sizeof(queries_size));
+    filebin.write(reinterpret_cast<char *>(&results_size), sizeof(results_size));
+    filebin.write(reinterpret_cast<char *>(&restats_size), sizeof(restats_size));
+    filebin.write(reinterpret_cast<char *>(&num_queries),  sizeof(num_queries));
 
     printf("> # of queries: %9u\n", num_queries);
     printf("> Queries size: %9u bytes\n", queries_size);
@@ -421,6 +421,7 @@ void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePac
     for (auto& rule : rulepack.m_rules)
     {
         the_level = 0;
+        filecsv << rule.m_ruleId;
         for (auto& ord : m_dic->m_sorting_map)
         {
             aux_criterion  = &(*std::next(rule.m_criteria.begin(), ord));
@@ -432,21 +433,20 @@ void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePac
                         &mem_opb,
                         aux_definition);
 
-            write_longlongint(&outfile, mem_opa);
-            // hrfile.write(aux_criterion->m_value.c_str(), aux_criterion->m_value.length());
-            // hrfile.write(" ", 1);
+            write_longlongint(&filebin, mem_opa);
+            filecsv << "," << aux_criterion->m_value;
             the_level++;
         }
-        // hrfile.write("\n", 1);
+        filecsv << "," << rule.m_content << std::endl;
 
         // padding
         mem_opa = 0;
         for (uint pad = padding_slices; pad != 0; pad--)
-            write_longlongint(&outfile, mem_opa);
+            write_longlongint(&filebin, mem_opa);
     }
 
-    outfile.close();
-    // hrfile.close();
+    filebin.close();
+    filecsv.close();
 }
 
 void NFAHandler::dump_core_parameters(const std::string& filename, const rulePack_s& rulepack)

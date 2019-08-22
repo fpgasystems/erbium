@@ -1,6 +1,7 @@
 #include "dictionnary.h"
 
 #include <algorithm>
+#include <fstream>
 
 namespace nfa_bre {
 
@@ -124,6 +125,29 @@ int Dictionnary::get_level_by_criterion_id(const uint& criterion_id)
         key++;
     }
     return -1;
+}
+
+void Dictionnary::dump_dictionnary(const std::string& filename)
+{
+    std::ofstream filecsv(filename, std::ios::out | std::ios::trunc);
+
+    filecsv << "level,value,id\n";
+    uint level = 0;
+    for (auto& aux : m_sorting_map)
+    {
+        for (auto& pair : m_dic_criteria[aux])
+        {
+            filecsv << level << "," << pair.first << "," << pair.second << std::endl;
+        }
+        level++;
+    }
+
+    for (auto& pair : m_dic_contents)
+    {
+        filecsv << level << "," << pair.first << "," << pair.second << std::endl;
+    }
+
+    filecsv.close();
 }
 
 } // namespace nfa_bre

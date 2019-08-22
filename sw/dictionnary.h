@@ -23,6 +23,7 @@ class Dictionnary
     std::vector<unsigned short int> sort_by_n_of_values(const SortOrder order, std::vector<short int>* arbitrary = NULL);
     std::map<std::string, uint> get_criterion_dic_by_level(const unsigned short int& level);
     int get_level_by_criterion_id(const uint& criterion_id);
+    void dump_dictionnary(const std::string& filename);
 
 
   private:

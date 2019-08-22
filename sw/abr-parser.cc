@@ -155,6 +155,7 @@ int main()
     // arbitrary[arbitrary.size()-1] = rp.m_ruleType.get_criteriON_id("IN_FLT_RG");
     // the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending, &arbitrary);
 
+    std::cout << "Arbitrary order" << std::endl;
     std::vector<unsigned short int> sorting_map(22);
     sorting_map[ 0] = rp.m_ruleType.get_criterion_id("MCT_OFF");
     sorting_map[ 1] = rp.m_ruleType.get_criterion_id("MCT_BRD");
@@ -184,13 +185,15 @@ int main()
     
     finish = std::chrono::high_resolution_clock::now();
 
-    uint key = 0;
-    for (auto& aux : the_dictionnary.m_sorting_map)
-    {
-        std::cout << "[" << key++ << "] ";
-        std::cout << std::next(rp.m_ruleType.m_criterionDefinition.begin(), aux)->m_code;
-        std::cout <<  " #" << the_dictionnary.m_dic_criteria[aux].size() << std::endl;
-    }
+    the_dictionnary.dump_dictionnary("build/dictionnary.csv");
+
+    // uint key = 0;
+    // for (auto& aux : the_dictionnary.m_sorting_map)
+    // {
+    //     std::cout << "[" << key++ << "] ";
+    //     std::cout << std::next(rp.m_ruleType.m_criterionDefinition.begin(), aux)->m_code;
+    //     std::cout <<  " #" << the_dictionnary.m_dic_criteria[aux].size() << std::endl;
+    // }
 
     elapsed = finish - start;
     std::cout << "# DICTIONNARY COMPLETED in " << elapsed.count() << " s\n";
@@ -286,21 +289,21 @@ int main()
 
     std::cout << "# MEMORY DUMP" << std::endl;
 
-    const uint CFG_ENGINE_NCRITERIA       = rp.m_ruleType.m_criterionDefinition.size();
-    const uint CFG_EDGE_BUFFERS_DEPTH     = 5;
-    //const uint CFG_EDGE_BRAM_DEPTH        = (1 << (nfa_bre::CFG_MEM_ADDR_WIDTH + 1)) - 1;
+    // const uint CFG_ENGINE_NCRITERIA       = rp.m_ruleType.m_criterionDefinition.size();
+    // const uint CFG_EDGE_BUFFERS_DEPTH     = 5;
+    // const uint CFG_EDGE_BRAM_DEPTH        = (1 << (nfa_bre::CFG_MEM_ADDR_WIDTH + 1)) - 1;
     const uint BRAM_USED_BITS             = nfa_bre::CFG_WEIGHT_WIDTH + nfa_bre::CFG_MEM_ADDR_WIDTH + 2*nfa_bre::CFG_ENGINE_CRITERION_WIDTH + 1;
-    const uint CFG_EDGE_BRAM_WIDTH        = 1 << ((uint)ceil(log2(BRAM_USED_BITS)));
+    // const uint CFG_EDGE_BRAM_WIDTH        = 1 << ((uint)ceil(log2(BRAM_USED_BITS)));
 
-    std::cout << "constant CFG_ENGINE_NCRITERIA         : integer := " << CFG_ENGINE_NCRITERIA << "; -- Number of criteria\n";
-    std::cout << "constant CFG_ENGINE_CRITERION_WIDTH   : integer := " << nfa_bre::CFG_ENGINE_CRITERION_WIDTH << "; -- Number of bits of each criterion value\n";
-    std::cout << "constant CFG_WEIGHT_WIDTH             : integer := " << nfa_bre::CFG_WEIGHT_WIDTH << "; -- integer from 0 to 2^CFG_WEIGHT_WIDTH-1\n";
-    std::cout << "--\n";
-    std::cout << "constant CFG_MEM_ADDR_WIDTH           : integer := " << nfa_bre::CFG_MEM_ADDR_WIDTH << ";\n";
-    std::cout << "--\n";
-    std::cout << "constant CFG_EDGE_BUFFERS_DEPTH       : integer := " << CFG_EDGE_BUFFERS_DEPTH << ";\n";
-    //std::cout << "constant CFG_EDGE_BRAM_DEPTH          : integer := " << CFG_EDGE_BRAM_DEPTH << ";\n";
-    std::cout << "constant CFG_EDGE_BRAM_WIDTH          : integer := " << CFG_EDGE_BRAM_WIDTH << ";\n";
+    // std::cout << "constant CFG_ENGINE_NCRITERIA         : integer := " << CFG_ENGINE_NCRITERIA << "; -- Number of criteria\n";
+    // std::cout << "constant CFG_ENGINE_CRITERION_WIDTH   : integer := " << nfa_bre::CFG_ENGINE_CRITERION_WIDTH << "; -- Number of bits of each criterion value\n";
+    // std::cout << "constant CFG_WEIGHT_WIDTH             : integer := " << nfa_bre::CFG_WEIGHT_WIDTH << "; -- integer from 0 to 2^CFG_WEIGHT_WIDTH-1\n";
+    // std::cout << "--\n";
+    // std::cout << "constant CFG_MEM_ADDR_WIDTH           : integer := " << nfa_bre::CFG_MEM_ADDR_WIDTH << ";\n";
+    // std::cout << "--\n";
+    // std::cout << "constant CFG_EDGE_BUFFERS_DEPTH       : integer := " << CFG_EDGE_BUFFERS_DEPTH << ";\n";
+    // //std::cout << "constant CFG_EDGE_BRAM_DEPTH          : integer := " << CFG_EDGE_BRAM_DEPTH << ";\n";
+    // std::cout << "constant CFG_EDGE_BRAM_WIDTH          : integer := " << CFG_EDGE_BRAM_WIDTH << ";\n";
     std::cout << "BRAM_USED_BITS                        : integer := " << BRAM_USED_BITS << ";\n";
 
     if (ceil(log2(n_bram_edges_max)) > nfa_bre::CFG_MEM_ADDR_WIDTH)

@@ -352,10 +352,9 @@ int main(int argc, char** argv)
     ends = (std::chrono::time_point<std::chrono::high_resolution_clock>*)
                                                             calloc(num_queries, sizeof(*ends));
 
-    uint32_t quantity = num_queries / num_of_cores;
     auto start = std::chrono::high_resolution_clock::now();
     #pragma omp parallel for num_threads(num_of_cores)
-    for (uint32_t query=omp_get_thread_num()*quantity; query < (omp_get_thread_num()+1)*quantity; query++)
+    for (uint32_t query=0; query < num_queries; query++)
     {
         starts[query] = std::chrono::high_resolution_clock::now();
         compute(&the_queries[query * CFG_ENGINE_NCRITERIA],
@@ -374,11 +373,13 @@ int main(int argc, char** argv)
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::ofstream results_file(argv[3]);
-    
+    char buffer[50];
+
     for (uint i = 0; i < num_queries; ++i)
     {
         std::chrono::duration<double> elapsed = ends[i] - starts[i];
-        results_file << results[i].pointer << "," << elapsed.count() << "\n";
+        sprintf(buffer, "%u,%.6lf\n", results[i].pointer, elapsed.count()*1000);
+        results_file << buffer;
     }
     /*if (stats_on)
     {

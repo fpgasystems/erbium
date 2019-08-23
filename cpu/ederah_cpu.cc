@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <chrono>
+#include <omp.h>
 
 #define CFG_ENGINE_NCRITERIA 22
 
@@ -22,9 +23,50 @@ const uint64_t SHIFT_POINTER   = 2*CFG_ENGINE_CRITERION_WIDTH;
 const uint64_t SHIFT_OPERAND_B = CFG_ENGINE_CRITERION_WIDTH;
 const uint64_t SHIFT_OPERAND_A = 0;
 
-const uint32_t WEIGHTS[CFG_ENGINE_NCRITERIA] = {0, 0, 512, 524288, 256, 262144, 65536, 64, 1, 128,
-                                                131072, 16, 16384, 2, 4, 4096, 2048, 32768, 32, 0,
-                                                8192, 8};
+enum MatchStructureType {STRCT_SIMPLE, STRCT_PAIR};
+enum MatchPairFunction {FNCTR_PAIR_NOP, FNCTR_PAIR_AND, FNCTR_PAIR_OR, FNCTR_PAIR_XOR, FNCTR_PAIR_NAND, FNCTR_PAIR_NOR};
+enum MatchSimpFunction {FNCTR_SIMP_NOP, FNCTR_SIMP_EQU, FNCTR_SIMP_NEQ, FNCTR_SIMP_GRT, FNCTR_SIMP_GEQ, FNCTR_SIMP_LES, FNCTR_SIMP_LEQ};
+enum MatchModeType {MODE_STRICT_MATCH, MODE_FULL_ITERATION};
+
+
+const uint32_t WEIGHTS[CFG_ENGINE_NCRITERIA] = {
+    0, 0, 512, 524288, 256, 262144, 65536, 64, 1, 128, 131072, 16, 16384, 2, 4, 4096, 2048, 32768,
+    32, 0, 8192, 8
+};
+
+const MatchStructureType STRUCT_TYPE[CFG_ENGINE_NCRITERIA] = {
+    STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_PAIR, STRCT_PAIR, STRCT_SIMPLE,
+    STRCT_SIMPLE, STRCT_PAIR, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE,
+    STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE,
+    STRCT_SIMPLE, STRCT_SIMPLE
+};
+
+const MatchPairFunction FUNCT_PAIR[CFG_ENGINE_NCRITERIA] = {
+   FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_AND, FNCTR_PAIR_AND,
+   FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_AND, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP,
+   FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP,
+   FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP
+};
+
+const MatchSimpFunction FUNCT_A[CFG_ENGINE_NCRITERIA] = {
+    FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_GEQ, FNCTR_SIMP_GEQ,
+    FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_GEQ, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU,
+    FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU,
+    FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU
+};
+
+const MatchSimpFunction FUNCT_B[CFG_ENGINE_NCRITERIA] = {
+    FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_LEQ, FNCTR_SIMP_LEQ,
+    FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_LEQ, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP,
+    FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP,
+    FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP
+};
+
+const bool WILDCARD_EN[CFG_ENGINE_NCRITERIA] = {
+    false, false, true, true, true, true, true, true, true, true, true, true, true, true, true,
+    true, true, true, true, false, true, true
+};
+
 
 struct edge_s {
     uint16_t operand_a;
@@ -45,30 +87,143 @@ struct level_s {
 
 edge_s*   the_memory[CFG_ENGINE_NCRITERIA];
 
+bool functor(const MatchSimpFunction& G_FUNCTION,
+             const bool& G_WILDCARD,
+             const uint16_t& rule_i,
+             const uint16_t& query_i,
+             bool* wildcard_o)
+{
+    bool sig_result;
+
+    switch(G_FUNCTION)
+    {
+      case FNCTR_SIMP_EQU:
+            sig_result = query_i == rule_i;
+            break;
+      case FNCTR_SIMP_NEQ:
+            sig_result = query_i != rule_i;
+            break;
+      case FNCTR_SIMP_GRT:
+            sig_result = query_i > rule_i;
+            break;
+      case FNCTR_SIMP_GEQ:
+            sig_result = query_i >= rule_i;
+            break;
+      case FNCTR_SIMP_LES:
+            sig_result = query_i < rule_i;
+            break;
+      case FNCTR_SIMP_LEQ:
+            sig_result = query_i <= rule_i;
+            break;
+      default:
+            sig_result = false;
+    }
+
+    if (G_WILDCARD and G_FUNCTION != FNCTR_SIMP_NOP)
+    {
+        *wildcard_o = (rule_i == 0);
+        sig_result = *wildcard_o or sig_result;
+    }
+    else
+    {
+        *wildcard_o = false;
+        sig_result = sig_result;
+    }
+
+    return sig_result;
+}
+
+bool matcher(const MatchStructureType& G_STRUCTURE,
+             const MatchSimpFunction& G_FUNCTION_A,
+             const MatchSimpFunction& G_FUNCTION_B,
+             const MatchPairFunction& G_FUNCTION_PAIR,
+             const bool& G_WILDCARD,
+             const uint16_t& op_query_i,
+             const uint16_t& opA_rule_i,
+             const uint16_t& opB_rule_i,
+             bool* wildcard_o)
+{
+    bool sig_functorA;
+    bool sig_functorB;
+    bool sig_wildcard_a;
+    bool sig_wildcard_b;
+    bool sig_mux_pair;
+
+    sig_functorA = functor(G_FUNCTION_A, G_WILDCARD, opA_rule_i, op_query_i, &sig_wildcard_a);
+
+    bool match_result_o;
+    switch (G_STRUCTURE)
+    {
+      case STRCT_SIMPLE:
+            *wildcard_o = sig_wildcard_a;
+            match_result_o = sig_functorA;
+            break;
+      case STRCT_PAIR:
+            sig_functorB = functor(G_FUNCTION_B, G_WILDCARD, opB_rule_i, op_query_i, &sig_wildcard_b);
+
+            *wildcard_o = sig_wildcard_a or sig_wildcard_b;
+
+            switch (G_FUNCTION_PAIR)
+            {
+              case FNCTR_PAIR_AND:
+                    sig_mux_pair = sig_functorA && sig_functorB;
+                    break;
+              case FNCTR_PAIR_OR:
+                    sig_mux_pair = sig_functorA || sig_functorB;
+                    break;
+              case FNCTR_PAIR_XOR:
+                    sig_mux_pair = sig_functorA ^ sig_functorB;
+                    break;
+              case FNCTR_PAIR_NAND:
+                    sig_mux_pair = !(sig_functorA && sig_functorB);
+                    break;
+              case FNCTR_PAIR_NOR:
+                    sig_mux_pair = !(sig_functorA || sig_functorB);
+                    break;
+              default:
+                    sig_mux_pair = false;
+            }
+            match_result_o = sig_mux_pair;
+            break;
+      default:
+            match_result_o = false;;
+    }
+
+    return match_result_o;
+}
 
 void compute(const uint16_t* query, const uint16_t level, uint16_t pointer, const uint32_t interim,
              result_s* result)
 {
     uint32_t aux_interim;
+    bool wildcard;
     do
     {
-        // perform match
-        bool match = the_memory[level][pointer].operand_a == *query;
+        bool match =  matcher(STRUCT_TYPE[level], FUNCT_A[level], FUNCT_B[level], FUNCT_PAIR[level],
+            WILDCARD_EN[level], *query, 
+            the_memory[level][pointer].operand_a,
+            the_memory[level][pointer].operand_b,
+            &wildcard);
 
         if (!match)
             continue;
 
         // weight
-        // check if no wildcard
-        aux_interim = interim + WEIGHTS[level];
+        if (wildcard)
+            aux_interim = interim;
+        else
+            aux_interim = interim + WEIGHTS[level];
 
         // check pointer or result
         if (level == CFG_ENGINE_NCRITERIA - 1)
         {
-            if (aux_interim > result->weight)
+            if (aux_interim >= result->weight)
             {
+                //if ((aux_interim == result->weight) && (result->pointer != the_memory[level][pointer].pointer))
+                //    printf("Weird\n");
                 result->weight = aux_interim;
                 result->pointer = the_memory[level][pointer].pointer;
+
             }
         }
         else
@@ -81,7 +236,7 @@ void compute(const uint16_t* query, const uint16_t level, uint16_t pointer, cons
 int main(int argc, char** argv)
 {
     if (argc < 5) {
-        printf("Usage: NFA.BIN QUERIES.BIN RESULTS.TXT STATS_ON\n");
+        printf("Usage: NFA.BIN QUERIES.BIN RESULTS.TXT N_OF_CORES\n");
         for (int i=0; i<argc; i++)
             printf("[%u] %s\n", i, argv[i]);
         return EXIT_FAILURE;
@@ -92,6 +247,7 @@ int main(int argc, char** argv)
     uint32_t  queries_size;
     uint32_t  results_size;
     uint32_t  restats_size;
+    uint16_t  num_of_cores = atoi(argv[4]);
     //bool      stats_on = (std::string(argv[4]) == "yes");
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -189,24 +345,41 @@ int main(int argc, char** argv)
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     result_s* results = (result_s*) calloc(num_queries, sizeof(*results));
+    std::chrono::time_point<std::chrono::high_resolution_clock>* starts;
+    std::chrono::time_point<std::chrono::high_resolution_clock>* ends;
+    starts = (std::chrono::time_point<std::chrono::high_resolution_clock>*)
+                                                            calloc(num_queries, sizeof(*starts));
+    ends = (std::chrono::time_point<std::chrono::high_resolution_clock>*)
+                                                            calloc(num_queries, sizeof(*ends));
 
+    uint32_t quantity = num_queries / num_of_cores;
     auto start = std::chrono::high_resolution_clock::now();
-    for (uint32_t query=0; query < num_queries; query++)
+    #pragma omp parallel for num_threads(num_of_cores)
+    for (uint32_t query=omp_get_thread_num()*quantity; query < (omp_get_thread_num()+1)*quantity; query++)
     {
+        starts[query] = std::chrono::high_resolution_clock::now();
         compute(&the_queries[query * CFG_ENGINE_NCRITERIA],
                 0, // level
-                0, // pointer
+                the_queries[query * CFG_ENGINE_NCRITERIA], // pointer
                 0, // interim
                 &results[query]);
+        ends[query] = std::chrono::high_resolution_clock::now();
     }
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - start;
     std::cout << "# Executed in " << elapsed.count() << " s\n";
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // RESULTS                                                                                    //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
     std::ofstream results_file(argv[3]);
     
     for (uint i = 0; i < num_queries; ++i)
-        results_file << results[i].pointer << "\n";
+    {
+        std::chrono::duration<double> elapsed = ends[i] - starts[i];
+        results_file << results[i].pointer << "," << elapsed.count() << "\n";
+    }
     /*if (stats_on)
     {
         results_file << "value_id,clock_cycles,higher_weight,lower_weight\n";
@@ -222,5 +395,7 @@ int main(int argc, char** argv)
             results_file << (results.data())[i] << "\n";
     }*/
 
-    return 0;
+    // TODO memory releases!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    return EXIT_SUCCESS;
 }

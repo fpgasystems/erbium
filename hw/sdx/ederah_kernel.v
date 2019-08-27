@@ -4,7 +4,7 @@
 `default_nettype none
 `timescale 1 ns / 1 ps
 // Top level of the kernel. Do not modify module name, parameters or ports.
-module ederah_kernel_top #(
+module ederah_kernel #(
   parameter integer C_S_AXI_CONTROL_ADDR_WIDTH = 12 ,
   parameter integer C_S_AXI_CONTROL_DATA_WIDTH = 32 ,
   parameter integer C_M00_AXI_ADDR_WIDTH       = 64 ,
@@ -14,6 +14,9 @@ module ederah_kernel_top #(
   // System Signals
   input  wire                                    ap_clk               ,
   input  wire                                    ap_rst_n             ,
+  input  wire                                    ap_clk_2             ,
+  input  wire                                    ap_rst_n_2           ,
+
   //  Note: A minimum subset of AXI4 memory mapped signals are declared.  AXI
   // signals omitted from these interfaces are automatically inferred with the
   // optimal values for Xilinx SDx systems.  This allows Xilinx AXI4 Interconnects
@@ -98,9 +101,10 @@ wire [32-1:0]                       queries_cls                   ;
 wire [32-1:0]                       results_cls                   ;
 wire [32-1:0]                       scalar03                      ;
 wire [32-1:0]                       scalar04                      ;
-wire [64-1:0]                       nfaPtr                        ;
-wire [64-1:0]                       queryPtr                      ;
-wire [64-1:0]                       resultPtr                     ;
+wire [64-1:0]                       nfadata_ptr                   ;
+wire [64-1:0]                       queries_ptr                   ;
+wire [64-1:0]                       results_ptr                   ;
+wire [64-1:0]                       axi00_ptr3                    ;
 
 // Register and invert reset signal.
 always @(posedge ap_clk) begin
@@ -147,9 +151,10 @@ inst_control_s_axi (
   .results_cls ( results_cls           ),
   .scalar03    ( scalar03              ),
   .scalar04    ( scalar04              ),
-  .nfaPtr      ( nfaPtr                ),
-  .queryPtr    ( queryPtr              ),
-  .resultPtr   ( resultPtr             )
+  .nfadata_ptr ( nfadata_ptr           ),
+  .queries_ptr ( queries_ptr           ),
+  .results_ptr ( results_ptr           ),
+  .axi00_ptr3  ( axi00_ptr3            )
 );
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -157,13 +162,15 @@ inst_control_s_axi (
 ///////////////////////////////////////////////////////////////////////////////
 
 // Example RTL block.  Remove to insert custom logic.
-ederah_kernel #(
+ederah #(
   .C_M00_AXI_ADDR_WIDTH ( C_M00_AXI_ADDR_WIDTH ),
   .C_M00_AXI_DATA_WIDTH ( C_M00_AXI_DATA_WIDTH )
 )
-inst_example (
-  .ap_clk          ( ap_clk          ),
-  .ap_rst_n        ( ap_rst_n        ),
+inst_ederah (
+  .data_clk        ( ap_clk          ),
+  .data_rst_n      ( ap_rst_n        ),
+  .kernel_clk      ( ap_clk_2        ),
+  .kernel_rst_n    ( ap_rst_n_2      ),
   .m00_axi_awvalid ( m00_axi_awvalid ),
   .m00_axi_awready ( m00_axi_awready ),
   .m00_axi_awaddr  ( m00_axi_awaddr  ),
@@ -191,9 +198,10 @@ inst_example (
   .results_cls     ( results_cls     ),
   .scalar03        ( scalar03        ),
   .scalar04        ( scalar04        ),
-  .nfaPtr          ( nfaPtr          ),
-  .queryPtr        ( queryPtr        ),
-  .resultPtr       ( resultPtr       )
+  .nfadata_ptr     ( nfadata_ptr     ),
+  .queries_ptr     ( queries_ptr     ),
+  .results_ptr     ( results_ptr     ),
+  .axi00_ptr3      ( axi00_ptr3      )
 );
 
 endmodule

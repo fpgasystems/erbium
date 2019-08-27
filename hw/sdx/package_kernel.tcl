@@ -22,6 +22,9 @@ proc edit_core {core} {
   ::ipx::associate_bus_interfaces -busif "m00_axi" -clock "ap_clk" $core
   ::ipx::associate_bus_interfaces -busif "s_axi_control" -clock "ap_clk" $core
 
+  ::ipx::infer_bus_interface "ap_clk_2"   "xilinx.com:signal:clock_rtl:1.0" $core
+  ::ipx::infer_bus_interface "ap_rst_n_2" "xilinx.com:signal:reset_rtl:1.0" $core
+
   set mem_map    [::ipx::add_memory_map -quiet "s_axi_control" $core]
   set addr_block [::ipx::add_address_block -quiet "reg0" $mem_map]
 
@@ -49,16 +52,20 @@ proc edit_core {core} {
   set_property address_offset 0x030 $reg
   set_property size           4   $reg
 
-  set reg      [::ipx::add_register -quiet "nfaPtr" $addr_block]
+  set reg      [::ipx::add_register -quiet "nfadata_ptr" $addr_block]
   set_property address_offset 0x038 $reg
   set_property size           8   $reg
 
-  set reg      [::ipx::add_register -quiet "queryPtr" $addr_block]
+  set reg      [::ipx::add_register -quiet "queries_ptr" $addr_block]
   set_property address_offset 0x040 $reg
   set_property size           8   $reg
 
-  set reg      [::ipx::add_register -quiet "resultPtr" $addr_block]
+  set reg      [::ipx::add_register -quiet "results_ptr" $addr_block]
   set_property address_offset 0x048 $reg
+  set_property size           8   $reg
+
+  set reg      [::ipx::add_register -quiet "axi00_ptr3" $addr_block]
+  set_property address_offset 0x050 $reg
   set_property size           8   $reg
 
   set_property slave_memory_map_ref "s_axi_control" [::ipx::get_bus_interfaces -of $core "s_axi_control"]
@@ -71,7 +78,7 @@ proc edit_core {core} {
 ##############################################################################
 
 proc package_project {path_to_packaged kernel_vendor kernel_library kernel_name} {
-  set core [::ipx::package_project -root_dir $path_to_packaged -vendor $kernel_vendor -library $kernel_library -taxonomy "/KernelIP" -import_files -set_current false]
+  set core [::ipx::package_project -root_dir $path_to_packaged -vendor $kernel_vendor -library $kernel_library -taxonomy "/KernelIP" -import_files -set_current false ]
   foreach user_parameter [list C_S_AXI_CONTROL_ADDR_WIDTH C_S_AXI_CONTROL_DATA_WIDTH C_M00_AXI_ADDR_WIDTH C_M00_AXI_DATA_WIDTH] {
     ::ipx::remove_user_parameter $user_parameter $core
   }

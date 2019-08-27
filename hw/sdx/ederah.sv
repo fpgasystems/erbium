@@ -1,15 +1,15 @@
-// This is a generated file. Use and modify at your own risk.
-//////////////////////////////////////////////////////////////////////////////// 
 // default_nettype of none prevents implicit wire declaration.
 `default_nettype none
-module ederah_kernel #(
+module ederah #(
   parameter integer C_M00_AXI_ADDR_WIDTH = 64 ,
   parameter integer C_M00_AXI_DATA_WIDTH = 512
 )
 (
   // System Signals
-  input  wire                              ap_clk         ,
-  input  wire                              ap_rst_n       ,
+  input  wire                              data_clk       ,
+  input  wire                              data_rst_n     ,
+  input  wire                              kernel_clk     ,
+  input  wire                              kernel_rst_n   ,
   // AXI4 master interface m00_axi
   output wire                              m00_axi_awvalid,
   input  wire                              m00_axi_awready,
@@ -37,65 +37,61 @@ module ederah_kernel #(
   input  wire [32-1:0]                     nfadata_cls    ,
   input  wire [32-1:0]                     queries_cls    ,
   input  wire [32-1:0]                     results_cls    ,
-  input  wire [32-1:0]                     scalar03       ,
+  input  wire [32-1:0]                     scalar03       , // stats_on
   input  wire [32-1:0]                     scalar04       ,
-  input  wire [64-1:0]                     nfaPtr         ,
-  input  wire [64-1:0]                     queryPtr       ,
-  input  wire [64-1:0]                     resultPtr      
+  input  wire [64-1:0]                     nfadata_ptr    ,
+  input  wire [64-1:0]                     queries_ptr    ,
+  input  wire [64-1:0]                     results_ptr    ,
+  input  wire [64-1:0]                     axi00_ptr3     
 );
 
 
 timeunit 1ps;
 timeprecision 1ps;
 
-///////////////////////////////////////////////////////////////////////////////
-// Local Parameters
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Local Parameters                                                                               //
+////////////////////////////////////////////////////////////////////////////////////////////////////
 // Large enough for interesting traffic.
 localparam integer  LP_DEFAULT_LENGTH_IN_BYTES = 16384;
 
-///////////////////////////////////////////////////////////////////////////////
-// Wires and Variables
-///////////////////////////////////////////////////////////////////////////////
-(* KEEP = "yes" *)
-logic                                rst_n                         = 1'b0;
-logic                                ap_start_r                     = 1'b0;
-logic                                ap_idle_r                      = 1'b1;
-logic                                ap_start_pulse                ;
-logic                                ap_done_i                     ;
-logic                                ap_done_r                      = 1'b0;
-logic [32-1:0]                       ctrl_xfer_size_in_bytes        = LP_DEFAULT_LENGTH_IN_BYTES;
-logic [32-1:0]                       ctrl_constant                  = 32'd1;
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Wires and Variables                                                                            //
+////////////////////////////////////////////////////////////////////////////////////////////////////
+logic                           ap_start_r                     = 1'b0;
+logic                           ap_idle_r                      = 1'b1;
+logic                           ap_start_pulse                ;
+logic                           ap_done_i                     ;
+logic                           ap_done_r                      = 1'b0;
+logic [32-1:0]                  ctrl_xfer_size_in_bytes        = LP_DEFAULT_LENGTH_IN_BYTES;
+logic [32-1:0]                  ctrl_constant                  = 32'd1;
 
-wire                                 wr_tvalid;
-wire                                 wr_tready;
-wire [C_M00_AXI_DATA_WIDTH-1:0]      wr_tdata;
+wire                            wr_tvalid;
+wire                            wr_tready;
+wire [C_M00_AXI_DATA_WIDTH-1:0] wr_tdata;
 
-wire                                 rd_tvalid;
-wire                                 rd_ttype;
-wire                                 rd_tlast;
-wire                                 rd_tready;
-wire [C_M00_AXI_DATA_WIDTH-1:0]      rd_tdata;
+wire                            rd_tvalid;
+wire                            rd_ttype;
+wire                            rd_tlast;
+wire                            rd_tready;
+wire [C_M00_AXI_DATA_WIDTH-1:0] rd_tdata;
 
-logic                                write_done;
-logic                                read_done;
+logic                           write_done;
+logic                           read_done;
 
-///////////////////////////////////////////////////////////////////////////////
-// Begin RTL
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Begin RTL                                                                                      //
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Register and invert reset signal.
-always @(posedge ap_clk) begin
-  rst_n             <= ap_rst_n;
-  ap_start_r        <= ap_start;
+always @(posedge data_clk) begin
+  ap_start_r <= ap_start;
 end
 
 assign ap_start_pulse = ap_start & ~ap_start_r;
 
-// ap_idle is asserted when done is asserted, it is de-asserted when ap_start_pulse
-// is asserted
-always @(posedge ap_clk) begin
-  if (!rst_n) begin
+// ap_idle is asserted when done is asserted, it is de-asserted when ap_start_pulse is asserted
+always @(posedge data_clk) begin
+  if (!data_rst_n) begin
     ap_idle_r <= 1'b1;
     ap_done_r <= 1'b0;
   end
@@ -109,27 +105,25 @@ assign ap_idle = ap_idle_r;
 assign ap_done = ap_done_r;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////                            //////////////////////////////////
-//////////////////////////////                Input Channel                /////////////////////////
-//////////////////////////////////////                            //////////////////////////////////
+// Input Channel                                                                                  //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // AXI4 Read Master, output format is an AXI4-Stream master, one stream per thread.
 InputChannel #(
   .C_M_AXI_ADDR_WIDTH       ( C_M00_AXI_ADDR_WIDTH ),
-  .C_M_AXI_query_WIDTH      ( C_M00_AXI_DATA_WIDTH ),
+  .C_M_AXI_DATA_WIDTH       ( C_M00_AXI_DATA_WIDTH ),
   .C_XFER_SIZE_WIDTH        (                   32 ),
   .C_MAX_OUTSTANDING        (                   16 ),
   .C_INCLUDE_query_FIFO     (                    1 )
 )
 inst_InputChannel (
-  .clk                      ( ap_clk               ),
-  .rst_n                    ( rst_n                ),
+  .data_clk                 ( data_clk             ),
+  .data_clk_n               ( data_rst_n           ),
   .ctrl_start               ( ap_start_pulse       ),
   .ctrl_done                ( read_done            ),
-  .nfaPtr                   ( nfaPtr               ),
+  .nfadata_ptr              ( nfadata_ptr          ),
   .nfa_xfer_size_in_bytes   ( (nfadata_cls << 6)   ),
-  .queryPtr                 ( queryPtr             ),
+  .queries_ptr              ( queries_ptr          ),
   .query_xfer_size_in_bytes ( (queries_cls << 6)   ),
   .m_axi_arvalid            ( m00_axi_arvalid      ),
   .m_axi_arready            ( m00_axi_arready      ),
@@ -139,8 +133,8 @@ inst_InputChannel (
   .m_axi_rready             ( m00_axi_rready       ),
   .m_axi_rdata              ( m00_axi_rdata        ),
   .m_axi_rlast              ( m00_axi_rlast        ),
-  .m_axis_aclk              ( ap_clk               ),
-  .m_axis_areset            ( rst_n                ),
+  .m_axis_aclk              ( kernel_clk           ),
+  .m_axis_areset_n          ( kernel_rst_n         ),
   .m_axis_tvalid            ( rd_tvalid            ),
   .m_axis_tready            ( rd_tready            ),
   .m_axis_tlast             ( rd_tlast             ),
@@ -149,19 +143,16 @@ inst_InputChannel (
 );
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////                            //////////////////////////////////
-//////////////////////////////                 Engine Core                 /////////////////////////
-//////////////////////////////////////                            //////////////////////////////////
+// EDERAH Engine Core                                                                             //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 ederah_wrapper #(
   .G_DATA_BUS_WIDTH         ( C_M00_AXI_DATA_WIDTH )
 )
 inst_wrapper (
-  .clk_i                    ( ap_clk               ),
-  .rst_i                    ( rst_n                ),
-  
+  .clk_i                    ( kernel_clk           ),
+  .rst_i                    ( kernel_rst_n         ),
+  .stats_on_i               ( |scalar03            ),
   // input
   .rd_data_i                ( rd_tdata             ),
   .rd_valid_i               ( rd_tvalid            ),
@@ -174,12 +165,8 @@ inst_wrapper (
   .wr_ready_i               ( wr_tready            )
 );
 
-
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////                            //////////////////////////////////
-//////////////////////////////               Output Channel                /////////////////////////
-//////////////////////////////////////                            //////////////////////////////////
+// Output Channel                                                                                 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // AXI4 Write Master
@@ -191,11 +178,11 @@ ederah_kernel_axi_write_master #(
   .C_INCLUDE_DATA_FIFO     (                    1    )
 )
 inst_axi_write_master (
-  .aclk                    ( ap_clk                  ),
-  .areset                  ( ~rst_n                  ),
+  .aclk                    ( data_clk                ),
+  .areset                  ( ~data_rst_n             ),
   .ctrl_start              ( ap_start_pulse          ),
   .ctrl_done               ( write_done              ),
-  .ctrl_addr_offset        ( resultPtr               ),
+  .ctrl_addr_offset        ( results_ptr             ),
   .ctrl_xfer_size_in_bytes ( {(results_cls << 6)}    ),
   .m_axi_awvalid           ( m00_axi_awvalid         ),
   .m_axi_awready           ( m00_axi_awready         ),
@@ -208,8 +195,8 @@ inst_axi_write_master (
   .m_axi_wlast             ( m00_axi_wlast           ),
   .m_axi_bvalid            ( m00_axi_bvalid          ),
   .m_axi_bready            ( m00_axi_bready          ),
-  .s_axis_aclk             ( ap_clk                  ),
-  .s_axis_areset           ( ~rst_n                  ),
+  .s_axis_aclk             ( kernel_clk              ),
+  .s_axis_areset           ( ~kernel_rst_n           ),
   .s_axis_tvalid           ( wr_tvalid               ),
   .s_axis_tready           ( wr_tready               ),
   .s_axis_tdata            ( wr_tdata                )
@@ -217,5 +204,5 @@ inst_axi_write_master (
 
 assign ap_done_i = write_done;
 
-endmodule : ederah_kernel
+endmodule : ederah
 `default_nettype wire

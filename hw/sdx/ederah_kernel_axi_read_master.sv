@@ -170,7 +170,8 @@ logic                                     r_completed;
 logic                                     decr_r_transaction_cntr;
 logic [LP_TRANSACTION_CNTR_WIDTH-1:0]     r_transactions_to_go;
 logic                                     r_final_transaction;
-logic [LP_OUTSTANDING_CNTR_WIDTH-1:0]     outstanding_vacancy_count;
+logic [LP_OUTSTANDING_CNTR_WIDTH-1:0]     ar_outstanding_cntr;
+logic [LP_OUTSTANDING_CNTR_WIDTH-1:0]     r_outstanding_cntr_aclk;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Control Logic
@@ -249,7 +250,7 @@ always @(posedge aclk) begin
 end
 
 // Counts down the number of transactions to send.
-ederah_kernel_example_counter #(
+ederah_kernel_counter #(
   .C_WIDTH ( LP_TRANSACTION_CNTR_WIDTH         ) ,
   .C_INIT  ( {LP_TRANSACTION_CNTR_WIDTH{1'b0}} )
 )
@@ -268,23 +269,20 @@ inst_ar_transaction_cntr (
 assign ar_done = ar_final_transaction && arxfer;
 
 
-// Keeps track of the number of outstanding transactions. Stalls
-// when the value is reached so that the FIFO won't overflow.
-// If no FIFO present, then just limit at max outstanding transactions.
-ederah_kernel_example_counter #(
-  .C_WIDTH ( LP_OUTSTANDING_CNTR_WIDTH                       ) ,
-  .C_INIT  ( C_MAX_OUTSTANDING[0+:LP_OUTSTANDING_CNTR_WIDTH] )
+ederah_kernel_counter #(
+  .C_WIDTH ( LP_OUTSTANDING_CNTR_WIDTH ) ,
+  .C_INIT  ( 0                         )
 )
-inst_ar_to_r_transaction_cntr (
+inst_ar_outstanding_cntr (
   .clk        ( aclk                              ) ,
   .clken      ( 1'b1                              ) ,
   .rst        ( areset                            ) ,
   .load       ( 1'b0                              ) ,
-  .incr       ( r_completed                       ) ,
-  .decr       ( arxfer                            ) ,
+  .incr       ( arxfer                            ) ,
+  .decr       ( 1'b0                              ) ,
   .load_value ( {LP_OUTSTANDING_CNTR_WIDTH{1'b0}} ) ,
-  .count      ( outstanding_vacancy_count         ) ,
-  .is_zero    ( stall_ar                          )
+  .count      ( ar_outstanding_cntr               ) ,
+  .is_zero    (                                   )
 );
 
 
@@ -294,11 +292,14 @@ inst_ar_to_r_transaction_cntr (
 generate
 if (C_INCLUDE_DATA_FIFO == 1) begin : gen_fifo
 
-  // xpm_fifo_sync: Synchronous FIFO
-  // Xilinx Parameterized Macro, Version 2017.4
-  xpm_fifo_sync # (
+  logic [LP_OUTSTANDING_CNTR_WIDTH-1:0]     r_outstanding_cntr;
+
+  // xpm_fifo_async: Asynchronous FIFO
+  // Xilinx Parameterized Macro, Version 2017.4+
+  xpm_fifo_async # (
     .FIFO_MEMORY_TYPE    ( "auto"               ) , // string; "auto", "block", "distributed", or "ultra";
     .ECC_MODE            ( "no_ecc"             ) , // string; "no_ecc" or "en_ecc";
+    .RELATED_CLOCKS      ( 0                    ) , // Must be 0 or 1
     .FIFO_WRITE_DEPTH    ( LP_FIFO_DEPTH        ) , // positive integer
     .WRITE_DATA_WIDTH    ( C_M_AXI_DATA_WIDTH+1 ) , // positive integer
     .WR_DATA_COUNT_WIDTH ( LP_FIFO_COUNT_WIDTH  ) , // positive integer, not used
@@ -311,9 +312,9 @@ if (C_INCLUDE_DATA_FIFO == 1) begin : gen_fifo
     .RD_DATA_COUNT_WIDTH ( LP_FIFO_COUNT_WIDTH  ) , // positive integer, not used
     .PROG_EMPTY_THRESH   ( 10                   ) , // positive integer, not used
     .DOUT_RESET_VALUE    ( "0"                  ) , // string, don't care
-    .WAKEUP_TIME         ( 0                    ) // positive integer; 0 or 2;
+    .WAKEUP_TIME         ( 0                    )   // positive integer; 0 or 2;
   )
-  inst_rd_xpm_fifo_sync (
+  inst_rd_xpm_fifo_async (
     .sleep         ( 1'b0                        ) ,
     .rst           ( areset                      ) ,
     .wr_clk        ( aclk                        ) ,
@@ -326,6 +327,7 @@ if (C_INCLUDE_DATA_FIFO == 1) begin : gen_fifo
     .almost_full   (                             ) ,
     .wr_ack        (                             ) ,
     .wr_rst_busy   (                             ) ,
+    .rd_clk        ( m_axis_aclk                 ) ,
     .rd_en         ( m_axis_tready               ) ,
     .dout          ( {m_axis_tlast,m_axis_tdata} ) ,
     .empty         (                             ) ,
@@ -341,9 +343,65 @@ if (C_INCLUDE_DATA_FIFO == 1) begin : gen_fifo
     .dbiterr       (                             )
   ) ;
 
+  ederah_kernel_counter #(
+    .C_WIDTH ( LP_OUTSTANDING_CNTR_WIDTH                       ) ,
+    .C_INIT  ( C_MAX_OUTSTANDING[0+:LP_OUTSTANDING_CNTR_WIDTH] )
+  )
+  inst_r_outstanding_cntr (
+    .clk        ( m_axis_aclk                       ) ,
+    .clken      ( 1'b1                              ) ,
+    .rst        ( m_axis_areset                     ) ,
+    .load       ( 1'b0                              ) ,
+    .incr       ( r_completed                       ) ,
+    .decr       ( 1'b0                              ) ,
+    .load_value ( {LP_OUTSTANDING_CNTR_WIDTH{1'b0}} ) ,
+    .count      ( r_outstanding_cntr                ) ,
+    .is_zero    (                                   )
+  );
+
+  xpm_cdc_gray #(
+    .DEST_SYNC_FF          ( 4                         ) ,
+    .INIT_SYNC_FF          ( 0                         ) ,
+    .REG_OUTPUT            ( 1                         ) ,
+    .SIM_ASSERT_CHK        ( 0                         ) ,
+    .SIM_LOSSLESS_GRAY_CHK ( 0                         ) ,
+    .WIDTH                 ( LP_OUTSTANDING_CNTR_WIDTH )
+  )
+  inst_r_outstanding_cntr_aclk (
+    .src_in_bin   ( r_outstanding_cntr      ) ,
+    .src_clk      ( m_axis_aclk             ) ,
+    .dest_out_bin ( r_outstanding_cntr_aclk ) ,
+    .dest_clk     ( aclk                    )
+  );
+
+  always_comb begin
+    stall_ar = (ar_outstanding_cntr == r_outstanding_cntr_aclk) ? 1'b1 : 1'b0;
+  end
+
   assign m_axi_rready = 1'b1;
 end
 else begin : gen_no_fifo
+  logic [LP_OUTSTANDING_CNTR_WIDTH-1:0]     outstanding_vacancy_count;
+
+  // Keeps track of the number of outstanding transactions. Stalls
+  // when the value is reached so that the FIFO won't overflow.
+  // If no FIFO present, then just limit at max outstanding transactions.
+  ederah_kernel_counter #(
+    .C_WIDTH ( LP_OUTSTANDING_CNTR_WIDTH                       ) ,
+    .C_INIT  ( C_MAX_OUTSTANDING[0+:LP_OUTSTANDING_CNTR_WIDTH] )
+  )
+  inst_ar_to_r_transaction_cntr (
+    .clk        ( aclk                              ) ,
+    .clken      ( 1'b1                              ) ,
+    .rst        ( areset                            ) ,
+    .load       ( 1'b0                              ) ,
+    .incr       ( r_completed                       ) ,
+    .decr       ( arxfer                            ) ,
+    .load_value ( {LP_OUTSTANDING_CNTR_WIDTH{1'b0}} ) ,
+    .count      ( outstanding_vacancy_count         ) ,
+    .is_zero    ( stall_ar                          )
+  );
+
 
   // All signals pass through.
   assign m_axis_tvalid = m_axi_rvalid;
@@ -362,7 +420,7 @@ always_comb begin
   decr_r_transaction_cntr = rxfer & m_axi_rlast;
 end
 
-ederah_kernel_example_counter #(
+ederah_kernel_counter #(
   .C_WIDTH ( LP_TRANSACTION_CNTR_WIDTH         ) ,
   .C_INIT  ( {LP_TRANSACTION_CNTR_WIDTH{1'b0}} )
 )

@@ -40,9 +40,10 @@ module ederah_kernel_control_s_axi #(
   output wire [32-1:0]             results_cls,
   output wire [32-1:0]             scalar03   ,
   output wire [32-1:0]             scalar04   ,
-  output wire [64-1:0]             nfaPtr     ,
-  output wire [64-1:0]             queryPtr   ,
-  output wire [64-1:0]             resultPtr  
+  output wire [64-1:0]             nfadata_ptr,
+  output wire [64-1:0]             queries_ptr,
+  output wire [64-1:0]             results_ptr,
+  output wire [64-1:0]             axi00_ptr3 
 );
 
 //------------------------Address Info-------------------
@@ -75,18 +76,22 @@ module ederah_kernel_control_s_axi #(
 // 0x030 : Data signal of scalar04
 //         bit 31~0 - scalar04[31:0] (Read/Write)
 // 0x034 : reserved
-// 0x038 : Data signal of nfaPtr
-//         bit 31~0 - nfaPtr[31:0] (Read/Write)
-// 0x03c : Data signal of nfaPtr
-//         bit 31~0 - nfaPtr[63:32] (Read/Write)
-// 0x040 : Data signal of queryPtr
-//         bit 31~0 - queryPtr[31:0] (Read/Write)
-// 0x044 : Data signal of queryPtr
-//         bit 31~0 - queryPtr[63:32] (Read/Write)
-// 0x048 : Data signal of resultPtr
-//         bit 31~0 - resultPtr[31:0] (Read/Write)
-// 0x04c : Data signal of resultPtr
-//         bit 31~0 - resultPtr[63:32] (Read/Write)
+// 0x038 : Data signal of nfadata_ptr
+//         bit 31~0 - nfadata_ptr[31:0] (Read/Write)
+// 0x03c : Data signal of nfadata_ptr
+//         bit 31~0 - nfadata_ptr[63:32] (Read/Write)
+// 0x040 : Data signal of queries_ptr
+//         bit 31~0 - queries_ptr[31:0] (Read/Write)
+// 0x044 : Data signal of queries_ptr
+//         bit 31~0 - queries_ptr[63:32] (Read/Write)
+// 0x048 : Data signal of results_ptr
+//         bit 31~0 - results_ptr[31:0] (Read/Write)
+// 0x04c : Data signal of results_ptr
+//         bit 31~0 - results_ptr[63:32] (Read/Write)
+// 0x050 : Data signal of axi00_ptr3
+//         bit 31~0 - axi00_ptr3[31:0] (Read/Write)
+// 0x054 : Data signal of axi00_ptr3
+//         bit 31~0 - axi00_ptr3[63:32] (Read/Write)
 // (SC = Self Clear, COR = Clear on Read, TOW = Toggle on Write, COH = Clear on Handshake)
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -101,12 +106,14 @@ localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_QUERIES_CLS_0          = 12'h018;
 localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_RESULTS_CLS_0          = 12'h020;
 localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_SCALAR03_0             = 12'h028;
 localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_SCALAR04_0             = 12'h030;
-localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_nfaPtr_0               = 12'h038;
-localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_nfaPtr_1               = 12'h03c;
-localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_queryPtr_0             = 12'h040;
-localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_queryPtr_1             = 12'h044;
-localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_resultPtr_0            = 12'h048;
-localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_resultPtr_1            = 12'h04c;
+localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_nfadata_ptr_0          = 12'h038;
+localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_nfadata_ptr_1          = 12'h03c;
+localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_queries_ptr_0          = 12'h040;
+localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_queries_ptr_1          = 12'h044;
+localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_results_ptr_0          = 12'h048;
+localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_results_ptr_1          = 12'h04c;
+localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_axi00_ptr3_0           = 12'h050;
+localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_axi00_ptr3_1           = 12'h054;
 localparam integer                  LP_SM_WIDTH                    = 2;
 localparam [LP_SM_WIDTH-1:0]        SM_WRIDLE                      = 2'd0;
 localparam [LP_SM_WIDTH-1:0]        SM_WRDATA                      = 2'd1;
@@ -143,9 +150,10 @@ reg  [32-1:0]                       int_queries_cls                = 32'd0;
 reg  [32-1:0]                       int_results_cls                = 32'd0;
 reg  [32-1:0]                       int_scalar03                   = 32'd0;
 reg  [32-1:0]                       int_scalar04                   = 32'd0;
-reg  [64-1:0]                       int_nfaPtr                     = 64'd0;
-reg  [64-1:0]                       int_queryPtr                   = 64'd0;
-reg  [64-1:0]                       int_resultPtr                  = 64'd0;
+reg  [64-1:0]                       int_nfadata_ptr                = 64'd0;
+reg  [64-1:0]                       int_queries_ptr                = 64'd0;
+reg  [64-1:0]                       int_results_ptr                = 64'd0;
+reg  [64-1:0]                       int_axi00_ptr3                 = 64'd0;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Begin RTL
@@ -274,23 +282,29 @@ always @(posedge aclk) begin
         LP_ADDR_SCALAR04_0: begin
           rdata_r <= int_scalar04[0+:32];
         end
-        LP_ADDR_nfaPtr_0: begin
-          rdata_r <= int_nfaPtr[0+:32];
+        LP_ADDR_nfadata_ptr_0: begin
+          rdata_r <= int_nfadata_ptr[0+:32];
         end
-        LP_ADDR_nfaPtr_1: begin
-          rdata_r <= int_nfaPtr[32+:32];
+        LP_ADDR_nfadata_ptr_1: begin
+          rdata_r <= int_nfadata_ptr[32+:32];
         end
-        LP_ADDR_queryPtr_0: begin
-          rdata_r <= int_queryPtr[0+:32];
+        LP_ADDR_queries_ptr_0: begin
+          rdata_r <= int_queries_ptr[0+:32];
         end
-        LP_ADDR_queryPtr_1: begin
-          rdata_r <= int_queryPtr[32+:32];
+        LP_ADDR_queries_ptr_1: begin
+          rdata_r <= int_queries_ptr[32+:32];
         end
-        LP_ADDR_resultPtr_0: begin
-          rdata_r <= int_resultPtr[0+:32];
+        LP_ADDR_results_ptr_0: begin
+          rdata_r <= int_results_ptr[0+:32];
         end
-        LP_ADDR_resultPtr_1: begin
-          rdata_r <= int_resultPtr[32+:32];
+        LP_ADDR_results_ptr_1: begin
+          rdata_r <= int_results_ptr[32+:32];
+        end
+        LP_ADDR_axi00_ptr3_0: begin
+          rdata_r <= int_axi00_ptr3[0+:32];
+        end
+        LP_ADDR_axi00_ptr3_1: begin
+          rdata_r <= int_axi00_ptr3[32+:32];
         end
 
         default: begin
@@ -310,9 +324,10 @@ assign queries_cls = int_queries_cls;
 assign results_cls = int_results_cls;
 assign scalar03 = int_scalar03;
 assign scalar04 = int_scalar04;
-assign nfaPtr = int_nfaPtr;
-assign queryPtr = int_queryPtr;
-assign resultPtr = int_resultPtr;
+assign nfadata_ptr = int_nfadata_ptr;
+assign queries_ptr = int_queries_ptr;
+assign results_ptr = int_results_ptr;
+assign axi00_ptr3 = int_axi00_ptr3;
 
 // int_ap_start
 always @(posedge aclk) begin
@@ -421,63 +436,83 @@ always @(posedge aclk) begin
   end
 end
 
-// int_nfaPtr[32-1:0]
+// int_nfadata_ptr[32-1:0]
 always @(posedge aclk) begin
   if (areset)
-    int_nfaPtr[0+:32] <= 32'd0;
+    int_nfadata_ptr[0+:32] <= 32'd0;
   else if (aclk_en) begin
-    if (w_hs && waddr == LP_ADDR_nfaPtr_0)
-      int_nfaPtr[0+:32] <= (wdata[0+:32] & wmask[0+:32]) | (int_nfaPtr[0+:32] & ~wmask[0+:32]);
+    if (w_hs && waddr == LP_ADDR_nfadata_ptr_0)
+      int_nfadata_ptr[0+:32] <= (wdata[0+:32] & wmask[0+:32]) | (int_nfadata_ptr[0+:32] & ~wmask[0+:32]);
   end
 end
 
-// int_nfaPtr[32-1:0]
+// int_nfadata_ptr[32-1:0]
 always @(posedge aclk) begin
   if (areset)
-    int_nfaPtr[32+:32] <= 32'd0;
+    int_nfadata_ptr[32+:32] <= 32'd0;
   else if (aclk_en) begin
-    if (w_hs && waddr == LP_ADDR_nfaPtr_1)
-      int_nfaPtr[32+:32] <= (wdata[0+:32] & wmask[0+:32]) | (int_nfaPtr[32+:32] & ~wmask[0+:32]);
+    if (w_hs && waddr == LP_ADDR_nfadata_ptr_1)
+      int_nfadata_ptr[32+:32] <= (wdata[0+:32] & wmask[0+:32]) | (int_nfadata_ptr[32+:32] & ~wmask[0+:32]);
   end
 end
 
-// int_queryPtr[32-1:0]
+// int_queries_ptr[32-1:0]
 always @(posedge aclk) begin
   if (areset)
-    int_queryPtr[0+:32] <= 32'd0;
+    int_queries_ptr[0+:32] <= 32'd0;
   else if (aclk_en) begin
-    if (w_hs && waddr == LP_ADDR_queryPtr_0)
-      int_queryPtr[0+:32] <= (wdata[0+:32] & wmask[0+:32]) | (int_queryPtr[0+:32] & ~wmask[0+:32]);
+    if (w_hs && waddr == LP_ADDR_queries_ptr_0)
+      int_queries_ptr[0+:32] <= (wdata[0+:32] & wmask[0+:32]) | (int_queries_ptr[0+:32] & ~wmask[0+:32]);
   end
 end
 
-// int_queryPtr[32-1:0]
+// int_queries_ptr[32-1:0]
 always @(posedge aclk) begin
   if (areset)
-    int_queryPtr[32+:32] <= 32'd0;
+    int_queries_ptr[32+:32] <= 32'd0;
   else if (aclk_en) begin
-    if (w_hs && waddr == LP_ADDR_queryPtr_1)
-      int_queryPtr[32+:32] <= (wdata[0+:32] & wmask[0+:32]) | (int_queryPtr[32+:32] & ~wmask[0+:32]);
+    if (w_hs && waddr == LP_ADDR_queries_ptr_1)
+      int_queries_ptr[32+:32] <= (wdata[0+:32] & wmask[0+:32]) | (int_queries_ptr[32+:32] & ~wmask[0+:32]);
   end
 end
 
-// int_resultPtr[32-1:0]
+// int_results_ptr[32-1:0]
 always @(posedge aclk) begin
   if (areset)
-    int_resultPtr[0+:32] <= 32'd0;
+    int_results_ptr[0+:32] <= 32'd0;
   else if (aclk_en) begin
-    if (w_hs && waddr == LP_ADDR_resultPtr_0)
-      int_resultPtr[0+:32] <= (wdata[0+:32] & wmask[0+:32]) | (int_resultPtr[0+:32] & ~wmask[0+:32]);
+    if (w_hs && waddr == LP_ADDR_results_ptr_0)
+      int_results_ptr[0+:32] <= (wdata[0+:32] & wmask[0+:32]) | (int_results_ptr[0+:32] & ~wmask[0+:32]);
   end
 end
 
-// int_resultPtr[32-1:0]
+// int_results_ptr[32-1:0]
 always @(posedge aclk) begin
   if (areset)
-    int_resultPtr[32+:32] <= 32'd0;
+    int_results_ptr[32+:32] <= 32'd0;
   else if (aclk_en) begin
-    if (w_hs && waddr == LP_ADDR_resultPtr_1)
-      int_resultPtr[32+:32] <= (wdata[0+:32] & wmask[0+:32]) | (int_resultPtr[32+:32] & ~wmask[0+:32]);
+    if (w_hs && waddr == LP_ADDR_results_ptr_1)
+      int_results_ptr[32+:32] <= (wdata[0+:32] & wmask[0+:32]) | (int_results_ptr[32+:32] & ~wmask[0+:32]);
+  end
+end
+
+// int_axi00_ptr3[32-1:0]
+always @(posedge aclk) begin
+  if (areset)
+    int_axi00_ptr3[0+:32] <= 32'd0;
+  else if (aclk_en) begin
+    if (w_hs && waddr == LP_ADDR_axi00_ptr3_0)
+      int_axi00_ptr3[0+:32] <= (wdata[0+:32] & wmask[0+:32]) | (int_axi00_ptr3[0+:32] & ~wmask[0+:32]);
+  end
+end
+
+// int_axi00_ptr3[32-1:0]
+always @(posedge aclk) begin
+  if (areset)
+    int_axi00_ptr3[32+:32] <= 32'd0;
+  else if (aclk_en) begin
+    if (w_hs && waddr == LP_ADDR_axi00_ptr3_1)
+      int_axi00_ptr3[32+:32] <= (wdata[0+:32] & wmask[0+:32]) | (int_axi00_ptr3[32+:32] & ~wmask[0+:32]);
   end
 end
 

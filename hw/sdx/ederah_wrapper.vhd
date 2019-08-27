@@ -25,6 +25,8 @@ entity ederah_wrapper is
     port (
         clk_i        :  in std_logic;
         rst_i        :  in std_logic;
+        -- stats option
+        stats_on_i   :  in std_logic;
         -- input bus
         rd_data_i    :  in std_logic_vector(G_DATA_BUS_WIDTH - 1 downto 0);
         rd_valid_i   :  in std_logic;
@@ -44,11 +46,14 @@ architecture rtl of ederah_wrapper is
     constant C_QUERY_PARTITIONS   : integer := G_DATA_BUS_WIDTH / CFG_RAW_QUERY_WIDTH;
     constant C_EDGES_PARTITIONS   : integer := G_DATA_BUS_WIDTH / CFG_EDGE_BRAM_WIDTH;
     constant C_RESULTS_PARTITIONS : integer := G_DATA_BUS_WIDTH / CFG_RAW_RESULTS_WIDTH;
+    constant C_STATS_PARTITIONS   : integer := G_DATA_BUS_WIDTH / CFG_RAW_RESULT_STATS_WIDTH;
     --
     signal sig_query_ready    : std_logic;
     signal sig_result_valid   : std_logic;
     signal sig_result_value   : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
     signal sig_query_id       : std_logic_vector(CFG_QUERY_ID_WIDTH - 1 downto 0);
+    signal sig_result_stats   : result_stats_type;
+    signal sig_resstats_value : std_logic_vector(CFG_RAW_RESULT_STATS_WIDTH - 1 downto 0);
     
     type flow_ctrl_type is (FLW_CTRL_WAIT, FLW_CTRL_READ, FLW_CTRL_WRITE);
     
@@ -137,6 +142,7 @@ begin
                                 (idx * CFG_RAW_QUERY_WIDTH)
                             );
                         v.query_array(query_r.counter + idx).query_id := my_conv_integer(sig_query_id);
+                        v.query_array(query_r.counter + idx).last_query := rd_last_i;
                     end loop;
                 else
                     useful := remaining;
@@ -150,6 +156,7 @@ begin
                                 (idx * CFG_RAW_QUERY_WIDTH)
                             );
                         v.query_array(query_r.counter + idx).query_id := my_conv_integer(sig_query_id);
+                        v.query_array(query_r.counter + idx).last_query := rd_last_i;
                     end loop;
                 end if;
                 
@@ -294,10 +301,18 @@ end process;
 -- wr_data_o    : out std_logic_vector(G_DATA_BUS_WIDTH - 1 downto 0);
 -- wr_valid_o   : out std_logic;
 
+sig_resstats_value <= (CFG_RAW_RESULT_STATS_WIDTH - 1
+                        downto
+                      CFG_RAW_RESULT_STATS_WIDTH - (CFG_RAW_RESULTS_WIDTH - CFG_MEM_ADDR_WIDTH) => '0')
+                      & sig_result_value
+                      & sig_result_stats.clock_cycle_counter
+                      & sig_result_stats.match_higher_weight
+                      & sig_result_stats.match_lower_weight;
+
 wr_data_o  <= result_r.value;
 wr_valid_o <= result_r.valid;
 
-result_comb : process(result_r, sig_result_valid, sig_result_value, wr_ready_i)
+result_comb : process(result_r, sig_result_valid, sig_result_value, wr_ready_i, stats_on_i, sig_resstats_value)
     variable v : result_reg_type;
 begin
     v := result_r;
@@ -309,7 +324,7 @@ begin
             v.ready := '1';
             v.valid := '0';
 
-            if sig_result_valid = '1' then
+            if sig_result_valid = '1' and stats_on_i = '0' then
 
                 v.slice := result_r.slice + 1;
 
@@ -412,7 +427,7 @@ begin
                   when 31 =>
                         v.value((31 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 31 * CFG_RAW_RESULTS_WIDTH)
                             := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
-                  when 32 =>
+                  when others =>
                 end case;
 
                 if v.slice = C_RESULTS_PARTITIONS then
@@ -421,6 +436,43 @@ begin
                     v.flow_ctrl := FLW_CTRL_WRITE;
                 end if;
 
+            elsif sig_result_valid = '1' and stats_on_i = '1' then
+                
+                v.slice := result_r.slice + 1;
+
+                case result_r.slice is
+                  when  0 =>
+                        v.value(CFG_RAW_RESULT_STATS_WIDTH - 1 downto  0)
+                            := sig_resstats_value;
+                  when  1 =>
+                        v.value(( 1 + 1) * CFG_RAW_RESULT_STATS_WIDTH - 1 downto  1 * CFG_RAW_RESULT_STATS_WIDTH)
+                            := sig_resstats_value;
+                  when  2 =>
+                        v.value(( 2 + 1) * CFG_RAW_RESULT_STATS_WIDTH - 1 downto  2 * CFG_RAW_RESULT_STATS_WIDTH)
+                            := sig_resstats_value;
+                  when  3 =>
+                        v.value(( 3 + 1) * CFG_RAW_RESULT_STATS_WIDTH - 1 downto  3 * CFG_RAW_RESULT_STATS_WIDTH)
+                            := sig_resstats_value;
+                  when  4 =>
+                        v.value(( 4 + 1) * CFG_RAW_RESULT_STATS_WIDTH - 1 downto  4 * CFG_RAW_RESULT_STATS_WIDTH)
+                            := sig_resstats_value;
+                  when  5 =>
+                        v.value(( 5 + 1) * CFG_RAW_RESULT_STATS_WIDTH - 1 downto  5 * CFG_RAW_RESULT_STATS_WIDTH)
+                            := sig_resstats_value;
+                  when  6 =>
+                        v.value(( 6 + 1) * CFG_RAW_RESULT_STATS_WIDTH - 1 downto  6 * CFG_RAW_RESULT_STATS_WIDTH)
+                            := sig_resstats_value;
+                  when  7 =>
+                        v.value(( 7 + 1) * CFG_RAW_RESULT_STATS_WIDTH - 1 downto  7 * CFG_RAW_RESULT_STATS_WIDTH)
+                            := sig_resstats_value;
+                  when others =>
+                end case;
+
+                if v.slice = C_STATS_PARTITIONS then
+                    v.ready := '0';
+                    v.valid := '1';
+                    v.flow_ctrl := FLW_CTRL_WRITE;
+                end if;
             end if;
 
       when FLW_CTRL_WRITE =>
@@ -464,7 +516,7 @@ end process;
 ----------------------------------------------------------------------------------------------------
 -- NFA-BRE ENGINE TOP                                                                             --
 ----------------------------------------------------------------------------------------------------
-mct_engine_top: entity bre.top port map 
+mct_engine_top: entity bre.engine port map 
 (
     clk_i           => clk_i,
     rst_i           => nfa_r.engine_rst,
@@ -478,6 +530,7 @@ mct_engine_top: entity bre.top port map
     mem_addr_i      => nfa_r.mem_addr,
     --
     result_ready_i  => result_r.ready,
+    result_stats_o  => sig_result_stats,
     result_valid_o  => sig_result_valid,
     result_value_o  => sig_result_value
 );

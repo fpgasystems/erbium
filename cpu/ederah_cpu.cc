@@ -368,6 +368,10 @@ int main(int argc, char** argv)
     std::chrono::duration<double> elapsed = finish - start;
     std::cout << "# Executed in " << elapsed.count() << " s\n";
 
+    auto total_s = elapsed.count();
+    printf("> Query latency (total exec): %2.4f us\n", total_s * 1000 * 1000 / num_queries);
+
+
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // RESULTS                                                                                    //
     ////////////////////////////////////////////////////////////////////////////////////////////////

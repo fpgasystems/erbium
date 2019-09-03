@@ -100,7 +100,7 @@ wire [32-1:0]                       nfadata_cls                   ;
 wire [32-1:0]                       queries_cls                   ;
 wire [32-1:0]                       results_cls                   ;
 wire [32-1:0]                       scalar03                      ;
-wire [32-1:0]                       scalar04                      ;
+wire [64-1:0]                       nfa_hash                      ;
 wire [64-1:0]                       nfadata_ptr                   ;
 wire [64-1:0]                       queries_ptr                   ;
 wire [64-1:0]                       results_ptr                   ;
@@ -150,7 +150,7 @@ inst_control_s_axi (
   .queries_cls ( queries_cls           ),
   .results_cls ( results_cls           ),
   .scalar03    ( scalar03              ),
-  .scalar04    ( scalar04              ),
+  .nfa_hash    ( nfa_hash              ),
   .nfadata_ptr ( nfadata_ptr           ),
   .queries_ptr ( queries_ptr           ),
   .results_ptr ( results_ptr           ),
@@ -197,7 +197,7 @@ inst_ederah (
   .queries_cls     ( queries_cls     ),
   .results_cls     ( results_cls     ),
   .scalar03        ( scalar03        ),
-  .scalar04        ( scalar04        ),
+  .nfa_hash        ( nfa_hash        ),
   .nfadata_ptr     ( nfadata_ptr     ),
   .queries_ptr     ( queries_ptr     ),
   .results_ptr     ( results_ptr     ),

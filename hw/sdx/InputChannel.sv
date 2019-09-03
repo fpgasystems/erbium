@@ -19,21 +19,22 @@ module InputChannel #(
   // FIFO is instantiated then the AXI4 read channel is passed through to the
   // AXI4-Stream slave interface.
   // Range: 0, 1
-  parameter integer C_INCLUDE_query_FIFO = 1
+  parameter integer C_INCLUDE_QUERY_FIFO = 1
 )
 (
   // System signals
   input  wire                          data_clk,
-  input  wire                          data_clk_n,
+  input  wire                          data_rst_n,
 
   // Control signals
   input  wire                          ctrl_start, // Pulses high for one cycle to begin reading
   output wire                          ctrl_done,  // Pulses high for one cycle when transfer request is complete
 
   // The following ctrl signals are sampled when ctrl_start is asserted
+  input  wire [64-1:0]                 nfa_hash,
   input  wire [C_M_AXI_ADDR_WIDTH-1:0] nfadata_ptr,   // Starting Address offset
   input  wire [C_XFER_SIZE_WIDTH-1:0]  nfa_xfer_size_in_bytes, // Length in number of bytes, limited by the address width.
-  
+
   input  wire [C_M_AXI_ADDR_WIDTH-1:0] queries_ptr,   // Starting Address offset
   input  wire [C_XFER_SIZE_WIDTH-1:0]  query_xfer_size_in_bytes, // Length in number of bytes, limited by the address width.
 
@@ -54,7 +55,7 @@ module InputChannel #(
   output wire                          m_axis_tvalid,
   input  wire                          m_axis_tready,
   output wire [C_M_AXI_DATA_WIDTH-1:0] m_axis_tdata,
-  output wire                          m_axis_tlast, 
+  output wire                          m_axis_tlast,
   output wire                          m_axis_ttype
 );
 
@@ -68,9 +69,9 @@ localparam integer LP_BRAM_DEPTH           = 512;
 localparam integer LP_RD_MAX_OUTSTANDING   = LP_BRAM_DEPTH / LP_AXI_BURST_LEN;
 localparam integer LP_WR_MAX_OUTSTANDING   = 32;
 
-localparam [1:0] IDLE           = 2'b00, 
-                 READ_NFA       = 2'b01, 
-                 WAIT_ALL_EDGES = 2'b10, 
+localparam [1:0] IDLE           = 2'b00,
+                 READ_NFA       = 2'b01,
+                 WAIT_ALL_EDGES = 2'b10,
                  READ_QUERY     = 2'b11;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -124,32 +125,47 @@ wire                          query_start;
 reg  [C_XFER_SIZE_WIDTH-1:0]  nfa_num_cls_received;
 reg  [C_XFER_SIZE_WIDTH-1:0]  query_num_cls_received;
 
+reg  [64-1:0]                 nfa_hash_r;
+wire                          nfa_reload;
+
 ///////////////////////////////////////////////////////////////////////////////
 // AXI Read Address Channel
 ///////////////////////////////////////////////////////////////////////////////
 
-// Reader State 
-always@(posedge data_clk) begin 
-  if(~data_clk_n) begin
+// NFA ID control
+always@(posedge data_clk) begin
+  if (~data_rst_n) begin
+    nfa_hash_r <= 0;
+  end
+  else if (ctrl_start) begin
+      nfa_hash_r <= nfa_hash;
+  end
+end
+
+assign nfa_reload = (ctrl_start) && (nfa_hash !== nfa_hash_r);
+
+// Reader State
+always@(posedge data_clk) begin
+  if (~data_rst_n) begin
     reader_state <= IDLE;
   end
-  else begin 
+  else begin
     reader_state <= nxt_reader_state;
   end
 end
 
-always@(*) begin 
+always@(*) begin
     case (reader_state)
-      IDLE           : nxt_reader_state = (ctrl_start)      ? READ_NFA       : IDLE;
+      IDLE           : nxt_reader_state = (ctrl_start) ? ((nfa_reload) ? READ_NFA : WAIT_ALL_EDGES) : IDLE;
       READ_NFA       : nxt_reader_state = (nfa_read_done_dataclk)   ? WAIT_ALL_EDGES : READ_NFA;
       WAIT_ALL_EDGES : nxt_reader_state = READ_QUERY;
-      READ_QUERY     : nxt_reader_state = (query_read_done_dataclk) ? IDLE           : READ_QUERY; 
+      READ_QUERY     : nxt_reader_state = (query_read_done_dataclk) ? IDLE           : READ_QUERY;
       default        : nxt_reader_state = IDLE;
     endcase
 end
 
 
-assign ctrl_done     = query_read_done_dataclk;
+assign ctrl_done    = query_read_done_dataclk;
 
 assign nfa_start    = (reader_state == IDLE)           && (nxt_reader_state == READ_NFA);
 assign query_start  = (reader_state == WAIT_ALL_EDGES) && (nxt_reader_state == READ_QUERY);
@@ -162,7 +178,7 @@ assign m_axi_arlen   = (reader_state == READ_NFA)? nfa_m_axi_arlen   : (reader_s
 assign query_m_axi_arready  = (reader_state == READ_QUERY) && m_axi_arready;
 assign nfa_m_axi_arready    = (reader_state == READ_NFA)   && m_axi_arready;
 
-// RD RX 
+// RD RX
 assign nfa_m_axi_rvalid = (reader_state == READ_NFA) && m_axi_rvalid;
 assign nfa_m_axi_rdata  = m_axi_rdata;
 assign nfa_m_axi_rlast  = m_axi_rlast;
@@ -183,25 +199,25 @@ assign nfa_rd_tready   = m_axis_tready;
 assign query_rd_tready = m_axis_tready;
 
 ////////////////////////////// Counters
-always@(posedge m_axis_aclk) begin 
-  if(~m_axis_areset_n) begin
+always@(posedge m_axis_aclk) begin
+  if (~m_axis_areset_n) begin
     nfa_num_cls_received <= 0;
     query_num_cls_received  <= 0;
   end
-  else begin 
+  else begin
     //
-    if(nfa_read_done) begin
+    if (nfa_read_done) begin
       nfa_num_cls_received <= 0;
     end
-    else if(nfa_rd_tvalid && nfa_rd_tready) begin
+    else if (nfa_rd_tvalid && nfa_rd_tready) begin
       nfa_num_cls_received <= nfa_num_cls_received + 1'b1;
     end
 
     //
-    if(query_read_done) begin
+    if (query_read_done) begin
       query_num_cls_received  <= 0;
     end
-    else if(query_rd_tvalid && query_rd_tready) begin
+    else if (query_rd_tvalid && query_rd_tready) begin
       query_num_cls_received <= query_num_cls_received + 1'b1;
     end
   end
@@ -220,10 +236,10 @@ ederah_kernel_axi_read_master #(
 )
 nfa_axi_read_master (
   .aclk                    ( data_clk               ) ,
-  .areset                  ( ~data_clk_n | nfa_read_done_dataclk ) ,
+  .areset                  ( ~data_rst_n | nfa_read_done_dataclk ) ,
   .ctrl_start              ( nfa_start              ) ,
   .ctrl_done               (                        ) ,
-  .ctrl_addr_offset        ( nfadata_ptr                 ) ,
+  .ctrl_addr_offset        ( nfadata_ptr            ) ,
   .ctrl_xfer_size_in_bytes ( nfa_xfer_size_in_bytes ) ,
   .m_axi_arvalid           ( nfa_m_axi_arvalid      ) ,
   .m_axi_arready           ( nfa_m_axi_arready      ) ,
@@ -250,10 +266,10 @@ ederah_kernel_axi_read_master #(
 )
 query_axi_read_master (
   .aclk                    ( data_clk               ) ,
-  .areset                  ( ~data_clk_n | query_read_done_dataclk ) ,
+  .areset                  ( ~data_rst_n | query_read_done_dataclk ) ,
   .ctrl_start              ( query_start            ) ,
   .ctrl_done               (                        ) ,
-  .ctrl_addr_offset        ( queries_ptr               ) ,
+  .ctrl_addr_offset        ( queries_ptr            ) ,
   .ctrl_xfer_size_in_bytes ( query_xfer_size_in_bytes ) ,
   .m_axi_arvalid           ( query_m_axi_arvalid    ) ,
   .m_axi_arready           ( query_m_axi_arready    ) ,

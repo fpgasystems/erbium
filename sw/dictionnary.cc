@@ -23,7 +23,7 @@ Dictionnary::Dictionnary(const rulePack_s& rulepack)
     }
 
     // content indexes
-    uint key = 0;
+    valueid_t key = 0;
     for (auto& value : m_dic_contents)
         value.second = key++;
 
@@ -36,7 +36,7 @@ Dictionnary::Dictionnary(const rulePack_s& rulepack)
     }
 
     // Put wildcard '*' codes as 0
-    uint buff;
+    valueid_t buff;
     for (auto& aux : rulepack.m_ruleType.m_criterionDefinition)
     {
         if (!aux.m_isMandatory)
@@ -52,13 +52,13 @@ Dictionnary::Dictionnary(const rulePack_s& rulepack)
         m_sorting_map.push_back(criterion.first);
 }
 
-std::vector<unsigned short int> Dictionnary::sort_by_n_of_values(const SortOrder order, std::vector<short int>* arbitrary)
+sorting_map_t Dictionnary::sort_by_n_of_values(const SortOrder order, std::vector<int16_t>* arbitrary)
 {
-    std::vector<std::pair<uint, uint>> the_map;     // list of pair <(#diff values) & (criteria_id)>
+    std::vector<std::pair<size_t, criterionid_t>> the_map; // list of pair <(#diff values) & (criteria_id)>
     
     // creation
     for (auto& criterion : m_dic_criteria)
-        the_map.push_back(std::pair<uint, uint>(criterion.second.size(), criterion.first));
+        the_map.push_back(std::pair<size_t, criterionid_t>(criterion.second.size(), criterion.first));
 
     // effective sort
     if (order == SortOrder::Ascending)
@@ -67,7 +67,7 @@ std::vector<unsigned short int> Dictionnary::sort_by_n_of_values(const SortOrder
         std::sort(the_map.begin(), the_map.end(), sort_pred_inv());
 
     // Update sorting_map
-    uint key = 0;
+    size_t key = 0;
     for (auto& aux : the_map)
         m_sorting_map[key++] = aux.second;
 
@@ -97,7 +97,8 @@ std::vector<unsigned short int> Dictionnary::sort_by_n_of_values(const SortOrder
 
     return m_sorting_map;
 }
-bool Dictionnary::exists_in_vector(const std::vector<short int> vec, const short int& point)
+
+bool Dictionnary::exists_in_vector(const std::vector<int16_t> vec, const criterionid_t& point)
 {
     for (auto& aux : vec)
     {
@@ -107,7 +108,7 @@ bool Dictionnary::exists_in_vector(const std::vector<short int> vec, const short
     return false;
 }
 
-std::map<std::string, uint> Dictionnary::get_criterion_dic_by_level(const unsigned short int& level)
+dictionnary_t Dictionnary::get_criterion_dic_by_level(const criterionid_t& level)
 {
     if (level == m_dic_criteria.size())
         return m_dic_contents;
@@ -115,9 +116,9 @@ std::map<std::string, uint> Dictionnary::get_criterion_dic_by_level(const unsign
         return m_dic_criteria[m_sorting_map[level]];
 }
 
-int Dictionnary::get_level_by_criterion_id(const uint& criterion_id)
+int16_t Dictionnary::get_level_by_criterion_id(const criterionid_t& criterion_id)
 {
-    int key = 0;
+    int16_t key = 0;
     for (auto& aux : m_sorting_map)
     {
         if (aux == criterion_id)
@@ -132,7 +133,7 @@ void Dictionnary::dump_dictionnary(const std::string& filename)
     std::ofstream filecsv(filename, std::ios::out | std::ios::trunc);
 
     filecsv << "level,value,id\n";
-    uint level = 0;
+    criterionid_t level = 0;
     for (auto& aux : m_sorting_map)
     {
         for (auto& pair : m_dic_criteria[aux])

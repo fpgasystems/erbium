@@ -48,9 +48,9 @@ proc edit_core {core} {
   set_property address_offset 0x028 $reg
   set_property size           4   $reg
 
-  set reg      [::ipx::add_register -quiet "scalar04" $addr_block]
+  set reg      [::ipx::add_register -quiet "nfa_hash" $addr_block]
   set_property address_offset 0x030 $reg
-  set_property size           4   $reg
+  set_property size           8   $reg
 
   set reg      [::ipx::add_register -quiet "nfadata_ptr" $addr_block]
   set_property address_offset 0x038 $reg

@@ -223,7 +223,7 @@ begin
             if rd_stype_i = CFG_RD_TYPE_NFA and rd_valid_i = '1' then
                 v.flow_ctrl     := FLW_CTRL_READ;
                 v.ready         := '0';
-                v.cnt_criterium :=  0;
+                v.cnt_criterium :=  0 ;
                 v.engine_rst    := '0';
             end if;
 

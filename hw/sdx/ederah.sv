@@ -38,11 +38,11 @@ module ederah #(
   input  wire [32-1:0]                     queries_cls    ,
   input  wire [32-1:0]                     results_cls    ,
   input  wire [32-1:0]                     scalar03       , // stats_on
-  input  wire [32-1:0]                     scalar04       ,
+  input  wire [64-1:0]                     nfa_hash       ,
   input  wire [64-1:0]                     nfadata_ptr    ,
   input  wire [64-1:0]                     queries_ptr    ,
   input  wire [64-1:0]                     results_ptr    ,
-  input  wire [64-1:0]                     axi00_ptr3     
+  input  wire [64-1:0]                     axi00_ptr3
 );
 
 
@@ -104,6 +104,8 @@ end
 assign ap_idle = ap_idle_r;
 assign ap_done = ap_done_r;
 
+assign ap_done_i = write_done;
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Input Channel                                                                                  //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -114,13 +116,14 @@ InputChannel #(
   .C_M_AXI_DATA_WIDTH       ( C_M00_AXI_DATA_WIDTH ),
   .C_XFER_SIZE_WIDTH        (                   32 ),
   .C_MAX_OUTSTANDING        (                   16 ),
-  .C_INCLUDE_query_FIFO     (                    1 )
+  .C_INCLUDE_QUERY_FIFO     (                    1 )
 )
 inst_InputChannel (
   .data_clk                 ( data_clk             ),
-  .data_clk_n               ( data_rst_n           ),
+  .data_rst_n               ( data_rst_n           ),
   .ctrl_start               ( ap_start_pulse       ),
   .ctrl_done                ( read_done            ),
+  .nfa_hash                 ( nfa_hash             ),
   .nfadata_ptr              ( nfadata_ptr          ),
   .nfa_xfer_size_in_bytes   ( (nfadata_cls << 6)   ),
   .queries_ptr              ( queries_ptr          ),
@@ -138,7 +141,7 @@ inst_InputChannel (
   .m_axis_tvalid            ( rd_tvalid            ),
   .m_axis_tready            ( rd_tready            ),
   .m_axis_tlast             ( rd_tlast             ),
-  .m_axis_tdata             ( rd_tdata             ), 
+  .m_axis_tdata             ( rd_tdata             ),
   .m_axis_ttype             ( rd_ttype             )
 );
 
@@ -159,7 +162,7 @@ inst_wrapper (
   .rd_last_i                ( rd_tlast             ),
   .rd_stype_i               ( rd_ttype             ),
   .rd_ready_o               ( rd_tready            ),
-  // output 
+  // output
   .wr_data_o                ( wr_tdata             ),
   .wr_valid_o               ( wr_tvalid            ),
   .wr_ready_i               ( wr_tready            )
@@ -201,8 +204,6 @@ inst_axi_write_master (
   .s_axis_tready           ( wr_tready               ),
   .s_axis_tdata            ( wr_tdata                )
 );
-
-assign ap_done_i = write_done;
 
 endmodule : ederah
 `default_nettype wire

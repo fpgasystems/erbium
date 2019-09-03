@@ -1,3 +1,7 @@
+.o/
+.d/
+.~lock.*
+
 bin/
 tmp/
 *.tmp

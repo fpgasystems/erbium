@@ -5,130 +5,60 @@
 #include <fstream>
 #include <chrono>
 #include <math.h>
+#include <locale.h>
 
 #include "definitions.h"
 #include "dictionnary.h"
 #include "nfa_handler.h"
 
+
 //#define _DEBUG true
 
-class CSVRow
+int main(int argc, char** argv)
 {
-public:
-    std::string const& operator[](std::size_t index) const
-    {
-        return m_data[index];
-    }
-    std::size_t size() const
-    {
-        return m_data.size();
-    }
-    std::string get_value(std::size_t index)
-    {
-        // REMOVE " "
-        return m_data[index].substr(1, m_data[index].size()-2);
-    }
-    void readNextRow(std::istream& str)
-    {
-        std::string         line;
-        std::getline(str, line);
+    setlocale(LC_NUMERIC, ""); // printf with thousand comma separator
 
-        std::stringstream   lineStream(line);
-        std::string         cell;
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // PARAMETERS                                                                                 //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
-        m_data.clear();
-        while(std::getline(lineStream, cell, ','))
-        {
-            m_data.push_back(cell);
-        }
-        // This checks for a trailing comma with no data after it.
-        if (!lineStream && cell.empty())
-        {
-            // If there was a trailing comma then add an empty element.
-            m_data.push_back("");
-        }
-    }
-    std::vector<std::string>    m_data;
-};
-std::istream& operator>>(std::istream& str, CSVRow& data)
-{
-    data.readNextRow(str);
-    return str;
-}
+    // #include <unistd.h>
+    // int opt;
+    // while ((opt = getopt(argc, argv, "nt:")) != -1) {
+    //     switch (opt) {
+    //     case 'n':
+    //         printf("option n with value '%s'\n", optarg);
+    //         break;
+    //     case 't':
+    //         printf("option t with value '%s'\n", optarg);
+    //         break;
+    //     default: /* '?' */
+    // std::cerr << "Usage: " << argv[0] << " <option(s)> SOURCES"
+    //           << "Options:\n"
+    //           << "\t-h,--help\t\tShow this help message\n"
+    //           << "\t-d,--destination DESTINATION\tSpecify the destination path"
+    //           << std::endl;
+    //         exit(EXIT_FAILURE);
+    //     }
+    // }
+    // return 0;
 
-std::string toBinary(uint padding, uint n)
-{
-    std::string r;
-    while(n!=0) {
-        r = (n%2==0 ? "0":"1") + r;
-        n/=2;
-    }
-    padding = padding - r.length();
-    while(padding != 0)
-    {
-        r = "0" + r;
-        padding--;
-    }
-    return r;
-}
+    std::string rules_file;
+    if (argc > 1)
+        rules_file = argv[1];
+    else
+        rules_file = "../../../Documents/amadeus-share/mct_rules.csv";
 
-int main()
-{
-    std::ifstream       file("../../../Documents/amadeus-share/mct_rules.csv");
-    //std::ifstream       file("../data/demo_02.csv");
-    //std::ifstream       file("../data/demo_01.csv");
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // LOAD                                                                                       //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    ////////////////////////////////////////////////////////////////////////////////////////
     std::cout << "# LOAD" << std::endl;
-    CSVRow              row;
-    row.readNextRow(file);
-    nfa_bre::rulePack_s rp;
-
     auto start = std::chrono::high_resolution_clock::now();
-
-    rp.load("../../../Documents/amadeus-share/ruleTypeDefinition_MINCT_1-0_Template1.xml");
-
-    int aux = row.m_data.size()-4;
-    while(file >> row)
-    {
-        // NOT PRODUCTION
-        // JUST TO FILTER WHILE IN DEV
-        // if (row.m_data[8] != "\"ZRH\"" && row.m_data[9] != "\"ZRH\"")
-        //     continue;
-        //if (row.m_data[8] != "\"CDG\"" && row.m_data[9] != "\"CDG\"")
-        //    continue;
-        //if (row.m_data[8] != "\"GRU\"" && row.m_data[9] != "\"GRU\"")
-        //    continue;
-        //if (row.m_data[8] != "\"ZRH\"" && row.m_data[9] != "\"ZRH\"" && row.m_data[8] != "\"CDG\"" && row.m_data[9] != "\"CDG\"" && row.m_data[8] != "\"GRU\"" && row.m_data[9] != "\"GRU\"")
-        //    continue;
-        //if (row.m_data[aux+3] != "\"35\"")
-        //    continue;
-        //if (row.m_data[8] != "\"FIR\"" && row.m_data[9] != "\"FIR\"" && row.m_data[8] != "\"IBT\"" && row.m_data[9] != "\"IBT\"")
-        //    continue;
-
-        nfa_bre::rule_s rl;
-        rl.m_ruleId = std::stoi(row.m_data[0].substr(1));
-        rl.m_weight = std::stoi(row.m_data[1]);
-
-        for (int i=6; i<aux; i++)
-        {
-            nfa_bre::criterion_s ct;
-            ct.m_index = i-6;
-            if (!row.m_data[i].empty())
-                ct.m_value = row.get_value(i);
-            else
-                ct.m_value = "*";
-            rl.m_criteria.insert(ct);
-        }
-
-        if (row.m_data[aux+2] == "\"TRUE\"")
-            rl.m_content = "999";
-        else
-            rl.m_content = std::to_string(std::stoi(row.get_value(aux+1))*60 + 
-                                          std::stoi(row.get_value(aux+3)));
-
-        rp.m_rules.insert(rl);
-    }
+    
+    nfa_bre::rulePack_s rp;
+    rp.load_ruleType("../../../Documents/amadeus-share/ruleTypeDefinition_MINCT_1-0_Template1.xml");
+    rp.load_rules(rules_file);
 
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - start;
@@ -156,7 +86,7 @@ int main()
     // the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending, &arbitrary);
 
     std::cout << "Arbitrary order" << std::endl;
-    std::vector<unsigned short int> sorting_map(22);
+    std::vector<uint16_t> sorting_map(22);
     sorting_map[ 0] = rp.m_ruleType.get_criterion_id("MCT_OFF");
     sorting_map[ 1] = rp.m_ruleType.get_criterion_id("MCT_BRD");
     sorting_map[ 2] = rp.m_ruleType.get_criterion_id("IN_FLT_NB");
@@ -224,7 +154,7 @@ int main()
     std::cout << "total number of states: " << boost::num_vertices(the_nfa.m_graph) << std::endl;
     //std::cout << "total number of transitions: " << boost::num_edges(the_nfa.m_graph) << std::endl;
     std::cout << "# NFA COMPLETED in " << elapsed.count() << " s\n";
-
+    
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // DROOLS                                                                                     //
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -292,7 +222,7 @@ int main()
     // const uint CFG_ENGINE_NCRITERIA       = rp.m_ruleType.m_criterionDefinition.size();
     // const uint CFG_EDGE_BUFFERS_DEPTH     = 5;
     // const uint CFG_EDGE_BRAM_DEPTH        = (1 << (nfa_bre::CFG_MEM_ADDR_WIDTH + 1)) - 1;
-    const uint BRAM_USED_BITS             = nfa_bre::CFG_WEIGHT_WIDTH + nfa_bre::CFG_MEM_ADDR_WIDTH + 2*nfa_bre::CFG_ENGINE_CRITERION_WIDTH + 1;
+    // const uint BRAM_USED_BITS             = nfa_bre::CFG_WEIGHT_WIDTH + nfa_bre::CFG_MEM_ADDR_WIDTH + 2*nfa_bre::CFG_ENGINE_CRITERION_WIDTH + 1;
     // const uint CFG_EDGE_BRAM_WIDTH        = 1 << ((uint)ceil(log2(BRAM_USED_BITS)));
 
     // std::cout << "constant CFG_ENGINE_NCRITERIA         : integer := " << CFG_ENGINE_NCRITERIA << "; -- Number of criteria\n";
@@ -302,9 +232,9 @@ int main()
     // std::cout << "constant CFG_MEM_ADDR_WIDTH           : integer := " << nfa_bre::CFG_MEM_ADDR_WIDTH << ";\n";
     // std::cout << "--\n";
     // std::cout << "constant CFG_EDGE_BUFFERS_DEPTH       : integer := " << CFG_EDGE_BUFFERS_DEPTH << ";\n";
-    // //std::cout << "constant CFG_EDGE_BRAM_DEPTH          : integer := " << CFG_EDGE_BRAM_DEPTH << ";\n";
+    // std::cout << "constant CFG_EDGE_BRAM_DEPTH          : integer := " << CFG_EDGE_BRAM_DEPTH << ";\n";
     // std::cout << "constant CFG_EDGE_BRAM_WIDTH          : integer := " << CFG_EDGE_BRAM_WIDTH << ";\n";
-    std::cout << "BRAM_USED_BITS                        : integer := " << BRAM_USED_BITS << ";\n";
+    // std::cout << "BRAM_USED_BITS                        : integer := " << BRAM_USED_BITS << ";\n";
 
     if (ceil(log2(n_bram_edges_max)) > nfa_bre::CFG_MEM_ADDR_WIDTH)
     {
@@ -338,5 +268,5 @@ int main()
     //                                                                                            //
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    return 0;
+    return (1 ? EXIT_SUCCESS : EXIT_FAILURE);
 }

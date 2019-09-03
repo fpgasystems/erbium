@@ -39,7 +39,7 @@ module ederah_kernel_control_s_axi #(
   output wire [32-1:0]             queries_cls,
   output wire [32-1:0]             results_cls,
   output wire [32-1:0]             scalar03   ,
-  output wire [32-1:0]             scalar04   ,
+  output wire [64-1:0]             nfa_hash   ,
   output wire [64-1:0]             nfadata_ptr,
   output wire [64-1:0]             queries_ptr,
   output wire [64-1:0]             results_ptr,
@@ -73,9 +73,10 @@ module ederah_kernel_control_s_axi #(
 // 0x028 : Data signal of scalar03
 //         bit 31~0 - scalar03[31:0] (Read/Write)
 // 0x02c : reserved
-// 0x030 : Data signal of scalar04
-//         bit 31~0 - scalar04[31:0] (Read/Write)
-// 0x034 : reserved
+// 0x030 : Data signal of nfa_hash
+//         bit 31~0 - nfa_hash[31:0] (Read/Write)
+// 0x034 : Data signal of nfa_hash
+//         bit 31~0 - nfa_hash[63:32] (Read/Write)
 // 0x038 : Data signal of nfadata_ptr
 //         bit 31~0 - nfadata_ptr[31:0] (Read/Write)
 // 0x03c : Data signal of nfadata_ptr
@@ -105,7 +106,8 @@ localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_NFADATA_CLS_0          = 12'h010;
 localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_QUERIES_CLS_0          = 12'h018;
 localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_RESULTS_CLS_0          = 12'h020;
 localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_SCALAR03_0             = 12'h028;
-localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_SCALAR04_0             = 12'h030;
+localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_NFA_HASH_0             = 12'h030;
+localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_NFA_HASH_1             = 12'h034;
 localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_nfadata_ptr_0          = 12'h038;
 localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_nfadata_ptr_1          = 12'h03c;
 localparam [C_ADDR_WIDTH-1:0]       LP_ADDR_queries_ptr_0          = 12'h040;
@@ -149,7 +151,7 @@ reg  [32-1:0]                       int_nfadata_cls                = 32'd0;
 reg  [32-1:0]                       int_queries_cls                = 32'd0;
 reg  [32-1:0]                       int_results_cls                = 32'd0;
 reg  [32-1:0]                       int_scalar03                   = 32'd0;
-reg  [32-1:0]                       int_scalar04                   = 32'd0;
+reg  [64-1:0]                       int_nfa_hash                   = 64'd0;
 reg  [64-1:0]                       int_nfadata_ptr                = 64'd0;
 reg  [64-1:0]                       int_queries_ptr                = 64'd0;
 reg  [64-1:0]                       int_results_ptr                = 64'd0;
@@ -279,8 +281,11 @@ always @(posedge aclk) begin
         LP_ADDR_SCALAR03_0: begin
           rdata_r <= int_scalar03[0+:32];
         end
-        LP_ADDR_SCALAR04_0: begin
-          rdata_r <= int_scalar04[0+:32];
+        LP_ADDR_NFA_HASH_0: begin
+          rdata_r <= int_nfa_hash[0+:32];
+        end
+        LP_ADDR_NFA_HASH_1: begin
+          rdata_r <= int_nfa_hash[32+:32];
         end
         LP_ADDR_nfadata_ptr_0: begin
           rdata_r <= int_nfadata_ptr[0+:32];
@@ -323,7 +328,7 @@ assign nfadata_cls = int_nfadata_cls;
 assign queries_cls = int_queries_cls;
 assign results_cls = int_results_cls;
 assign scalar03 = int_scalar03;
-assign scalar04 = int_scalar04;
+assign nfa_hash = int_nfa_hash;
 assign nfadata_ptr = int_nfadata_ptr;
 assign queries_ptr = int_queries_ptr;
 assign results_ptr = int_results_ptr;
@@ -426,13 +431,23 @@ always @(posedge aclk) begin
   end
 end
 
-// int_scalar04[32-1:0]
+// int_nfa_hash[32-1:0]
 always @(posedge aclk) begin
   if (areset)
-    int_scalar04[0+:32] <= 32'd0;
+    int_nfa_hash[0+:32] <= 32'd0;
   else if (aclk_en) begin
-    if (w_hs && waddr == LP_ADDR_SCALAR04_0)
-      int_scalar04[0+:32] <= (wdata[0+:32] & wmask[0+:32]) | (int_scalar04[0+:32] & ~wmask[0+:32]);
+    if (w_hs && waddr == LP_ADDR_NFA_HASH_0)
+      int_nfa_hash[0+:32] <= (wdata[0+:32] & wmask[0+:32]) | (int_nfa_hash[0+:32] & ~wmask[0+:32]);
+  end
+end
+
+// int_nfa_hash[32-1:0]
+always @(posedge aclk) begin
+  if (areset)
+    int_nfa_hash[32+:32] <= 32'd0;
+  else if (aclk_en) begin
+    if (w_hs && waddr == LP_ADDR_NFA_HASH_1)
+      int_nfa_hash[32+:32] <= (wdata[0+:32] & wmask[0+:32]) | (int_nfa_hash[32+:32] & ~wmask[0+:32]);
   end
 end
 

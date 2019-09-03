@@ -2,8 +2,38 @@
 
 #include <boost/graph/graphviz.hpp>
 #include <iostream>
+#include <fstream>
+#include <stdio.h>
 
 namespace nfa_bre {
+
+uint64_t NFAHandler::hash(vertexes_t& the_map, graph_t const& the_graph)
+{
+    uint64_t h1, h2, h3, h4, h5, result = 0;
+    for (auto& level : the_map)
+    {
+        for (auto& value : the_map[level.first])
+        {
+            for (auto& vert : the_map[level.first][value.first])
+            {
+                h1 = std::hash<uint>{}(the_graph[vert].level);
+                h2 = std::hash<std::string>{}(the_graph[vert].label);
+                h3 = std::hash<std::string>{}(the_graph[vert].path);
+                
+                h4 = 0;
+                for (auto& parent : the_graph[vert].parents)
+                    h4 = h4 * 5 + std::hash<uint>{}(parent);
+
+                h5 = 0;
+                for (auto& child : the_graph[vert].children)
+                    h5 = h5 * 7 + std::hash<uint>{}(child);
+
+                result = h1 + h2 * 2 + h3 * 3 + h4 * 5 + h5 * 7 + result * 11;
+            }
+        }
+    }
+    return result;
+}
 
 NFAHandler::NFAHandler(const rulePack_s& rulepack, Dictionnary* dic)
 {
@@ -11,11 +41,11 @@ NFAHandler::NFAHandler(const rulePack_s& rulepack, Dictionnary* dic)
 
     add_vertex(m_graph); // origin;
 
-	std::map<std::string, uint> path_map;   // from node_path to node_id
-    std::string path_fwd;
-    uint prev_id = 0;
-    uint level = 0;
-    uint node_to_use = 0;
+	std::map<std::string, vertex_id_t> path_map;   // from node_path to node_id
+    std::string    path_fwd;
+    vertex_id_t    prev_id = 0;
+    vertex_id_t    node_to_use = 0;
+    criterionid_t level = 0;
 
     for (auto& rule : rulepack.m_rules)
     {
@@ -119,16 +149,15 @@ uint NFAHandler::optimise()
 void NFAHandler::deletion()
 {
     // effectively remove obsolete vertexes from the graph
-    std::map<uint, std::map<uint, std::set<uint>>> final_vertexes; // per level > per value_dic > states list
-    graph_t final_graph(1);
-    std::vector<uint> mapa;
-    std::map<uint, uint> mapaa;
+    vertexes_t final_vertexes; // per level > per value_dic > states list
+    graph_t    final_graph(1);
+    std::vector<vertex_id_t> mapa;
+    std::map<vertex_id_t, vertex_id_t> mapaa;
     final_graph[0].label="o"; // origin
-
-    std::map<std::string, uint> dic;
+    dictionnary_t dic;
 
     // iterates all states
-    uint node_to_use;
+    vertex_id_t node_to_use;
     for (auto& level : m_vertexes)
     {
         dic = m_dic->get_criterion_dic_by_level(level.first);
@@ -205,13 +234,13 @@ uint NFAHandler::print_stats()
 
 void NFAHandler::export_dot_file(const std::string& filename)
 {
-    std::ofstream dot_file(filename);
+    std::fstream dot_file(filename, std::ios::out | std::ios::trunc);
     boost::write_graphviz(dot_file, m_graph, boost::make_label_writer(get(&vertex_info::label, m_graph)));
 }
 
 void NFAHandler::memory_dump(const std::string& filename, const rulePack_s& rulepack)
 {
-    std::ofstream outfile(filename, std::ios::binary | std::ios::out | std::ios::trunc);
+    std::fstream outfile(filename, std::ios::out | std::ios::trunc | std::ios::binary);
 
     //----------------- Address pointers
     std::vector<uint> edges_per_level(m_vertexes.size());
@@ -227,7 +256,6 @@ void NFAHandler::memory_dump(const std::string& filename, const rulePack_s& rule
                 m_graph[vert].dump_pointer = n_edges;
                 n_edges_max = m_graph[vert].children.size();
 
-                // does it work for conflict rules for ex?
                 if (n_edges_max == 0)
                     n_edges++;
                 else
@@ -244,14 +272,18 @@ void NFAHandler::memory_dump(const std::string& filename, const rulePack_s& rule
             m_graph[vert].dump_pointer = m_graph[*m_graph[vert].children.begin()].dump_pointer;
     }
 
-
-    unsigned long long int mem_int;
-    std::map<std::string, uint> dic;
+    uint64_t mem_int;
+    dictionnary_t dic;
     const criterionDefinition_s* criterion_def;
+
+    // NFA ID (hash)
+    const uint64_t nfa_hash = hash(m_vertexes, m_graph);
+    outfile.write((char*)&nfa_hash, sizeof(nfa_hash));
+    std::cout << "NFA hash: " << nfa_hash << std::endl;
 
     ////// ORIGIN
     mem_int = m_graph[0].children.size();
-    write_longlongint(&outfile, mem_int);
+    outfile.write((char*)&mem_int, sizeof(mem_int));
 
     dic = m_dic->get_criterion_dic_by_level(0);
     criterion_def = &(*std::next(rulepack.m_ruleType.m_criterionDefinition.begin(),
@@ -261,14 +293,14 @@ void NFAHandler::memory_dump(const std::string& filename, const rulePack_s& rule
     dump_padding(&outfile, m_graph[0].children.size()+1);
 
     ////// AND THE REST OF CRITERIA
-    uint the_level = 1;
+    criterionid_t the_level = 1;
     for (auto& level : m_vertexes)
     {
         if (level.second == m_vertexes[m_vertexes.size()-2])
             break;  // skip content
 
         mem_int = edges_per_level[level.first];
-        write_longlongint(&outfile, mem_int);        
+        outfile.write((char*)&mem_int, sizeof(mem_int));
 
         dic = m_dic->get_criterion_dic_by_level(the_level);
         criterion_def = &(*std::next(rulepack.m_ruleType.m_criterionDefinition.begin(),
@@ -285,51 +317,42 @@ void NFAHandler::memory_dump(const std::string& filename, const rulePack_s& rule
     outfile.close();
 }
 
-void NFAHandler::dump_nfa_state(std::ofstream* outfile,
-                                const uint& vertex_id,
-                                std::map<std::string, uint>* dic,
+void NFAHandler::dump_nfa_state(std::fstream* outfile,
+                                const vertex_id_t& vertex_id,
+                                dictionnary_t* dic,
                                 const criterionDefinition_s* criterion_def)
 {
-    unsigned long long int mem_int;
-    uint aux = 1;
-    uint n_fanout = m_graph[vertex_id].children.size();
-    unsigned short int mem_opa;
-    unsigned short int mem_opb;
+    size_t n_fanout = m_graph[vertex_id].children.size();
+    size_t aux = 1;
+    uint64_t mem_int;
+    operands_t mem_opa;
+    operands_t mem_opb;
 
     for (auto& itr : m_graph[vertex_id].children)
     {
         parse_value(m_graph[itr].label, (*dic)[m_graph[itr].label], &mem_opa, &mem_opb, criterion_def);
-        mem_int = (unsigned long long int)(aux++ == n_fanout) << SHIFT_LAST;
-        mem_int |= ((unsigned long long int)256 & MASK_WEIGHT) << SHIFT_WEIGHT;
-        mem_int |= ((unsigned long long int)(m_graph[itr].dump_pointer) & MASK_POINTER) << SHIFT_POINTER;
-        mem_int |= ((unsigned long long int)(mem_opb & MASK_OPERAND_B)) << SHIFT_OPERAND_B;
-        mem_int |= ((unsigned long long int)(mem_opa & MASK_OPERAND_A)) << SHIFT_OPERAND_A;
-        write_longlongint(outfile, mem_int);
+        mem_int = (uint64_t)(aux++ == n_fanout) << SHIFT_LAST;
+        mem_int |= ((uint64_t)256 & MASK_WEIGHT) << SHIFT_WEIGHT;
+        mem_int |= ((uint64_t)(m_graph[itr].dump_pointer) & MASK_POINTER) << SHIFT_POINTER;
+        mem_int |= ((uint64_t)(mem_opb & MASK_OPERAND_B)) << SHIFT_OPERAND_B;
+        mem_int |= ((uint64_t)(mem_opa & MASK_OPERAND_A)) << SHIFT_OPERAND_A;
+        outfile->write((char*)&mem_int, sizeof(mem_int));
     }
 }
 
-void NFAHandler::dump_padding(std::ofstream* outfile, const uint& slices)
+void NFAHandler::dump_padding(std::fstream* outfile, const size_t& slices)
 {
-    unsigned long long int mem_int = 0;
-    uint n_edges = slices % C_EDGES_PER_CACHE_LINE;
+    uint64_t mem_int = 0;
+    size_t n_edges = slices % C_EDGES_PER_CACHE_LINE;
     n_edges = (n_edges == 0) ? 0 : C_EDGES_PER_CACHE_LINE - n_edges;
-    for (uint pad = n_edges; pad != 0; pad--)
-        write_longlongint(outfile, mem_int);
-}
-
-template<typename T>
-void NFAHandler::write_longlongint(std::ofstream* outfile, const T& value)
-{
-    //const uintptr_t addr = (uintptr_t)&value;
-    //for (short i = sizeof(value) - 1; i >= 0; i--)
-    //    outfile->write((char*)(addr + i), 1);
-    outfile->write((char*)&value, sizeof(value));
+    for (size_t pad = n_edges; pad != 0; pad--)
+        outfile->write((char*)&mem_int, sizeof(mem_int));
 }
 
 void NFAHandler::parse_value(const std::string& value_raw,
-                             const uint& value_id,
-                             unsigned short int* operand_a,
-                             unsigned short int* operand_b,
+                             const valueid_t& value_id,
+                             valueid_t* operand_a,
+                             valueid_t* operand_b,
                              const criterionDefinition_s* criterion_def)
 {
     if (!criterion_def->m_isPair)
@@ -375,12 +398,14 @@ bool export_parameters(const std::string& filename)
 
 void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePack_s& rulepack)
 {
-    std::ofstream filebin(filename + ".bin", std::ios::out | std::ios::trunc | std::ios::binary);
-    std::ofstream filecsv(filename + ".csv", std::ios::out | std::ios::trunc);
+    const uint16_t BATCHES = 1;
+    std::fstream filebin(filename + ".bin", std::ios::out | std::ios::trunc | std::ios::binary);
+    std::fstream filecsv(filename + ".csv", std::ios::out | std::ios::trunc);
+    std::fstream fileaux(filename + ".aux", std::ios::out | std::ios::in | std::ios::trunc | std::ios::binary);
     
     const uint SLICES_PER_LINE = C_CACHE_LINE_WIDTH / C_RAW_CRITERION_SIZE;
-    unsigned short int mem_opa;
-    unsigned short int mem_opb;
+    operands_t mem_opa;
+    operands_t mem_opb;
 
     uint padding_slices = (rulepack.m_ruleType.m_criterionDefinition.size()) % SLICES_PER_LINE;
     padding_slices = (padding_slices == 0) ? 0 : SLICES_PER_LINE - padding_slices;
@@ -391,7 +416,7 @@ void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePac
     uint32_t restats_size; // in bytes without padding
     uint32_t num_queries;
 
-    num_queries = rulepack.m_rules.size();
+    num_queries = rulepack.m_rules.size() * BATCHES;
     results_size = num_queries * C_RAW_RESUTLS_SIZE;
     restats_size = num_queries * C_RAW_RESULT_STATS_WIDTH;
     queries_size = rulepack.m_ruleType.m_criterionDefinition.size() * C_RAW_CRITERION_SIZE;
@@ -403,12 +428,12 @@ void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePac
     filebin.write(reinterpret_cast<char *>(&restats_size), sizeof(restats_size));
     filebin.write(reinterpret_cast<char *>(&num_queries),  sizeof(num_queries));
 
-    printf("> # of queries: %9u\n", num_queries);
-    printf("> Queries size: %9u bytes\n", queries_size);
-    printf("> Results size: %9u bytes\n", results_size);
-    printf("> Stats size:   %9u bytes\n", restats_size);
+    printf("> # of queries: %'9u\n", num_queries);
+    printf("> Queries size: %'9u bytes\n", queries_size);
+    printf("> Results size: %'9u bytes\n", results_size);
+    printf("> Stats size:   %'9u bytes\n", restats_size);
 
-    uint the_level;
+    criterionid_t the_level;
     const criterion_s* aux_criterion;
     const criterionDefinition_s* aux_definition;
     for (auto& rule : rulepack.m_rules)
@@ -426,7 +451,7 @@ void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePac
                         &mem_opb,
                         aux_definition);
 
-            write_longlongint(&filebin, mem_opa);
+            fileaux.write((char*)&mem_opa, sizeof(mem_opa));
             filecsv << "," << aux_criterion->m_value;
             the_level++;
         }
@@ -435,16 +460,23 @@ void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePac
         // padding
         mem_opa = 0;
         for (uint pad = padding_slices; pad != 0; pad--)
-            write_longlongint(&filebin, mem_opa);
+            fileaux.write((char*)&mem_opa, sizeof(mem_opa));
+    }
+    for (size_t i = 0; i < BATCHES; i++)
+    {
+        fileaux.seekg(0, std::ios::beg);
+        filebin << fileaux.rdbuf();
     }
 
     filebin.close();
     filecsv.close();
+    fileaux.close();
+    remove(((std::string)(filename + ".aux")).c_str());
 }
 
 void NFAHandler::dump_core_parameters(const std::string& filename, const rulePack_s& rulepack)
 {
-    std::ofstream outfile(filename, std::ios::out | std::ios::trunc);
+    std::fstream outfile(filename, std::ios::out | std::ios::trunc);
 
     std::vector<uint> edges_per_level(m_vertexes.size()+1);
     edges_per_level[0] = m_graph[0].children.size();
@@ -463,7 +495,7 @@ void NFAHandler::dump_core_parameters(const std::string& filename, const rulePac
     const criterionDefinition_s* criterion_def;
     char buffer[1024];
     std::string func_a, func_b, func_pair, match_mode;
-    uint the_level = 0;
+    criterionid_t the_level = 0;
     for (auto& ord : m_dic->m_sorting_map)
     {
         criterion_def = &(*std::next(rulepack.m_ruleType.m_criterionDefinition.begin(), ord));
@@ -504,7 +536,7 @@ void NFAHandler::dump_core_parameters(const std::string& filename, const rulePac
                         "        G_MATCH_FUNCTION_B    => %s,\n"
                         "        G_MATCH_FUNCTION_PAIR => %s,\n"
                         "        G_MATCH_MODE          => %s,\n"
-                        "        G_WEIGHT              => %lu,\n"
+                        "        G_WEIGHT              => %u,\n"
                         "        G_WILDCARD_ENABLED    => '%u'\n"
                         "    );\n",
             the_level,
@@ -535,13 +567,13 @@ void NFAHandler::dump_core_parameters(const std::string& filename, const rulePac
 
 void NFAHandler::dump_drools_rules(const std::string& filename, const rulePack_s& rulepack)
 {
-    std::ofstream outfile(filename, std::ios::out | std::ios::trunc);
+    std::fstream outfile(filename, std::ios::out | std::ios::trunc);
 
     outfile << "package com.ethz.rules\n\nimport com.ethz.SK_FDF;\n";
     outfile << "\ndialect \"java\"\n\n";
 
     // helpers
-    unsigned short int operand_a, operand_b;
+    uint16_t operand_a, operand_b;
     bool except;
     const criterionDefinition_s* crit_def;
     for (auto& rule : rulepack.m_rules)
@@ -580,7 +612,7 @@ void NFAHandler::dump_drools_rules(const std::string& filename, const rulePack_s
 
     outfile.close();
 
-    std::ofstream secfile("build/SK_FDF.java", std::ios::out | std::ios::trunc);
+    std::fstream secfile("build/SK_FDF.java", std::ios::out | std::ios::trunc);
     secfile << "package com.sample;\n\npublic class SK_FDF {\n";
     for (auto& crit_def : rulepack.m_ruleType.m_criterionDefinition)
     {
@@ -591,11 +623,6 @@ void NFAHandler::dump_drools_rules(const std::string& filename, const rulePack_s
     }
     secfile << "}";
     secfile.close();
-}
-
-void NFAHandler::dump_drools_workload(const std::string& filename, const rulePack_s& rulepack)
-{
-
 }
 
 } // namespace nfa_bre

@@ -56,7 +56,6 @@ typedef boost::graph_traits<graph_t>::vertex_descriptor                      ver
 typedef std::map<criterionid_t, std::map<valueid_t, std::set<vertex_id_t>>>  vertexes_t;
 
 
-
 enum SortOrder { Ascending, Descending };
 
 struct vertex_info { 

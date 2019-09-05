@@ -5,10 +5,14 @@
 #include <fstream>
 #include <chrono>
 #include <math.h>
+#include <unistd.h>
+#include <filesystem>
 
 #include "definitions.h"
 #include "dictionnary.h"
 #include "nfa_handler.h"
+
+enum SortOption { None, Ascending, Descending, MCT_DESC, MCT_PERF };
 
 //#define _DEBUG true
 
@@ -17,33 +21,62 @@ int main(int argc, char** argv)
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // PARAMETERS                                                                                 //
     ////////////////////////////////////////////////////////////////////////////////////////////////
+    std::cout << "# PARAMETERS" << std::endl;
+    // -d destination folder
+    // -r rules file
+    // -s sorting: 0=none 1=asc 2=desc 3=mct_asc 4=mct_perf
+    // -z [ZRH workload]
+    // -h help
 
-    // #include <unistd.h>
-    // int opt;
-    // while ((opt = getopt(argc, argv, "nt:")) != -1) {
-    //     switch (opt) {
-    //     case 'n':
-    //         printf("option n with value '%s'\n", optarg);
-    //         break;
-    //     case 't':
-    //         printf("option t with value '%s'\n", optarg);
-    //         break;
-    //     default: /* '?' */
-    // std::cerr << "Usage: " << argv[0] << " <option(s)> SOURCES"
-    //           << "Options:\n"
-    //           << "\t-h,--help\t\tShow this help message\n"
-    //           << "\t-d,--destination DESTINATION\tSpecify the destination path"
-    //           << std::endl;
-    //         exit(EXIT_FAILURE);
-    //     }
-    // }
-    // return 0;
+    SortOption sorting_option = MCT_DESC;
+    std::string dest_folder = "build/";
+    std::string rules_file = "../../../Documents/amadeus-share/mct_rules.csv";
 
-    std::string rules_file;
-    if (argc > 1)
-        rules_file = argv[1];
-    else
-        rules_file = "../../../Documents/amadeus-share/mct_rules.csv";
+    int opt;
+    while ((opt = getopt(argc, argv, "d:r:zs:h")) != -1) {
+        switch (opt) {
+        case 'd':
+            dest_folder = optarg;
+            break;
+        case 'r':
+            rules_file = optarg;
+            break;
+        case 't':
+            printf("option t with value '%s'\n", optarg);
+            break;
+        case 's':
+            sorting_option = static_cast<SortOption>(atoi(optarg));
+            break;
+        case 'z':
+            dest_folder = "build-zrh/";
+            rules_file = "../../../Documents/amadeus-share/zrh_rules.csv";
+            break;
+        case 'h':
+        default: /* '?' */
+            std::cerr << "Usage: " << argv[0] << "\n"
+                      << "\t-d  destination folder\n"
+                      << "\t-r  rules file\n"
+                      << "\t-s  sorting: 0=none 1=asc 2=desc 3=mct_asc 4=mct_perf\n"
+                      << "\t-z  [ZRH workload]\n"
+                      << "\t-h  help\n";
+            exit(EXIT_FAILURE);
+        }
+    }
+    
+    if (dest_folder.back() != '/')
+        dest_folder = dest_folder + "/";
+    if (!std::filesystem::exists(dest_folder))
+        std::filesystem::create_directory(dest_folder);
+
+    std::cout << "-d destination folder: " << dest_folder << std::endl;
+    std::cout << "-r rules file: " << rules_file << std::endl;
+    printf("-s sorting: [%c]none [%c]asc [%c]desc [%c]mct_asc [%c]mct_perf\n",
+            (sorting_option==SortOption::None)       ? 'x' : ' ',
+            (sorting_option==SortOption::Ascending)  ? 'x' : ' ',
+            (sorting_option==SortOption::Descending) ? 'x' : ' ',
+            (sorting_option==SortOption::MCT_DESC)   ? 'x' : ' ',
+            (sorting_option==SortOption::MCT_PERF)   ? 'x' : ' ');
+    
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // LOAD                                                                                       //
@@ -70,48 +103,71 @@ int main(int argc, char** argv)
     
     nfa_bre::Dictionnary the_dictionnary(rp);
 
-    // // arbitrary criteria order
-    // std::vector<short int> arbitrary;            // key=position; value=criteria_id
-    // for (auto& aux : rp.m_ruleType.m_criterionDefinition)
-    //     arbitrary.push_back(-1);
-    // arbitrary[0] = rp.m_ruleType.get_criterion_id("MCT_OFF");
-    // arbitrary[1] = rp.m_ruleType.get_criterion_id("MCT_BRD");
-    // arbitrary[arbitrary.size()-3] = rp.m_ruleType.get_criteriON_id("MCT_PRD");
-    // arbitrary[arbitrary.size()-2] = rp.m_ruleType.get_criteriON_id("OUT_FLT_RG");
-    // arbitrary[arbitrary.size()-1] = rp.m_ruleType.get_criteriON_id("IN_FLT_RG");
-    // the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending, &arbitrary);
+    switch (sorting_option) // todo enum
+    {
+        case SortOption::Ascending:
+            std::cout << "Ascending sort" << std::endl;
+            the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Ascending);
+            break;
 
-    std::cout << "Arbitrary order" << std::endl;
-    std::vector<uint16_t> sorting_map(22);
-    sorting_map[ 0] = rp.m_ruleType.get_criterion_id("MCT_OFF");
-    sorting_map[ 1] = rp.m_ruleType.get_criterion_id("MCT_BRD");
-    sorting_map[ 2] = rp.m_ruleType.get_criterion_id("IN_FLT_NB");
-    sorting_map[ 3] = rp.m_ruleType.get_criterion_id("OUT_FLT_NB");
-    sorting_map[ 4] = rp.m_ruleType.get_criterion_id("IN_FLT_RG");
-    sorting_map[ 5] = rp.m_ruleType.get_criterion_id("OUT_FLT_RG");
-    sorting_map[ 6] = rp.m_ruleType.get_criterion_id("NXT_APT");
-    sorting_map[ 7] = rp.m_ruleType.get_criterion_id("PRV_APT");
-    sorting_map[ 8] = rp.m_ruleType.get_criterion_id("MCT_PRD");
-    sorting_map[ 9] = rp.m_ruleType.get_criterion_id("IN_CRR");
-    sorting_map[10] = rp.m_ruleType.get_criterion_id("OUT_CRR");
-    sorting_map[11] = rp.m_ruleType.get_criterion_id("PRV_CTRY");
-    sorting_map[12] = rp.m_ruleType.get_criterion_id("NXT_CTRY");
-    sorting_map[13] = rp.m_ruleType.get_criterion_id("IN_EQP");
-    sorting_map[14] = rp.m_ruleType.get_criterion_id("IN_TER");
-    sorting_map[15] = rp.m_ruleType.get_criterion_id("OUT_TER");
-    sorting_map[16] = rp.m_ruleType.get_criterion_id("OUT_EQP");
-    sorting_map[17] = rp.m_ruleType.get_criterion_id("NXT_STATE");
-    sorting_map[18] = rp.m_ruleType.get_criterion_id("PRV_STATE");
-    sorting_map[19] = rp.m_ruleType.get_criterion_id("CTN_TYPE");
-    sorting_map[20] = rp.m_ruleType.get_criterion_id("NXT_AREA");
-    sorting_map[21] = rp.m_ruleType.get_criterion_id("PRV_AREA");
-    the_dictionnary.m_sorting_map = sorting_map;
+        case SortOption::Descending:
+            std::cout << "Descending sort" << std::endl;
+            the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending);
+            break;
 
-    //the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending);
-    
+        case SortOption::MCT_DESC:
+        {
+            std::cout << "Arbitrary order MCT_DESC" << std::endl;
+            nfa_bre::sorting_map_t sorting_map(22);
+            sorting_map[ 0] = rp.m_ruleType.get_criterion_id("MCT_OFF");
+            sorting_map[ 1] = rp.m_ruleType.get_criterion_id("MCT_BRD");
+            sorting_map[ 2] = rp.m_ruleType.get_criterion_id("IN_FLT_NB");
+            sorting_map[ 3] = rp.m_ruleType.get_criterion_id("OUT_FLT_NB");
+            sorting_map[ 4] = rp.m_ruleType.get_criterion_id("IN_FLT_RG");
+            sorting_map[ 5] = rp.m_ruleType.get_criterion_id("OUT_FLT_RG");
+            sorting_map[ 6] = rp.m_ruleType.get_criterion_id("NXT_APT");
+            sorting_map[ 7] = rp.m_ruleType.get_criterion_id("PRV_APT");
+            sorting_map[ 8] = rp.m_ruleType.get_criterion_id("MCT_PRD");
+            sorting_map[ 9] = rp.m_ruleType.get_criterion_id("IN_CRR");
+            sorting_map[10] = rp.m_ruleType.get_criterion_id("OUT_CRR");
+            sorting_map[11] = rp.m_ruleType.get_criterion_id("PRV_CTRY");
+            sorting_map[12] = rp.m_ruleType.get_criterion_id("NXT_CTRY");
+            sorting_map[13] = rp.m_ruleType.get_criterion_id("IN_EQP");
+            sorting_map[14] = rp.m_ruleType.get_criterion_id("IN_TER");
+            sorting_map[15] = rp.m_ruleType.get_criterion_id("OUT_TER");
+            sorting_map[16] = rp.m_ruleType.get_criterion_id("OUT_EQP");
+            sorting_map[17] = rp.m_ruleType.get_criterion_id("NXT_STATE");
+            sorting_map[18] = rp.m_ruleType.get_criterion_id("PRV_STATE");
+            sorting_map[19] = rp.m_ruleType.get_criterion_id("CTN_TYPE");
+            sorting_map[20] = rp.m_ruleType.get_criterion_id("NXT_AREA");
+            sorting_map[21] = rp.m_ruleType.get_criterion_id("PRV_AREA");
+            the_dictionnary.m_sorting_map = sorting_map;
+        }
+            break;
+
+        case SortOption::MCT_PERF:
+        {
+            std::cout << "Arbitrary order MCT_PERF" << std::endl;
+            std::vector<int16_t> arbitrary; // key=position; value=criteria_id
+            for (auto& aux __attribute__((unused)) : rp.m_ruleType.m_criterionDefinition)
+                 arbitrary.push_back(-1);
+            arbitrary[0] = rp.m_ruleType.get_criterion_id("MCT_OFF");
+            arbitrary[1] = rp.m_ruleType.get_criterion_id("MCT_BRD");
+            arbitrary[arbitrary.size()-3] = rp.m_ruleType.get_criterion_id("MCT_PRD");
+            arbitrary[arbitrary.size()-2] = rp.m_ruleType.get_criterion_id("OUT_FLT_RG");
+            arbitrary[arbitrary.size()-1] = rp.m_ruleType.get_criterion_id("IN_FLT_RG");
+            the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending, &arbitrary);
+        }
+            break;
+
+        case SortOption::None:
+        default:
+            break;
+    }
+
     finish = std::chrono::high_resolution_clock::now();
 
-    the_dictionnary.dump_dictionnary("build/dictionnary.csv");
+    the_dictionnary.dump_dictionnary(dest_folder + "dictionnary.csv");
 
     // uint key = 0;
     // for (auto& aux : the_dictionnary.m_sorting_map)
@@ -193,21 +249,21 @@ int main(int argc, char** argv)
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::cout << "# EXPORT CORE PARAMETERS" << std::endl;
-    the_nfa.dump_core_parameters("build/core_param.txt", rp);
+    the_nfa.dump_core_parameters(dest_folder + "core_param.txt", rp);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // DROOLS                                                                                     //
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::cout << "# DROOLS" << std::endl;
-    the_nfa.dump_drools_rules("build/Rule.drl", rp);
+    the_nfa.dump_drools_rules(dest_folder, rp);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // EXPORT DOT FILE                                                                            //
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::cout << "# EXPORT DOT FILE" << std::endl;
-    the_nfa.export_dot_file("build/automaton.dot");
+    the_nfa.export_dot_file(dest_folder + "automaton.dot");
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // MEMORY DUMP                                                                                //
@@ -241,7 +297,7 @@ int main(int argc, char** argv)
 
     start = std::chrono::high_resolution_clock::now();
 
-    the_nfa.memory_dump("build/mem_edges.bin", rp);
+    the_nfa.memory_dump(dest_folder + "mem_edges.bin", rp);
 
     finish = std::chrono::high_resolution_clock::now();
 
@@ -254,7 +310,7 @@ int main(int argc, char** argv)
     std::cout << "# WORKLOAD DUMP" << std::endl;
     start = std::chrono::high_resolution_clock::now();
 
-    the_nfa.dump_mirror_workload("build/workload", rp);
+    the_nfa.dump_mirror_workload(dest_folder + "workload", rp);
 
     finish = std::chrono::high_resolution_clock::now();
     elapsed = finish - start;

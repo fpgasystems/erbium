@@ -581,9 +581,9 @@ void NFAHandler::dump_core_parameters(const std::string& filename, const rulePac
     outfile.close();
 }
 
-void NFAHandler::dump_drools_rules(const std::string& filename, const rulePack_s& rulepack)
+void NFAHandler::dump_drools_rules(const std::string& path, const rulePack_s& rulepack)
 {
-    std::fstream outfile(filename, std::ios::out | std::ios::trunc);
+    std::fstream outfile(path + "Rule.drl", std::ios::out | std::ios::trunc);
 
     outfile << "package com.ethz.rules\n\nimport com.ethz.SK_FDF;\n";
     outfile << "\ndialect \"java\"\n\n";
@@ -628,7 +628,7 @@ void NFAHandler::dump_drools_rules(const std::string& filename, const rulePack_s
 
     outfile.close();
 
-    std::fstream secfile("build/SK_FDF.java", std::ios::out | std::ios::trunc);
+    std::fstream secfile(path + "SK_FDF.java", std::ios::out | std::ios::trunc);
     secfile << "package com.sample;\n\npublic class SK_FDF {\n";
     for (auto& crit_def : rulepack.m_ruleType.m_criterionDefinition)
     {

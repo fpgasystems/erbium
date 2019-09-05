@@ -24,14 +24,14 @@ $(shell mkdir -p $(dir $(DEPS)) >/dev/null)
 # C compiler
 CC := gcc
 # C++ compiler
-CXX := c++
+CXX := gcc-9
 # linker
-LD := g++
+LD := g++-9
 # tar
 TAR := tar
 
 # C++ flags
-CXXFLAGS := -std=c++11
+CXXFLAGS := -std=c++17
 # C/C++ flags
 CPPFLAGS := -g -Wall -pedantic -fopenmp
 # linker flags

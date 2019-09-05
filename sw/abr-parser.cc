@@ -5,19 +5,15 @@
 #include <fstream>
 #include <chrono>
 #include <math.h>
-#include <locale.h>
 
 #include "definitions.h"
 #include "dictionnary.h"
 #include "nfa_handler.h"
 
-
 //#define _DEBUG true
 
 int main(int argc, char** argv)
 {
-    setlocale(LC_NUMERIC, ""); // printf with thousand comma separator
-
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // PARAMETERS                                                                                 //
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -151,17 +147,10 @@ int main(int argc, char** argv)
     #endif
 
     // Stats
-    std::cout << "total number of states: " << boost::num_vertices(the_nfa.m_graph) << std::endl;
-    //std::cout << "total number of transitions: " << boost::num_edges(the_nfa.m_graph) << std::endl;
+    std::cout << "initial number of states: " << boost::num_vertices(the_nfa.m_graph) << std::endl;
+    //std::cout << "initial number of transitions: " << boost::num_edges(the_nfa.m_graph) << std::endl;
     std::cout << "# NFA COMPLETED in " << elapsed.count() << " s\n";
     
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-    // DROOLS                                                                                     //
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-
-    std::cout << "# DROOLS" << std::endl;
-    the_nfa.dump_drools_rules("build/Rule.drl", rp);
-
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // OPTIMISATIONS                                                                              //
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -205,6 +194,13 @@ int main(int argc, char** argv)
 
     std::cout << "# EXPORT CORE PARAMETERS" << std::endl;
     the_nfa.dump_core_parameters("build/core_param.txt", rp);
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // DROOLS                                                                                     //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
+    std::cout << "# DROOLS" << std::endl;
+    the_nfa.dump_drools_rules("build/Rule.drl", rp);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // EXPORT DOT FILE                                                                            //

@@ -104,8 +104,6 @@ bool load_queries_from_file(char* file_name,
 
 int main(int argc, char** argv)
 {
-    setlocale(LC_NUMERIC, ""); // printf with thousand comma separator
-
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // PARAMETERS                                                                                 //
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -204,11 +202,11 @@ int main(int argc, char** argv)
     if(!suc)
         return EXIT_FAILURE;
 
-    printf("> # of queries: %'9u\n", num_queries);
-    printf("> NFA size:     %'9u bytes\n", nfadata_size);
-    printf("> Queries size: %'9u bytes\n", queries_size);
-    printf("> Results size: %'9u bytes\n", results_size);
-    printf("> Stats size:   %'9u bytes\n", restats_size);
+    printf("> # of queries: %9u\n", num_queries);
+    printf("> NFA size:     %9u bytes\n", nfadata_size);
+    printf("> Queries size: %9u bytes\n", queries_size);
+    printf("> Results size: %9u bytes\n", results_size);
+    printf("> Stats size:   %9u bytes\n", restats_size);
     if (stats_on)
     {
         results_size = restats_size;
@@ -224,10 +222,7 @@ int main(int argc, char** argv)
     // cache lines
     uint32_t nfadata_cls = nfadata_size / C_CACHELINE_SIZE;
     uint32_t queries_cls = queries_size / C_CACHELINE_SIZE;
-    uint32_t results_cls = results_size / C_CACHELINE_SIZE; // TODO it will ignore the last cacheline!
-    //uint32_t results_cls = number_of_lines(results_size, C_CACHELINE_SIZE);
-    // must create a mask then
-
+    uint32_t results_cls = (results_size / C_CACHELINE_SIZE) + (((results_size % C_CACHELINE_SIZE)==0)?0:1);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // KERNEL EXECUTION                                                                           //
@@ -289,12 +284,12 @@ int main(int argc, char** argv)
     double opencl_pct = ((double) opencl_ns) / total_ns * 100;
 
     printf(">> Timing report: \n");
-    printf("> Invocation overhead (opencl calls): %'11lu ns (%5.2f%%)\n", opencl_ns, opencl_pct);
-    printf("> Static data overhead (NFA to DDR):  %'11lu ns (%5.2f%%)\n", nfadata_ns, nfadata_pct);
-    printf("> Data transfer (Queries to DDR):     %'11lu ns (%5.2f%%)\n", queries_ns, queries_pct);
-    printf("> Wall Clock Time (Kernel execution): %'11lu ns (%5.2f%%)\n", kernel_ns, kernel_pct);
-    printf("> Results transfer (back from DDR):   %'11lu ns (%5.2f%%)\n", result_ns, result_pct);
-    printf("> Total execution and retrieval time: %'11.4f ms\n", (stamp01-stamp00)*1000);
+    printf("> Invocation overhead (opencl calls): %9lu ns (%5.2f%%)\n", opencl_ns, opencl_pct);
+    printf("> Static data overhead (NFA to DDR):  %9lu ns (%5.2f%%)\n", nfadata_ns, nfadata_pct);
+    printf("> Data transfer (Queries to DDR):     %9lu ns (%5.2f%%)\n", queries_ns, queries_pct);
+    printf("> Wall Clock Time (Kernel execution): %9lu ns (%5.2f%%)\n", kernel_ns, kernel_pct);
+    printf("> Results transfer (back from DDR):   %9lu ns (%5.2f%%)\n", result_ns, result_pct);
+    printf("> Total execution and retrieval time: %9.4f ms\n", (stamp01-stamp00)*1000);
     printf("> Query latancy (wall clock): %2.4f us\n", ((double) kernel_ns) / 1000 / num_queries);
     printf("> Query latency (total exec): %2.4f us\n", ((double) total_ns) / 1000 / num_queries);
 
@@ -321,8 +316,15 @@ int main(int argc, char** argv)
     }
     file.close();
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // SECOND CALL                                                                                //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    // second call!
+    printf("\n");
+    stamp00 = get_time();
+
+    queue.enqueueMigrateMemObjects({buffer_queries}, 0/* 0 means from host*/, NULL, &evtQueries);
+
     // kernel arguments
     kernel.setArg(0, nfadata_cls);
     kernel.setArg(1, queries_cls);
@@ -339,27 +341,26 @@ int main(int argc, char** argv)
     queue.enqueueMigrateMemObjects({buffer_results}, CL_MIGRATE_MEM_OBJECT_HOST, NULL, &evtResult);
 
     queue.finish();
+    stamp01 = get_time();
 
     total_ns = (stamp01-stamp00)*1000*1000*1000;
-    nfadata_ns = get_duration_ns(evtNFAdata);
     queries_ns = get_duration_ns(evtQueries);
     kernel_ns = get_duration_ns(evtKernel);
     result_ns = get_duration_ns(evtResult);
-    events_ns = nfadata_ns + queries_ns + kernel_ns + result_ns;
+    events_ns = queries_ns + kernel_ns + result_ns;
     opencl_ns = total_ns - events_ns;
-    nfadata_pct = ((double) nfadata_ns) / total_ns * 100;
     queries_pct = ((double) queries_ns) / total_ns * 100;
     kernel_pct = ((double) kernel_ns) / total_ns * 100;
     result_pct = ((double) result_ns) / total_ns * 100;
     opencl_pct = ((double) opencl_ns) / total_ns * 100;
 
     printf(">> Timing report: \n");
-    printf("> Invocation overhead (opencl calls): %'11lu ns (%5.2f%%)\n", opencl_ns, opencl_pct);
-    printf("> Static data overhead (NFA to DDR):  %'11lu ns (%5.2f%%)\n", nfadata_ns, nfadata_pct);
-    printf("> Data transfer (Queries to DDR):     %'11lu ns (%5.2f%%)\n", queries_ns, queries_pct);
-    printf("> Wall Clock Time (Kernel execution): %'11lu ns (%5.2f%%)\n", kernel_ns, kernel_pct);
-    printf("> Results transfer (back from DDR):   %'11lu ns (%5.2f%%)\n", result_ns, result_pct);
-    printf("> Total execution and retrieval time: %'11.4f ms\n", (stamp01-stamp00)*1000);
+    printf("> Invocation overhead (opencl calls): %9lu ns (%5.2f%%)\n", opencl_ns, opencl_pct);
+    printf("> Static data overhead (NFA to DDR):  %9u ns (%5.2f%%)\n", 0, 0.0);
+    printf("> Data transfer (Queries to DDR):     %9lu ns (%5.2f%%)\n", queries_ns, queries_pct);
+    printf("> Wall Clock Time (Kernel execution): %9lu ns (%5.2f%%)\n", kernel_ns, kernel_pct);
+    printf("> Results transfer (back from DDR):   %9lu ns (%5.2f%%)\n", result_ns, result_pct);
+    printf("> Total execution and retrieval time: %9.4f ms\n", (stamp01-stamp00)*1000);
     printf("> Query latancy (wall clock): %2.4f us\n", ((double) kernel_ns) / 1000 / num_queries);
     printf("> Query latency (total exec): %2.4f us\n", ((double) total_ns) / 1000 / num_queries);
 

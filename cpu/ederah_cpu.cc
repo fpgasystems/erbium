@@ -248,6 +248,7 @@ int main(int argc, char** argv)
     uint32_t  results_size;
     uint32_t  restats_size;
     uint16_t  num_of_cores = atoi(argv[4]);
+    uint64_t  nfa_hash;
     //bool      stats_on = (std::string(argv[4]) == "yes");
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -262,6 +263,8 @@ int main(int argc, char** argv)
         uint32_t num_edges;
         uint64_t raw_edge;
         uint16_t padding;
+
+        nfadata_file.read(reinterpret_cast<char *>(&nfa_hash), sizeof(nfa_hash));
 
         for (uint16_t level=0; level<CFG_ENGINE_NCRITERIA; level++)
         {

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <stdio.h>
+#include <omp.h>
 
 namespace nfa_bre {
 
@@ -101,13 +102,23 @@ NFAHandler::NFAHandler(const rulePack_s& rulepack, Dictionnary* dic)
 
 uint NFAHandler::optimise()
 {
+    omp_lock_t writelock;
+    omp_lock_t writelock2;
+    omp_init_lock(&writelock);
+    omp_init_lock(&writelock2);
+
     uint n_merged = 0;
     // iterates all the levels (one level per criterion)
     for (auto level = ++(m_vertexes.rbegin()); level != m_vertexes.rend(); ++level)
     {
+        auto it = m_vertexes[level->first].begin();
+ 
         // iterates all the values
-        for (auto& value_id : m_vertexes[level->first])
+        #pragma omp parallel for num_threads(m_vertexes[level->first].size())
+        //for (auto& value_id : m_vertexes[level->first])
+        for (uint i = 0; i < m_vertexes[level->first].size(); i++)
         {
+            auto& value_id = *std::next(it, i);
             // iterates all the states with this value within this level
             for (auto& vertex : m_vertexes[level->first][value_id.first])
             {
@@ -131,13 +142,17 @@ uint NFAHandler::optimise()
                         // redirect all the in edges of aux to vertex
                         for (auto& cr : m_graph[aux].parents)
                         {
+                            omp_set_lock(&writelock);
                             m_graph[cr].children.erase(aux);
                             m_graph[cr].children.insert(vertex);
+                            omp_unset_lock(&writelock);
                             m_graph[vertex].parents.insert(cr);
                         }
+                        omp_set_lock(&writelock2);
+                        n_merged++;
+                        omp_unset_lock(&writelock2);
                         m_graph[aux].parents.clear();
                         m_graph[aux].label = "";
-                        n_merged++;
                     }
                 }
             }
@@ -416,7 +431,7 @@ void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePac
     uint32_t restats_size; // in bytes without padding
     uint32_t num_queries;
 
-    num_queries = rulepack.m_rules.size() * BATCHES;
+    num_queries = 1;// rulepack.m_rules.size() * BATCHES; // ONLY ONE RULE
     results_size = num_queries * C_RAW_RESUTLS_SIZE;
     restats_size = num_queries * C_RAW_RESULT_STATS_WIDTH;
     queries_size = rulepack.m_ruleType.m_criterionDefinition.size() * C_RAW_CRITERION_SIZE;
@@ -428,10 +443,10 @@ void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePac
     filebin.write(reinterpret_cast<char *>(&restats_size), sizeof(restats_size));
     filebin.write(reinterpret_cast<char *>(&num_queries),  sizeof(num_queries));
 
-    printf("> # of queries: %'9u\n", num_queries);
-    printf("> Queries size: %'9u bytes\n", queries_size);
-    printf("> Results size: %'9u bytes\n", results_size);
-    printf("> Stats size:   %'9u bytes\n", restats_size);
+    printf("> # of queries: %9u\n", num_queries);
+    printf("> Queries size: %9u bytes\n", queries_size);
+    printf("> Results size: %9u bytes\n", results_size);
+    printf("> Stats size:   %9u bytes\n", restats_size);
 
     criterionid_t the_level;
     const criterion_s* aux_criterion;
@@ -461,6 +476,7 @@ void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePac
         mem_opa = 0;
         for (uint pad = padding_slices; pad != 0; pad--)
             fileaux.write((char*)&mem_opa, sizeof(mem_opa));
+        break; //  ONLY ONE RULE
     }
     for (size_t i = 0; i < BATCHES; i++)
     {

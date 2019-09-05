@@ -12,6 +12,7 @@ entity result_reducer is
     port (
         clk_i           :  in std_logic;
         rst_i           :  in std_logic; -- low active
+        engine_idle_i   :  in std_logic;
         -- interim result from NFA-PE
         interim_valid_i :  in std_logic;
         interim_data_i  :  in edge_buffer_type;
@@ -34,6 +35,7 @@ architecture behavioural of result_reducer is
         result        : edge_buffer_type;
         valid         : std_logic;
         ready         : std_logic;
+        empty         : std_logic;
     end record;
 
     signal result_r, result_rin : result_reg_type;
@@ -52,8 +54,9 @@ result_data_o   <= result_r.result;
 result_valid_o  <= result_r.valid;
 result_stats_o  <= stats_r;
 
-result_comb: process(result_r, interim_valid_i, interim_data_i, result_ready_i)
-    variable v : result_reg_type;
+result_comb: process(result_r, interim_valid_i, interim_data_i, result_ready_i, engine_idle_i)
+    variable v     : result_reg_type;
+    variable v_new : std_logic;
 begin
     v := result_r;
 
@@ -61,25 +64,62 @@ begin
 
       when FLW_CTRL_READ =>
 
+            if result_r.interim.query_id /= interim_data_i.query_id then
+                v_new := '1';
+            else
+                v_new := '0';
+            end if;
+
+            -- input : empty, valid, new, idle
+            -- output: empty interim, result, go_write
+
+            -- e v n i | e i r w
+            -- 0 0 0 0 | 0 i x 0
+            -- 0 0 0 1 | 1 x i 1
+            -- 0 0 1 0 | 0 i x 0
+            -- 0 0 1 1 | 1 x i 1
+            -- 0 1 0 0 | 0 n x 0
+            -- 0 1 0 1 | x x x x
+            -- 0 1 1 0 | 0 n i 1
+            -- 0 1 1 1 | x x x x
+            -- 1 0 0 0 | 1 x x 0
+            -- 1 0 0 1 | 1 x x 0
+            -- 1 0 1 0 | 1 x x 0
+            -- 1 0 1 1 | 1 x x 0
+            -- 1 1 0 0 | 0 n x 0
+            -- 1 1 0 1 | x x x x
+            -- 1 1 1 0 | 0 n x 0
+            -- 1 1 1 1 | x x x x
+
+            -- e = i or (e and !v)
+            -- i = n when [v] else i
+            -- r = i
+            -- w = (!e and i) or (!e and v and n)
+
+            -- EMPTY SIGNAL
+            v.empty := engine_idle_i or (result_r.empty and not interim_valid_i);
+
+            -- RESULT VALUE
+            v.result := result_r.interim;
+            v.result.clock_cycles := increment(result_r.interim.clock_cycles);
+
+            -- INTERIM VALUE
+            v.interim.clock_cycles := increment(result_r.interim.clock_cycles);
+
+            if interim_valid_i = '1' then
+                if v_new = '1' or interim_data_i.weight >= result_r.interim.weight then
+                    v.interim := interim_data_i;
+                    v.interim.clock_cycles := increment(interim_data_i.clock_cycles);
+                end if;
+            end if;
+
+            -- GO WRITE
             v.ready := '1';
             v.valid := '0';
-
-            v.interim.clock_cycles := increment(interim_data_i.clock_cycles);
-            if interim_valid_i = '1' then
-
-                if result_r.interim.query_id = interim_data_i.query_id then
-                    if interim_data_i.weight >= result_r.interim.weight then
-                        v.interim := interim_data_i;
-                    end if;
-                    v.interim.clock_cycles := increment(interim_data_i.clock_cycles);
-                else
-                    v.ready     := '0';
-                    v.valid     := '1';
-                    v.flow_ctrl := FLW_CTRL_WRITE;
-                    v.result    := result_r.interim;
-                    v.interim   := interim_data_i;
-                end if;
-
+            if (not result_r.empty and (engine_idle_i or (interim_valid_i and v_new))) = '1' then
+                v.ready     := '0';
+                v.valid     := '1';
+                v.flow_ctrl := FLW_CTRL_WRITE;
             end if;
 
       when FLW_CTRL_WRITE =>
@@ -88,6 +128,7 @@ begin
             v.valid := '1';
 
             if result_ready_i = '1' then
+                v.ready     := '1';
                 v.valid     := '0';
                 v.flow_ctrl := FLW_CTRL_READ;
             end if;
@@ -106,6 +147,7 @@ begin
             result_r.interim.weight   <=  0 ;
             result_r.valid            <= '0';
             result_r.ready            <= '1';
+            result_r.empty            <= '1';
         else
             result_r <= result_rin;
         end if;

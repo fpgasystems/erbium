@@ -8,7 +8,7 @@ use bre.core_pkg.all;
 library tools;
 use tools.std_pkg.all;
 
-entity top is
+entity engine is
     port (
         clk_i          :  in std_logic;
         rst_i          :  in std_logic; -- rst low active
@@ -24,11 +24,12 @@ entity top is
         result_ready_i :  in std_logic;
         result_stats_o : out result_stats_type;
         result_valid_o : out std_logic;
+        result_last_o  : out std_logic;
         result_value_o : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0)
     );
-end top;
+end engine;
 
-architecture behavioural of top is
+architecture behavioural of engine is
     type CORE_PARAM_ARRAY is array (0 to CFG_ENGINE_NCRITERIA - 1) of core_parameters_type;
 
     -- CORE PARAMETERS
@@ -268,30 +269,35 @@ architecture behavioural of top is
     type mem_data_array     is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of std_logic_vector(CFG_EDGE_BRAM_WIDTH - 1 downto 0);
     type query_buffer_array is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of query_buffer_type;
     --
-    signal prev_empty    : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
-    signal prev_read     : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
-    signal prev_data     : edge_buffer_array;
-    signal query         : query_buffer_array;
-    signal query_full    : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
-    signal query_empty   : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
-    signal query_read    : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
-    signal weight_filter : weight_array;
-    signal weight_driver : weight_array;
-    signal mem_edge      : edge_store_array;
-    signal mem_addr      : mem_addr_array;
-    signal mem_en        : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
-    signal next_full     : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
-    signal next_data     : edge_buffer_array;
-    signal next_write    : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
+    signal idle            : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
+    signal prev_empty      : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
+    signal prev_read       : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
+    signal prev_data       : edge_buffer_array;
+    signal query           : query_buffer_array;
+    signal query_full      : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
+    signal query_empty     : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
+    signal query_read      : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
+    signal weight_filter   : weight_array;
+    signal weight_driver   : weight_array;
+    signal mem_edge        : edge_store_array;
+    signal mem_addr        : mem_addr_array;
+    signal mem_en          : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
+    signal next_full       : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
+    signal next_data       : edge_buffer_array;
+    signal next_write      : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
     -- result reducer
-    signal resred_value  : edge_buffer_type;
-    signal resred_ready  : std_logic;
+    signal resred_value    : edge_buffer_type;
+    signal resred_ready    : std_logic;
+    signal resred_valid    : std_logic;
+    --
+    signal sig_engine_idle : std_logic;
+    signal sig_engine_time : std_logic_vector(CFG_DBG_COUNTERS_WIDTH - 1 downto 0);
     --
     -- BRAM INTERFACE ARRAYS
-    signal uram_rd_data  : mem_data_array;
+    signal uram_rd_data    : mem_data_array;
     --
     -- CORNER CASE SIGNALS
-    signal sig_origin_node     : edge_buffer_type;
+    signal sig_origin_node : edge_buffer_type;
 begin
 
 ----------------------------------------------------------------------------------------------------
@@ -334,6 +340,7 @@ gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
     (
         rst_i           => rst_i,
         clk_i           => clk_i,
+        idle_o          => idle(I),
         -- FIFO buffer from previous level
         prev_empty_i    => prev_empty(I),
         prev_data_i     => prev_data(I),
@@ -405,6 +412,7 @@ reducer : result_reducer port map
 (
     clk_i           => clk_i,
     rst_i           => rst_i,
+    engine_idle_i   => sig_engine_idle,
     --
     interim_valid_i => next_write(CFG_ENGINE_NCRITERIA - 1),
     interim_data_i  => next_data(CFG_ENGINE_NCRITERIA - 1),
@@ -413,8 +421,9 @@ reducer : result_reducer port map
     result_ready_i  => result_ready_i,
     result_data_o   => resred_value,
     result_stats_o  => result_stats_o,
-    result_valid_o  => result_valid_o
+    result_valid_o  => resred_valid
 );
+-- TODO
 -- if host's often not ready (result_ready_i), deploy a fifo so the last level is less often blocked
 
 -- ORIGIN
@@ -429,6 +438,10 @@ query_ready_o  <= not query_full(CFG_ENGINE_NCRITERIA - 1);
 next_full(CFG_ENGINE_NCRITERIA - 1) <= not resred_ready;
 result_value_o <= resred_value.pointer;
 
+sig_engine_idle <= v_and(idle) and not v_or(next_write);
+result_last_o   <= sig_engine_idle and resred_valid;
+result_valid_o  <= resred_valid;
+
 -- ORIGIN LOOK-UP
 gen_lookup : if CFG_FIRST_CRITERION_LOOKUP generate
     sig_origin_node.pointer  <= '0' & query(0).operand;
@@ -437,5 +450,22 @@ end generate gen_lookup;
 gen_lookup_n : if not CFG_FIRST_CRITERION_LOOKUP generate
     sig_origin_node.pointer  <= (others => '0');
 end generate gen_lookup_n;
+
+----------------------------------------------------------------------------------------------------
+-- STATS                                                                                          --
+----------------------------------------------------------------------------------------------------
+
+-- non-idle counter
+counter_computing_time: simple_counter generic map
+(
+    G_WIDTH   => CFG_DBG_COUNTERS_WIDTH
+)
+port map
+(
+    clk_i     => clk_i,
+    rst_i     => rst_i,
+    enable_i  => not sig_engine_idle,
+    counter_o => sig_engine_time
+);
 
 end architecture behavioural;

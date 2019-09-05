@@ -11,6 +11,7 @@ PACKAGE std_pkg IS
 ----------------------------------------------------------------------------------------------------
 
     function v_or(d : std_logic_vector) return std_logic;
+    function v_and(d : std_logic_vector) return std_logic;
     function is_zero(d : std_logic_vector) return std_logic;
     function is_not_zero(d : std_logic_vector) return std_logic;
     function my_conv_integer(a: std_logic_vector) return integer;
@@ -73,6 +74,18 @@ PACKAGE BODY std_pkg IS
         if notx (d) then
             for i in d'range loop
                 z := z or d(i);
+            end loop;
+        end if;
+        return z;
+    end;
+-- Unary AND reduction
+    function v_and(d : std_logic_vector) return std_logic is
+        variable z : std_logic;
+    begin
+        z := '1';
+        if notx (d) then
+            for i in d'range loop
+                z := z and d(i);
             end loop;
         end if;
         return z;

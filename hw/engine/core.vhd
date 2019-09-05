@@ -33,6 +33,7 @@ entity core is
     port (
         clk_i           :  in std_logic;
         rst_i           :  in std_logic; -- low active
+        idle_o          : out std_logic;
         -- FIFO edge buffer from previous level
         prev_empty_i    :  in std_logic;
         prev_data_i     :  in edge_buffer_type;
@@ -108,14 +109,18 @@ prev_read_o <= fetch_r.buffer_rd_en;
 mem_addr_o  <= fetch_r.mem_addr;
 mem_en_o    <= fetch_r.mem_rd_en;
 
-fetch_comb: process(fetch_r, prev_data_i, prev_empty_i, query_empty_i, mem_edge_i.last, mem_r.valid, sig_exe_branch, next_full_i)
+fetch_comb: process(fetch_r, prev_data_i, prev_empty_i, query_empty_i, mem_edge_i.last, mem_r.valid, sig_exe_branch, next_full_i, query_r.query.query_id)
     variable v        : fetch_out_type;
     variable v_empty  : std_logic;
     variable v_branch : std_logic;
 begin
     v := fetch_r;
 
-    v_empty  := prev_empty_i or query_empty_i;
+    if (prev_data_i.query_id /= query_r.query.query_id) then
+        v_empty  := prev_empty_i or query_empty_i;
+    else
+        v_empty  := prev_empty_i;
+    end if;
     v_branch := (mem_edge_i.last and mem_r.valid) or sig_exe_branch;
 
     -- state machine
@@ -308,6 +313,13 @@ gen_mode_full_iteration : if G_MATCH_MODE = MODE_FULL_ITERATION generate
     sig_exe_branch <= '0';
 
 end generate;
+
+----------------------------------------------------------------------------------------------------
+-- IDLE SIGNAL                                                                                    --
+----------------------------------------------------------------------------------------------------
+
+idle_o <= prev_empty_i and query_empty_i when (fetch_r.flow_ctrl = FLW_CTRL_BUFFER)
+          else '0';
 
 ----------------------------------------------------------------------------------------------------
 -- FAILURE CHECKS                                                                                 --

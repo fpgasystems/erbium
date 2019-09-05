@@ -42,6 +42,7 @@ package core_pkg is
     type query_buffer_type is record
         operand         : std_logic_vector(CFG_CRITERION_VALUE_WIDTH - 1 downto 0);
         query_id        : integer range 0 to 2**CFG_QUERY_ID_WIDTH - 1;
+        last_query      : std_logic; -- indicates corretly, but it's not used
     end record;
     type query_in_array_type is array(0 to CFG_ENGINE_NCRITERIA - 1) of query_buffer_type;
 
@@ -163,6 +164,7 @@ package core_pkg is
         port (
             clk_i           :  in std_logic;
             rst_i           :  in std_logic; -- low active
+            idle_o          : out std_logic;
             -- FIFO edge buffer from previous level
             prev_empty_i    :  in std_logic;
             prev_data_i     :  in edge_buffer_type;
@@ -189,6 +191,7 @@ package core_pkg is
     port (
         clk_i           :  in std_logic;
         rst_i           :  in std_logic; -- low active
+        engine_idle_i   :  in std_logic;
         -- interim result from NFA-PE
         interim_valid_i :  in std_logic;
         interim_data_i  :  in edge_buffer_type;

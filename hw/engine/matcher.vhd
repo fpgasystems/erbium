@@ -76,13 +76,13 @@ with G_FUNCTION_PAIR select sig_mux_pair <=
     sig_res_xor  when FNCTR_PAIR_XOR,
     sig_res_nand when FNCTR_PAIR_NAND,
     sig_res_nor  when FNCTR_PAIR_NOR,
-    'Z' when others;
+    '0' when others;
 
 
 with G_STRUCTURE select match_result_o <=
     sig_functorA      when STRCT_SIMPLE,
     sig_mux_pair      when STRCT_PAIR,
-    'Z' when others;
+    '0' when others;
 
 opA: functor generic map
 (

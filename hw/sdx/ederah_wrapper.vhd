@@ -49,6 +49,7 @@ architecture rtl of ederah_wrapper is
     constant C_STATS_PARTITIONS   : integer := G_DATA_BUS_WIDTH / CFG_RAW_RESULT_STATS_WIDTH;
     --
     signal sig_query_ready    : std_logic;
+    signal sig_result_last    : std_logic;
     signal sig_result_valid   : std_logic;
     signal sig_result_value   : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
     signal sig_query_id       : std_logic_vector(CFG_QUERY_ID_WIDTH - 1 downto 0);
@@ -99,7 +100,7 @@ rd_ready_o <= query_r.ready or nfa_rin.ready;
 -- extract input query criteria from the rd_data_i bus. each query has CFG_ENGINE_NCRITERIA criteria
 -- and each criterium has two operands of CFG_CRITERION_VALUE_WIDTH width
 
-query_comb : process(query_r, rd_stype_i, rd_valid_i, rd_data_i, sig_query_ready, sig_query_id)
+query_comb : process(query_r, rd_stype_i, rd_valid_i, rd_data_i, rd_last_i, sig_query_ready, sig_query_id)
     constant C_SLICES_REM     : integer := CFG_ENGINE_NCRITERIA / C_QUERY_PARTITIONS;
     constant C_SLICES_MOD     : integer := CFG_ENGINE_NCRITERIA mod C_QUERY_PARTITIONS;
     --
@@ -312,7 +313,7 @@ sig_resstats_value <= (CFG_RAW_RESULT_STATS_WIDTH - 1
 wr_data_o  <= result_r.value;
 wr_valid_o <= result_r.valid;
 
-result_comb : process(result_r, sig_result_valid, sig_result_value, wr_ready_i, stats_on_i, sig_resstats_value)
+result_comb : process(result_r, sig_result_valid, sig_result_value, wr_ready_i, stats_on_i, sig_resstats_value, sig_result_last)
     variable v : result_reg_type;
 begin
     v := result_r;
@@ -430,7 +431,7 @@ begin
                   when others =>
                 end case;
 
-                if v.slice = C_RESULTS_PARTITIONS then
+                if v.slice = C_RESULTS_PARTITIONS or sig_result_last = '1' then
                     v.ready := '0';
                     v.valid := '1';
                     v.flow_ctrl := FLW_CTRL_WRITE;
@@ -468,7 +469,7 @@ begin
                   when others =>
                 end case;
 
-                if v.slice = C_STATS_PARTITIONS then
+                if v.slice = C_STATS_PARTITIONS or sig_result_last = '1' then
                     v.ready := '0';
                     v.valid := '1';
                     v.flow_ctrl := FLW_CTRL_WRITE;
@@ -532,6 +533,7 @@ mct_engine_top: entity bre.engine port map
     result_ready_i  => result_r.ready,
     result_stats_o  => sig_result_stats,
     result_valid_o  => sig_result_valid,
+    result_last_o   => sig_result_last,
     result_value_o  => sig_result_value
 );
 

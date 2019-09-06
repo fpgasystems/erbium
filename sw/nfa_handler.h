@@ -23,8 +23,9 @@ class NFAHandler {
     uint print_stats(); // returns n_bram_edges_max
     void export_dot_file(const std::string& filename);
     void memory_dump(const std::string& filename, const rulePack_s& rulepack);
-    void dump_mirror_workload(const std::string& filename, const rulePack_s& rulepack);
     void dump_core_parameters(const std::string& filename, const rulePack_s& rulepack);
+    void dump_mirror_workload(const std::string& filename, const rulePack_s& rulepack);
+    void dump_benchmark_workload(const std::string& filename, const rulePack_s& rulepack);
 
     void dump_drools_rules(const std::string& filename, const rulePack_s& rulepack);
     
@@ -44,6 +45,11 @@ class NFAHandler {
                      valueid_t* operand_a,
                      valueid_t* operand_b,
                      const criterionDefinition_s* criterion_def);
+
+    std::fstream dump_workload(const std::string& filename, const rulePack_s& rulepack);
+    void dump_partial_workload(const std::string& filename, const rulePack_s& rulepack,
+                               std::fstream* fileaux, const uint32_t& size,const uint16_t& mult);
+
 
     bool m_imported_param;
 

@@ -5,6 +5,7 @@
 #include <fstream>
 #include <stdio.h>
 #include <omp.h>
+#include <filesystem>
 
 namespace nfa_bre {
 
@@ -411,6 +412,119 @@ bool export_parameters(const std::string& filename)
     return false;
 }
 
+void NFAHandler::dump_benchmark_workload(const std::string& path, const rulePack_s& rulepack)
+{
+    std::string dest_folder = path + "benchmarks/";
+    if (std::filesystem::exists(dest_folder))
+        std::filesystem::remove_all(dest_folder);
+    std::filesystem::create_directory(dest_folder);
+
+    dest_folder = dest_folder + "workload";
+    // generate .csv and .aux
+    std::fstream fileaux = dump_workload(dest_folder, rulepack);
+
+    // partial benchmarks
+    for (uint i = 1; i <= rulepack.m_rules.size(); i = i << 1)
+        dump_partial_workload(dest_folder, rulepack, &fileaux, i, 1);
+
+    // full benchmarks
+    for (uint i = 1; i < 10; i++)
+        dump_partial_workload(dest_folder, rulepack, &fileaux, rulepack.m_rules.size(), i);
+
+    fileaux.close();
+    remove(((std::string)(dest_folder + ".aux")).c_str());
+}
+
+void NFAHandler::dump_partial_workload(const std::string& filename, const rulePack_s& rulepack,
+                                       std::fstream* fileaux,
+                                       const uint32_t& size, const uint16_t& mult)
+{
+    char fname[1024];
+    sprintf(fname, "%s-%07d.bin", filename.c_str(), size * mult);
+    std::fstream filebin(fname, std::ios::out | std::ios::trunc | std::ios::binary);
+
+    // file header
+    uint32_t query_size;   // in bytes with padding
+    uint32_t queries_size; // in bytes with padding
+    uint32_t results_size; // in bytes without padding
+    uint32_t restats_size; // in bytes without padding
+    uint32_t num_queries = size * mult;
+
+    results_size = num_queries * C_RAW_RESUTLS_SIZE;
+    restats_size = num_queries * C_RAW_RESULT_STATS_WIDTH;
+    query_size   = rulepack.m_ruleType.m_criterionDefinition.size() * C_RAW_CRITERION_SIZE;
+    query_size   = query_size / C_CACHE_LINE_WIDTH + ((query_size % C_CACHE_LINE_WIDTH) ? 1 : 0);
+    queries_size = query_size * num_queries * C_CACHE_LINE_WIDTH;
+
+    filebin.write(reinterpret_cast<char *>(&queries_size), sizeof(queries_size));
+    filebin.write(reinterpret_cast<char *>(&results_size), sizeof(results_size));
+    filebin.write(reinterpret_cast<char *>(&restats_size), sizeof(restats_size));
+    filebin.write(reinterpret_cast<char *>(&num_queries),  sizeof(num_queries));
+
+    // printf("> %u rules and %u batches\n", size, mult);
+    // printf("> # of queries: %9u\n", num_queries);
+    // printf("> Queries size: %9u bytes\n", queries_size);
+    // printf("> Results size: %9u bytes\n", results_size);
+    // printf("> Stats size:   %9u bytes\n", restats_size);
+
+    char* buffer = new char[size * query_size];
+    fileaux->seekg(0, std::ios::beg);
+    fileaux->read(buffer, size * query_size);
+
+
+    for (size_t i = 0; i < mult; i++)
+        filebin.write(buffer, size * query_size);
+
+    delete[] buffer;
+
+    filebin.close();
+}
+
+std::fstream NFAHandler::dump_workload(const std::string& filename, const rulePack_s& rulepack)
+{
+    std::fstream filecsv(filename + ".csv", std::ios::out | std::ios::trunc);
+    std::fstream fileaux(filename + ".aux", std::ios::out | std::ios::in | std::ios::trunc | std::ios::binary);
+
+    const uint SLICES_PER_LINE = C_CACHE_LINE_WIDTH / C_RAW_CRITERION_SIZE;
+    uint padding_slices = (rulepack.m_ruleType.m_criterionDefinition.size()) % SLICES_PER_LINE;
+    padding_slices = (padding_slices == 0) ? 0 : SLICES_PER_LINE - padding_slices;
+
+    operands_t mem_opa;
+    operands_t mem_opb;
+    criterionid_t the_level;
+    const criterion_s* aux_criterion;
+    const criterionDefinition_s* aux_definition;
+    for (auto& rule : rulepack.m_rules)
+    {
+        the_level = 0;
+        filecsv << rule.m_ruleId << "," << rule.m_weight;
+        for (auto& ord : m_dic->m_sorting_map)
+        {
+            aux_criterion  = &(*std::next(rule.m_criteria.begin(), ord));
+            aux_definition = &(*std::next(rulepack.m_ruleType.m_criterionDefinition.begin(), ord));
+
+            parse_value(aux_criterion->m_value,
+                        m_dic->get_criterion_dic_by_level(the_level)[aux_criterion->m_value],
+                        &mem_opa,
+                        &mem_opb,
+                        aux_definition);
+
+            fileaux.write((char*)&mem_opa, sizeof(mem_opa));
+            filecsv << "," << aux_criterion->m_value;
+            the_level++;
+        }
+        filecsv << "," << rule.m_content << std::endl;
+
+        // padding
+        mem_opa = 0;
+        for (uint pad = padding_slices; pad != 0; pad--)
+            fileaux.write((char*)&mem_opa, sizeof(mem_opa));
+    }
+
+    filecsv.close();
+    return fileaux;
+}
+
 void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePack_s& rulepack)
 {
     const uint16_t BATCHES = 1;
@@ -419,8 +533,6 @@ void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePac
     std::fstream fileaux(filename + ".aux", std::ios::out | std::ios::in | std::ios::trunc | std::ios::binary);
     
     const uint SLICES_PER_LINE = C_CACHE_LINE_WIDTH / C_RAW_CRITERION_SIZE;
-    operands_t mem_opa;
-    operands_t mem_opb;
 
     uint padding_slices = (rulepack.m_ruleType.m_criterionDefinition.size()) % SLICES_PER_LINE;
     padding_slices = (padding_slices == 0) ? 0 : SLICES_PER_LINE - padding_slices;
@@ -448,6 +560,8 @@ void NFAHandler::dump_mirror_workload(const std::string& filename, const rulePac
     printf("> Results size: %9u bytes\n", results_size);
     printf("> Stats size:   %9u bytes\n", restats_size);
 
+    operands_t mem_opa;
+    operands_t mem_opb;
     criterionid_t the_level;
     const criterion_s* aux_criterion;
     const criterionDefinition_s* aux_definition;

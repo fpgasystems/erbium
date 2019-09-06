@@ -76,7 +76,6 @@ int main(int argc, char** argv)
             (sorting_option==SortOption::Descending) ? 'x' : ' ',
             (sorting_option==SortOption::MCT_DESC)   ? 'x' : ' ',
             (sorting_option==SortOption::MCT_PERF)   ? 'x' : ' ');
-    
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // LOAD                                                                                       //
@@ -151,11 +150,11 @@ int main(int argc, char** argv)
             std::vector<int16_t> arbitrary; // key=position; value=criteria_id
             for (auto& aux __attribute__((unused)) : rp.m_ruleType.m_criterionDefinition)
                  arbitrary.push_back(-1);
-            arbitrary[0] = rp.m_ruleType.get_criterion_id("MCT_OFF");
-            arbitrary[1] = rp.m_ruleType.get_criterion_id("MCT_BRD");
-            arbitrary[arbitrary.size()-3] = rp.m_ruleType.get_criterion_id("MCT_PRD");
-            arbitrary[arbitrary.size()-2] = rp.m_ruleType.get_criterion_id("OUT_FLT_RG");
-            arbitrary[arbitrary.size()-1] = rp.m_ruleType.get_criterion_id("IN_FLT_RG");
+            arbitrary[ 0] = rp.m_ruleType.get_criterion_id("MCT_OFF");
+            arbitrary[ 1] = rp.m_ruleType.get_criterion_id("MCT_BRD");
+            arbitrary[19] = rp.m_ruleType.get_criterion_id("MCT_PRD");
+            arbitrary[20] = rp.m_ruleType.get_criterion_id("OUT_FLT_RG");
+            arbitrary[21] = rp.m_ruleType.get_criterion_id("IN_FLT_RG");
             the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending, &arbitrary);
         }
             break;
@@ -290,7 +289,7 @@ int main(int argc, char** argv)
 
     if (ceil(log2(n_bram_edges_max)) > nfa_bre::CFG_MEM_ADDR_WIDTH)
     {
-        std::cout << "[!] Required address space for " << n_bram_edges_max << " is ";
+        std::cout << "[!] Required address space for " << n_bram_edges_max << " transitions is ";
         std::cout << ceil(log2(n_bram_edges_max)) << " bits (CFG_MEM_ADDR_WIDTH = ";
         std::cout << nfa_bre::CFG_MEM_ADDR_WIDTH << " bits;\n";
     }
@@ -310,7 +309,7 @@ int main(int argc, char** argv)
     std::cout << "# WORKLOAD DUMP" << std::endl;
     start = std::chrono::high_resolution_clock::now();
 
-    the_nfa.dump_mirror_workload(dest_folder + "workload", rp);
+    the_nfa.dump_benchmark_workload(dest_folder, rp);
 
     finish = std::chrono::high_resolution_clock::now();
     elapsed = finish - start;

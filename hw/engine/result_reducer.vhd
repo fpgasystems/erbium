@@ -20,6 +20,7 @@ entity result_reducer is
         -- final result to TOP
         result_ready_i  :  in std_logic;
         result_data_o   : out edge_buffer_type;
+        result_last_o   : out std_logic;
         result_stats_o  : out result_stats_type;
         result_valid_o  : out std_logic
     );
@@ -36,6 +37,7 @@ architecture behavioural of result_reducer is
         valid         : std_logic;
         ready         : std_logic;
         empty         : std_logic;
+        last          : std_logic;
     end record;
 
     signal result_r, result_rin : result_reg_type;
@@ -43,6 +45,8 @@ architecture behavioural of result_reducer is
     signal sig_stats_reset      : std_logic;
     signal sig_match_higher_en  : std_logic;
     signal sig_match_lower_en   : std_logic;
+
+    signal stats_queries        : std_logic_vector(63 downto 0);
 begin
 
 ----------------------------------------------------------------------------------------------------
@@ -51,6 +55,7 @@ begin
 
 interim_ready_o <= result_r.ready;
 result_data_o   <= result_r.result;
+result_last_o   <= result_r.last;
 result_valid_o  <= result_r.valid;
 result_stats_o  <= stats_r;
 
@@ -71,30 +76,31 @@ begin
             end if;
 
             -- input : empty, valid, new, idle
-            -- output: empty interim, result, go_write
+            -- output: empty, interim, result, go_write, last
 
-            -- e v n i | e i r w
-            -- 0 0 0 0 | 0 i x 0
-            -- 0 0 0 1 | 1 x i 1
-            -- 0 0 1 0 | 0 i x 0
-            -- 0 0 1 1 | 1 x i 1
-            -- 0 1 0 0 | 0 n x 0
-            -- 0 1 0 1 | x x x x
-            -- 0 1 1 0 | 0 n i 1
-            -- 0 1 1 1 | x x x x
-            -- 1 0 0 0 | 1 x x 0
-            -- 1 0 0 1 | 1 x x 0
-            -- 1 0 1 0 | 1 x x 0
-            -- 1 0 1 1 | 1 x x 0
-            -- 1 1 0 0 | 0 n x 0
-            -- 1 1 0 1 | x x x x
-            -- 1 1 1 0 | 0 n x 0
-            -- 1 1 1 1 | x x x x
+            -- e v n i | e i r w l
+            -- 0 0 0 0 | 0 i x 0 0
+            -- 0 0 0 1 | 1 x i 1 1
+            -- 0 0 1 0 | 0 i x 0 0
+            -- 0 0 1 1 | 1 x i 1 1
+            -- 0 1 0 0 | 0 n x 0 0
+            -- 0 1 0 1 | x x x x x
+            -- 0 1 1 0 | 0 n i 1 0
+            -- 0 1 1 1 | x x x x x
+            -- 1 0 0 0 | 1 x x 0 0
+            -- 1 0 0 1 | 1 x x 0 0
+            -- 1 0 1 0 | 1 x x 0 0
+            -- 1 0 1 1 | 1 x x 0 0
+            -- 1 1 0 0 | 0 n x 0 0
+            -- 1 1 0 1 | x x x x x
+            -- 1 1 1 0 | 0 n x 0 0
+            -- 1 1 1 1 | x x x x x
 
             -- e = i or (e and !v)
             -- i = n when [v] else i
             -- r = i
             -- w = (!e and i) or (!e and v and n)
+            -- l = !e and i
 
             -- EMPTY SIGNAL
             v.empty := engine_idle_i or (result_r.empty and not interim_valid_i);
@@ -102,6 +108,9 @@ begin
             -- RESULT VALUE
             v.result := result_r.interim;
             v.result.clock_cycles := increment(result_r.interim.clock_cycles);
+
+            -- LAST
+            v.last := engine_idle_i and not result_r.empty;
 
             -- INTERIM VALUE
             v.interim.clock_cycles := increment(result_r.interim.clock_cycles);
@@ -130,6 +139,7 @@ begin
             if result_ready_i = '1' then
                 v.ready     := '1';
                 v.valid     := '0';
+                v.last      := '0';
                 v.flow_ctrl := FLW_CTRL_READ;
             end if;
             
@@ -191,6 +201,18 @@ port map
     rst_i     => sig_stats_reset,
     enable_i  => sig_match_lower_en,
     counter_o => stats_r.match_lower_weight
+);
+
+counter_queries: simple_counter generic map
+(
+    G_WIDTH   => 64
+)
+port map
+(
+    clk_i     => clk_i,
+    rst_i     => rst_i,
+    enable_i  => result_r.valid and result_ready_i,
+    counter_o => stats_queries
 );
 
 end architecture behavioural;

@@ -199,6 +199,7 @@ package core_pkg is
         -- final result to TOP
         result_ready_i  :  in std_logic;
         result_data_o   : out edge_buffer_type;
+        result_last_o   : out std_logic;
         result_stats_o  : out result_stats_type;
         result_valid_o  : out std_logic
     );

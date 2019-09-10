@@ -10,22 +10,24 @@ use tools.std_pkg.all;
 
 entity engine is
     port (
-        clk_i          :  in std_logic;
-        rst_i          :  in std_logic; -- rst low active
+        clk_i             :  in std_logic;
+        rst_i             :  in std_logic; -- rst low active
         --
-        query_i        :  in query_in_array_type;
-        query_wr_en_i  :  in std_logic;
-        query_ready_o  : out std_logic;
+        query_i           :  in query_in_array_type;
+        query_wr_en_i     :  in std_logic;
+        query_ready_o     : out std_logic;
         --
-        mem_i          :  in std_logic_vector(CFG_EDGE_BRAM_WIDTH - 1 downto 0);
-        mem_wren_i     :  in std_logic_vector(CFG_ENGINE_NCRITERIA - 1 downto 0);
-        mem_addr_i     :  in std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        mem_i             :  in std_logic_vector(CFG_EDGE_BRAM_WIDTH - 1 downto 0);
+        mem_wren_i        :  in std_logic_vector(CFG_ENGINE_NCRITERIA - 1 downto 0);
+        mem_addr_i        :  in std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
         --
-        result_ready_i :  in std_logic;
-        result_stats_o : out result_stats_type;
-        result_valid_o : out std_logic;
-        result_last_o  : out std_logic;
-        result_value_o : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0)
+        result_ready_i    :  in std_logic;
+        result_stats_o    : out result_stats_type;
+        result_valid_o    : out std_logic;
+        result_last_o     : out std_logic;
+        result_value_o    : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        --
+        stats_idle_time_o : out std_logic_vector(CFG_DBG_COUNTERS_WIDTH - 1 downto 0)
     );
 end engine;
 
@@ -288,7 +290,6 @@ architecture behavioural of engine is
     -- result reducer
     signal resred_value    : edge_buffer_type;
     signal resred_ready    : std_logic;
-    signal resred_valid    : std_logic;
     --
     signal sig_engine_idle : std_logic;
     signal sig_engine_time : std_logic_vector(CFG_DBG_COUNTERS_WIDTH - 1 downto 0);
@@ -420,8 +421,9 @@ reducer : result_reducer port map
     -- final result to TOP
     result_ready_i  => result_ready_i,
     result_data_o   => resred_value,
+    result_last_o   => result_last_o,
     result_stats_o  => result_stats_o,
-    result_valid_o  => resred_valid
+    result_valid_o  => result_valid_o
 );
 -- TODO
 -- if host's often not ready (result_ready_i), deploy a fifo so the last level is less often blocked
@@ -439,8 +441,6 @@ next_full(CFG_ENGINE_NCRITERIA - 1) <= not resred_ready;
 result_value_o <= resred_value.pointer;
 
 sig_engine_idle <= v_and(idle) and not v_or(next_write);
-result_last_o   <= sig_engine_idle and resred_valid;
-result_valid_o  <= resred_valid;
 
 -- ORIGIN LOOK-UP
 gen_lookup : if CFG_FIRST_CRITERION_LOOKUP generate

@@ -158,6 +158,7 @@ begin
             result_r.valid            <= '0';
             result_r.ready            <= '1';
             result_r.empty            <= '1';
+            result_r.last             <= '0';
         else
             result_r <= result_rin;
         end if;

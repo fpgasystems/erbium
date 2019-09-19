@@ -5,7 +5,6 @@
 #include <fstream>
 #include <stdio.h>
 #include <omp.h>
-#include <filesystem>
 
 namespace nfa_bre {
 
@@ -414,26 +413,48 @@ bool export_parameters(const std::string& filename)
 
 void NFAHandler::dump_benchmark_workload(const std::string& path, const rulePack_s& rulepack)
 {
-    std::string dest_folder = path + "benchmarks/";
-    if (std::filesystem::exists(dest_folder))
-        std::filesystem::remove_all(dest_folder);
-    std::filesystem::create_directory(dest_folder);
-
-    dest_folder = dest_folder + "workload";
     // generate .csv and .aux
-    std::fstream fileaux = dump_workload(dest_folder, rulepack);
+    std::fstream fileaux = dump_workload(path + "benchmark", rulepack);
+    std::fstream benchfile(path + "benchmark.bin", std::ios::out | std::ios::trunc | std::ios::binary);
 
-    // partial benchmarks
-    for (uint i = 1; i <= rulepack.m_rules.size(); i = i << 1)
-        dump_partial_workload(dest_folder, rulepack, &fileaux, i, 1);
+    uint32_t query_size = rulepack.m_ruleType.m_criterionDefinition.size() * C_RAW_CRITERION_SIZE;
+    query_size = query_size / C_CACHE_LINE_WIDTH + ((query_size % C_CACHE_LINE_WIDTH) ? 1 : 0);
+    query_size = query_size * C_CACHE_LINE_WIDTH;
+    uint32_t benchmark_size = rulepack.m_rules.size();
 
-    // full benchmarks
-    for (uint i = 1; i < 10; i++)
-        dump_partial_workload(dest_folder, rulepack, &fileaux, rulepack.m_rules.size(), i);
+    benchfile.write(reinterpret_cast<char *>(&query_size), sizeof(query_size));
+    benchfile.write(reinterpret_cast<char *>(&benchmark_size), sizeof(benchmark_size));
+
+    fileaux.seekg(0, std::ios::beg);
+    benchfile << fileaux.rdbuf();
 
     fileaux.close();
-    remove(((std::string)(dest_folder + ".aux")).c_str());
+    benchfile.close();
+    remove(((std::string)(path + "benchmark.aux")).c_str());
 }
+
+// void NFAHandler::dump_benchmark_workload(const std::string& path, const rulePack_s& rulepack)
+// {
+//     std::string dest_folder = path + "benchmarks/";
+//     if (std::filesystem::exists(dest_folder))
+//         std::filesystem::remove_all(dest_folder);
+//     std::filesystem::create_directory(dest_folder);
+// 
+//     dest_folder = dest_folder + "workload";
+//     // generate .csv and .aux
+//     std::fstream fileaux = dump_workload(dest_folder, rulepack);
+// 
+//     // partial benchmarks
+//     for (uint i = 1; i <= rulepack.m_rules.size(); i = i << 1)
+//         dump_partial_workload(dest_folder, rulepack, &fileaux, i, 1);
+// 
+//     // full benchmarks
+//     for (uint i = 1; i < 10; i++)
+//         dump_partial_workload(dest_folder, rulepack, &fileaux, rulepack.m_rules.size(), i);
+// 
+//     fileaux.close();
+//     remove(((std::string)(dest_folder + ".aux")).c_str());
+// }
 
 void NFAHandler::dump_partial_workload(const std::string& filename, const rulePack_s& rulepack,
                                        std::fstream* fileaux,
@@ -461,19 +482,19 @@ void NFAHandler::dump_partial_workload(const std::string& filename, const rulePa
     filebin.write(reinterpret_cast<char *>(&restats_size), sizeof(restats_size));
     filebin.write(reinterpret_cast<char *>(&num_queries),  sizeof(num_queries));
 
-    // printf("> %u rules and %u batches\n", size, mult);
-    // printf("> # of queries: %9u\n", num_queries);
-    // printf("> Queries size: %9u bytes\n", queries_size);
-    // printf("> Results size: %9u bytes\n", results_size);
-    // printf("> Stats size:   %9u bytes\n", restats_size);
+    printf("> %u rules and %u batches\n", size, mult);
+    printf("> # of queries: %9u\n", num_queries);
+    printf("> Queries size: %9u bytes\n", queries_size);
+    printf("> Results size: %9u bytes\n", results_size);
+    printf("> Stats size:   %9u bytes\n", restats_size);
 
-    char* buffer = new char[size * query_size];
+    char* buffer = new char[size * query_size * C_CACHE_LINE_WIDTH];
     fileaux->seekg(0, std::ios::beg);
-    fileaux->read(buffer, size * query_size);
+    fileaux->read(buffer, size * query_size * C_CACHE_LINE_WIDTH);
 
 
     for (size_t i = 0; i < mult; i++)
-        filebin.write(buffer, size * query_size);
+        filebin.write(buffer, size * query_size * C_CACHE_LINE_WIDTH);
 
     delete[] buffer;
 
@@ -753,6 +774,102 @@ void NFAHandler::dump_drools_rules(const std::string& path, const rulePack_s& ru
     }
     secfile << "}";
     secfile.close();
+}
+
+uint16_t NFAHandler::get_month_number(const std::string& month_code) const
+{
+    std::map<std::string, uint16_t> months
+    {
+        { "JAN",  1 },
+        { "FEB",  2 },
+        { "MAR",  3 },
+        { "APR",  4 },
+        { "MAY",  5 },
+        { "JUN",  6 },
+        { "JUL",  7 },
+        { "AUG",  8 },
+        { "SEP",  9 },
+        { "OCT", 10 },
+        { "NOV", 11 },
+        { "DEC", 12 }
+    };
+
+    return months[month_code];
+}
+
+uint32_t NFAHandler::full_rata_die_day(const uint16_t& d, uint16_t m, uint16_t y) const
+{
+    if (m < 3)
+        y--, m += 12;
+    return 365*y + y/4 - y/100 + y/400 + (153*m - 457)/5 + d - 306;
+}
+
+valueid_t NFAHandler::date_check(const uint16_t& d, uint16_t m, uint16_t y) const
+{
+    // Rata Die day one is 0001-01-01
+
+    /*  0       wildcard '*': it matches anything
+     *  1       infinity down   e.g. 1st Jan 1990
+     *  2       start date      e.g. 1st Jan 2006
+     *  ...
+     *  2^14-2  end date        e.g. 6th Nov 2050
+     *  2^14-1  infinity up     e.g. 1st Jan 9999
+     * 
+     *  16,381 days period
+     */
+    const uint32_t JANFIRST1990  =  726468; // 1st Jan 1990 - infinity down
+    const uint32_t JANFIRST2006  =  732312; // 1st Jan 2006 - start date
+    const uint32_t NOVNINETH2050 =  748692; // 6th Nov 2050 - end date
+    const uint32_t JANFIRST9999  = 3651695; // 1st Jan 9999 - infinity up
+    
+    uint32_t interim = full_rata_die_day(d, m, y);
+
+    if (interim == JANFIRST1990)
+    {
+        return 1;
+    }
+    else if (interim < JANFIRST2006)
+    {
+        printf("[!] Minimal date is Jan 1st 2006, got: m=%d d=%d y=%d\n", m, d, y);
+        return 1;
+    }
+    else if (interim == JANFIRST9999)
+    {
+        return USHRT_MAX;
+    }
+    else if (interim > NOVNINETH2050)
+    {
+        printf("[!] Maximal date is Nov 6th 2050, got: m=%d d=%d y=%d\n", m, d, y);
+        return USHRT_MAX;
+    }
+    else
+        return interim - JANFIRST2006 + 2;
+}
+
+void NFAHandler::parse_pairOfDates(const std::string& value, valueid_t* operand_a, valueid_t* operand_b) const
+{
+    if (value.length() != 19)
+    {
+        printf("[!] Failed parsing value [%s] as a pair of dates\n", value.c_str());
+        *operand_a = 0;
+        *operand_b = 0;
+        return;
+    }
+
+    *operand_a = date_check(atoi(value.substr( 0,  2).c_str()),
+                            get_month_number(value.substr( 2,  3)),
+                            atoi(value.substr( 5,  4).c_str()));
+    *operand_b = date_check(atoi(value.substr(10, 2).c_str()),
+                            get_month_number(value.substr(12, 3)),
+                            atoi(value.substr(15, 4).c_str()));
+}
+
+void NFAHandler::parse_pairOfFlights(std::string value_raw, valueid_t* operand_a, valueid_t* operand_b) const
+{
+    std::replace(value_raw.begin(), value_raw.end(), '/', ' ');
+    char* p_end;
+    *operand_a = strtoul(value_raw.c_str(), &p_end, 10);
+    *operand_b = strtoul(p_end, &p_end, 10);
 }
 
 } // namespace nfa_bre

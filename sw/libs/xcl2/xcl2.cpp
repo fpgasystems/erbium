@@ -65,8 +65,6 @@ std::vector<cl::Device> get_xil_devices() {
 
 char* read_binary_file(const std::string &xclbin_file_name, unsigned &nb) 
 {
-    std::cout << "INFO: Reading " << xclbin_file_name << std::endl;
-
 	if(access(xclbin_file_name.c_str(), R_OK) != 0) {
 		printf("ERROR: %s xclbin not available please build\n", xclbin_file_name.c_str());
 		exit(EXIT_FAILURE);
@@ -114,4 +112,4 @@ bool is_xpr_device(const char *device_name) {
 }
 
 
-};
+}

@@ -1,4 +1,3 @@
-#include <boost/graph/adjacency_list.hpp>
 #include <string>
 #include <exception>
 #include <iostream>
@@ -6,7 +5,8 @@
 #include <chrono>
 #include <math.h>
 #include <unistd.h>
-#include <filesystem>
+
+#include <boost/graph/adjacency_list.hpp>
 
 #include "definitions.h"
 #include "dictionnary.h"
@@ -65,12 +65,10 @@ int main(int argc, char** argv)
     
     if (dest_folder.back() != '/')
         dest_folder = dest_folder + "/";
-    if (!std::filesystem::exists(dest_folder))
-        std::filesystem::create_directory(dest_folder);
 
     std::cout << "-d destination folder: " << dest_folder << std::endl;
     std::cout << "-r rules file: " << rules_file << std::endl;
-    printf("-s sorting: [%c]none [%c]asc [%c]desc [%c]mct_asc [%c]mct_perf\n",
+    printf("-s sorting: [%c]none [%c]asc [%c]desc [%c]mct_desc [%c]mct_perf\n",
             (sorting_option==SortOption::None)       ? 'x' : ' ',
             (sorting_option==SortOption::Ascending)  ? 'x' : ' ',
             (sorting_option==SortOption::Descending) ? 'x' : ' ',
@@ -206,6 +204,18 @@ int main(int argc, char** argv)
     //std::cout << "initial number of transitions: " << boost::num_edges(the_nfa.m_graph) << std::endl;
     std::cout << "# NFA COMPLETED in " << elapsed.count() << " s\n";
     
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // WORKLOAD DUMP                                                                              //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    std::cout << "# WORKLOAD DUMP" << std::endl;
+    start = std::chrono::high_resolution_clock::now();
+
+    the_nfa.dump_benchmark_workload(dest_folder, rp);
+
+    finish = std::chrono::high_resolution_clock::now();
+    elapsed = finish - start;
+    std::cout << "# WORKLOAD DUMP COMPLETED in " << elapsed.count() << " s\n";
+    return 0;
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // OPTIMISATIONS                                                                              //
     ////////////////////////////////////////////////////////////////////////////////////////////////

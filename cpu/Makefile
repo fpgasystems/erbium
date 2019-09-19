@@ -30,14 +30,14 @@ $(shell mkdir -p $(dir $(DEPS)) >/dev/null)
 # C compiler
 CC := gcc
 # C++ compiler
-CXX := c++
+CXX := gcc
 # linker
 LD := g++
 # tar
 TAR := tar
 
 # C++ flags
-CXXFLAGS := -std=c++11
+CXXFLAGS := 
 # C/C++ flags
 CPPFLAGS := -g -Wall -pedantic -fopenmp
 # linker flags

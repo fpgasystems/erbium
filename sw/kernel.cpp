@@ -266,21 +266,15 @@ int main(int argc, char** argv)
     printf("> Static data overhead (NFA to DDR):  %9lu ns\n", nfadata_ns); fflush(stdout);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    // QUERIES DATA                                                                               //
-    ////////////////////////////////////////////////////////////////////////////////////////////////    
+    // WORKLOAD SETUP                                                                             //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    printf(">> Queries Setup\n"); fflush(stdout);
+    printf(">> Workload Setup\n"); fflush(stdout);
     char* benchmark_buff;
     uint32_t benchmark_size; // in queries
     uint32_t query_size;     // in bytes with padding
-    uint32_t queries_size;   // in bytes with padding
-    uint32_t results_size;   // in bytes without padding
-    uint32_t aux;
     std::vector<operands_t, aligned_allocator<operands_t>>* queries_data;
     std::vector<uint16_t, aligned_allocator<uint16_t>>* results;
-
-    uint32_t queries_cls;
-    uint32_t results_cls;
 
     if(!load_workload_from_file(workload_file, &benchmark_size, &benchmark_buff, &query_size))
         return EXIT_FAILURE;
@@ -290,7 +284,13 @@ int main(int argc, char** argv)
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::ofstream file_bnchout(bnchmrk_out);
-    file_bnchout << "batch_size,overhead,data,kernel,result,total_ns" << std::endl;
+    file_bnchout << "batch_size,overhead,nfa,queries,kernel,result" << std::endl;
+    
+    uint32_t queries_size;   // in bytes with padding
+    uint32_t results_size;   // in bytes without padding
+    uint32_t queries_cls;
+    uint32_t results_cls;
+    uint32_t aux;
 
     double stamp00, stamp01;
     uint64_t total_ns;

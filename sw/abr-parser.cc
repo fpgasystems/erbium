@@ -22,11 +22,6 @@ int main(int argc, char** argv)
     // PARAMETERS                                                                                 //
     ////////////////////////////////////////////////////////////////////////////////////////////////
     std::cout << "# PARAMETERS" << std::endl;
-    // -d destination folder
-    // -r rules file
-    // -s sorting: 0=none 1=asc 2=desc 3=mct_asc 4=mct_perf
-    // -z [ZRH workload]
-    // -h help
 
     SortOption sorting_option = MCT_DESC;
     std::string dest_folder = "build/";
@@ -204,18 +199,6 @@ int main(int argc, char** argv)
     //std::cout << "initial number of transitions: " << boost::num_edges(the_nfa.m_graph) << std::endl;
     std::cout << "# NFA COMPLETED in " << elapsed.count() << " s\n";
     
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-    // WORKLOAD DUMP                                                                              //
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-    std::cout << "# WORKLOAD DUMP" << std::endl;
-    start = std::chrono::high_resolution_clock::now();
-
-    the_nfa.dump_benchmark_workload(dest_folder, rp);
-
-    finish = std::chrono::high_resolution_clock::now();
-    elapsed = finish - start;
-    std::cout << "# WORKLOAD DUMP COMPLETED in " << elapsed.count() << " s\n";
-    return 0;
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // OPTIMISATIONS                                                                              //
     ////////////////////////////////////////////////////////////////////////////////////////////////

@@ -2,7 +2,6 @@
 
 #include <stdlib.h>
 #include <vector>
-#include <sys/time.h>
 #include <unistd.h>     // parameters
 
 const unsigned char C_CACHELINE_SIZE   = 64; // in bytes
@@ -19,13 +18,6 @@ uint64_t get_duration_ns (const cl::Event &event) {
     event.getProfilingInfo<uint64_t>(CL_PROFILING_COMMAND_START, &nstimestart);
     event.getProfilingInfo<uint64_t>(CL_PROFILING_COMMAND_END, &nstimeend);
     return (nstimeend - nstimestart);
-}
-
-static double get_time()
-{
-    struct timeval t;
-    gettimeofday(&t, NULL);
-    return t.tv_sec + t.tv_usec*1e-6;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -155,7 +147,7 @@ int main(int argc, char** argv)
     uint32_t iterations = 100;
     
     char opt;
-    while ((opt = getopt(argc, argv, "b:n:w:r:o:s:m:i:h")) != -1) {
+    while ((opt = getopt(argc, argv, "b:n:w:r:o:sm:i:h")) != -1) {
         switch (opt) {
         case 'b':
             bitstream_file = (char*) malloc(strlen(optarg)+1);
@@ -234,10 +226,11 @@ int main(int argc, char** argv)
     devices.resize(1);
 
     cl_int err;
-    double stamp_p0 = get_time();
+    auto start = std::chrono::high_resolution_clock::now();
     OCL_CHECK(err, cl::Program program(context, devices, bins, NULL, &err));
-    double stamp_p1 = get_time();
-    printf("Time to program FPGA: %.8f Seconds\n", stamp_p1-stamp_p0); fflush(stdout);
+    auto finish = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::ratio<1,1>> elapsed_s = finish - start;
+    printf("Time to program FPGA: %.8f Seconds\n", elapsed_s.count()); fflush(stdout);
 
     cl::Kernel kernel(program, "nfabre");
 
@@ -292,8 +285,7 @@ int main(int argc, char** argv)
     uint32_t results_cls;
     uint32_t aux;
 
-    double stamp00, stamp01;
-    uint64_t total_ns;
+    std::chrono::duration<double, std::nano> total_ns;
     uint64_t queries_ns;
     uint64_t kernel_ns;
     uint64_t result_ns;
@@ -339,7 +331,7 @@ int main(int argc, char** argv)
             cl::Event evtKernel;
             cl::Event evtResult;
 
-            stamp00 = get_time();
+            start = std::chrono::high_resolution_clock::now();
 
             // load data via PCIe to the FPGA on-board DDR
             queue.enqueueMigrateMemObjects({buffer_queries}, 0/* 0 means from host*/, NULL, &evtQueries);
@@ -359,42 +351,25 @@ int main(int argc, char** argv)
             // load results via PCIe from FPGA on-board DDR
             queue.enqueueMigrateMemObjects({buffer_results}, CL_MIGRATE_MEM_OBJECT_HOST, NULL, &evtResult);
             queue.finish();
-            stamp01 = get_time();
+            finish = std::chrono::high_resolution_clock::now();
 
             ////////////////////////////////////////////////////////////////////////////////////////
             // TIMING REPORT                                                                      //
             ////////////////////////////////////////////////////////////////////////////////////////
 
-            total_ns = (stamp01-stamp00)*1000*1000*1000;
+            total_ns = finish - start;
             nfadata_ns = get_duration_ns(evtNFAdata);
             queries_ns = get_duration_ns(evtQueries);
             kernel_ns = get_duration_ns(evtKernel);
             result_ns = get_duration_ns(evtResult);
             events_ns = queries_ns + kernel_ns + result_ns;
-            opencl_ns = total_ns - events_ns;
-            //double nfadata_pct = ((double) nfadata_ns) / total_ns * 100;
-            //double queries_pct = ((double) queries_ns) / total_ns * 100;
-            //double kernel_pct = ((double) kernel_ns) / total_ns * 100;
-            //double result_pct = ((double) result_ns) / total_ns * 100;
-            //double opencl_pct = ((double) opencl_ns) / total_ns * 100;
-
+            opencl_ns = total_ns.count() - events_ns;
             file_bnchout << bsize
                          << "," << opencl_ns
                          << "," << nfadata_ns
                          << "," << queries_ns
                          << "," << kernel_ns
                          << "," << result_ns << std::endl;
-
-            // printf(">> Timing report: \n");
-            // printf("> Invocation overhead (opencl calls): %9lu ns (%5.2f%%)\n", opencl_ns, opencl_pct);
-            // printf("> Static data overhead (NFA to DDR):  %9lu ns (%5.2f%%)\n", nfadata_ns, nfadata_pct);
-            // printf("> Data transfer (Queries to DDR):     %9lu ns (%5.2f%%)\n", queries_ns, queries_pct);
-            // printf("> Wall Clock Time (Kernel execution): %9lu ns (%5.2f%%)\n", kernel_ns, kernel_pct);
-            // printf("> Results transfer (back from DDR):   %9lu ns (%5.2f%%)\n", result_ns, result_pct);
-            // printf("> Total execution and retrieval time: %9.4f ms\n", (stamp01-stamp00)*1000);
-            // printf("> Query latancy (wall clock): %2.4f us\n", ((double) kernel_ns) / 1000 / num_queries);
-            // printf("> Query latency (total exec): %2.4f us\n", ((double) total_ns) / 1000 / num_queries);
-
         }
         delete queries_data;
         delete results;

@@ -442,9 +442,9 @@ int main(int argc, char** argv)
                 // ends[query] = std::chrono::high_resolution_clock::now();
             }
             auto finish = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double> elapsed = finish - start;
+            std::chrono::duration<double, std::nano> elapsed = finish - start;
 
-            file_bnchout << bsize << "," << elapsed.count() * 1000 * 1000 * 1000 << std::endl;
+            file_bnchout << bsize << "," << elapsed.count() << std::endl;
         }
         free(the_queries);
         free(results);

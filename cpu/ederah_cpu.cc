@@ -1,3 +1,4 @@
+#include <cstring>
 #include <string>
 #include <fstream>
 #include <iostream>
@@ -224,7 +225,7 @@ void compute(const uint16_t* query, const uint16_t level, uint16_t pointer, cons
             if (aux_interim >= result->weight)
             {
                 //if ((aux_interim == result->weight) && (result->pointer != the_memory[level][pointer].pointer))
-                //    printf("Weird\n");
+                //    std::cout << "Weird\n";
                 result->weight = aux_interim;
                 result->pointer = the_memory[level][pointer].pointer;
 
@@ -296,17 +297,18 @@ int main(int argc, char** argv)
         }
     }
 
-    printf("-n nfa_data_file: %s\n", nfadata_file);
-    printf("-w workload_file: %s\n", workload_file);
-    printf("-r result_data_file: %s\n", results_file);
-    printf("-o benchmark_out_file: %s\n", bnchmrk_out);
-    printf("-m max_batch_size: %u\n", max_batch_size);
-    printf("-i iterations: %u\n", iterations);
-    printf("-c cores_number: %u\n", cores_number);
+    std::cout << "-n nfa_data_file: " << nfadata_file << std::endl;
+    std::cout << "-w workload_file: " << workload_file << std::endl;
+    std::cout << "-r result_data_file: " << results_file << std::endl;
+    std::cout << "-o benchmark_out_file: " << bnchmrk_out << std::endl;
+    std::cout << "-m max_batch_size: " << max_batch_size << std::endl;
+    std::cout << "-i iterations: " << iterations << std::endl;
+    std::cout << "-c cores_number: " << cores_number << std::endl;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // NFA SETUP                                                                                  //
     ////////////////////////////////////////////////////////////////////////////////////////////////
+    
     std::cout << "# NFA SETUP" << std::endl;
 
     std::ifstream file_nfadata(nfadata_file, std::ios::in | std::ios::binary);
@@ -315,7 +317,7 @@ int main(int argc, char** argv)
         uint32_t num_edges;
         uint64_t raw_edge;
         uint16_t padding;
-        uint64_t  nfa_hash;
+        uint64_t nfa_hash;
 
         file_nfadata.read(reinterpret_cast<char *>(&nfa_hash), sizeof(nfa_hash));
 
@@ -324,7 +326,7 @@ int main(int argc, char** argv)
             file_nfadata.read(reinterpret_cast<char *>(&raw_edge), sizeof(raw_edge));
             num_edges = raw_edge;
             the_memory[level] = (edge_s*) malloc(num_edges * sizeof(edge_s));
-            //std::cout << " level=" << level << " edges=" << num_edges << std::endl;
+            // std::cout << " level=" << level << " edges=" << num_edges << std::endl;
 
             for (uint32_t i=0; i<num_edges; i++)
             {
@@ -348,7 +350,7 @@ int main(int argc, char** argv)
     }
     else
     {
-        printf("[!] Failed to open NFA .bin file\n");
+        std::cerr << "[!] Failed to open NFA .bin file\n";
         return EXIT_FAILURE;
     }
 
@@ -360,7 +362,6 @@ int main(int argc, char** argv)
     char*    workload_buff;
     uint32_t workload_size; // in queries
     uint32_t query_size;    // in bytes with padding
-    uint32_t results_size;  // in bytes without padding
 
     std::ifstream queries_file(workload_file, std::ios::in | std::ios::binary);
     if(queries_file.is_open())
@@ -374,9 +375,9 @@ int main(int argc, char** argv)
 
         if (workload_size * query_size != raw_size)
         {
-            printf("[!] Corrupted benchmark file!\n[!]  Expected: %u bytes\n[!]  Got: %u bytes\n",
-                workload_size * query_size, raw_size);
-            fflush(stdout);
+            std::cerr << "[!] Corrupted benchmark file!\n[!]  Expected: "
+                      <<  workload_size * query_size << " bytes\n[!]  Got: "
+                      << raw_size << " bytes\n";
             return EXIT_FAILURE;
         }
 
@@ -386,7 +387,7 @@ int main(int argc, char** argv)
     }
     else
     {
-        printf("[!] Failed to open BENCHMARK .bin file\n"); fflush(stdout);
+        std::cerr << "[!] Failed to open WORKLOAD .bin file\n";
         return EXIT_FAILURE;
     }
 
@@ -395,28 +396,34 @@ int main(int argc, char** argv)
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::ofstream file_bnchout(bnchmrk_out);
+    std::ofstream file_result(results_file);
     file_bnchout << "batch_size,total_ns" << std::endl;
+    file_result << "query_id,content_id\n";
 
     operands_t* the_queries;
-    uint32_t aux;
-
+    uint32_t* gabarito;
+    result_s* results;
+    uint32_t aux = 0;
     for (uint32_t bsize = 1; bsize < max_batch_size; bsize = bsize << 1)
     {
         the_queries = (operands_t*) malloc(bsize * CFG_ENGINE_NCRITERIA * sizeof(operands_t));
-        result_s* results = (result_s*) calloc(bsize, sizeof(*results));
-        results_size = bsize * sizeof(operands_t);
+        results = (result_s*) calloc(bsize, sizeof(*results));
+        gabarito = (uint32_t*) calloc(bsize, sizeof(*gabarito));
         
         printf("> # of queries: %9u\n", bsize);
         printf("> Queries size: %9u bytes\n", bsize * query_size);
-        printf("> Results size: %9u bytes\n", results_size);
+        printf("> Results size: %9u bytes\n", bsize * (uint)sizeof(operands_t));
 
         for (uint32_t i = 0; i < iterations; i++)
         {
             for (uint32_t k = 0; k < bsize; k++)
             {
-                aux = (rand() % workload_size) * query_size;
-                memcpy(&the_queries[k*CFG_ENGINE_NCRITERIA], &(workload_buff[aux]), CFG_ENGINE_NCRITERIA * sizeof(operands_t));
+                memcpy(&the_queries[k*CFG_ENGINE_NCRITERIA], &(workload_buff[aux * query_size]),
+                    CFG_ENGINE_NCRITERIA * sizeof(operands_t));
+                gabarito[k] = aux;
+                aux = (aux + 1) % workload_size;
             }
+            std::memset(results, 0, bsize * sizeof(*results));
 
             ////////////////////////////////////////////////////////////////////////////////////////
             // KERNEL EXECUTION                                                                   //
@@ -440,32 +447,29 @@ int main(int argc, char** argv)
                         0, // interim
                         &results[query]);
                 // ends[query] = std::chrono::high_resolution_clock::now();
+                //std::cout << gabarito[query] << " " << results[query].pointer << std::endl;
             }
             auto finish = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double, std::nano> elapsed = finish - start;
 
             file_bnchout << bsize << "," << elapsed.count() << std::endl;
+
+            ////////////////////////////////////////////////////////////////////////////////////////
+            // RESULTS                                                                            //
+            ////////////////////////////////////////////////////////////////////////////////////////
+            for (uint vtc = 0; vtc < bsize; ++vtc)
+                file_result << gabarito[vtc] << "," << results[vtc].pointer << std::endl;
         }
         free(the_queries);
         free(results);
+        free(gabarito);
     }
     delete [] workload_buff;
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-    // RESULTS                                                                                    //
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-
-    // std::ofstream results_file(argv[3]);
-    // char buffer[50];
-// 
-//     // for (uint i = 0; i < bsize; ++i)
-//     // {
-//     //     std::chrono::duration<double> elapsed = ends[i] - starts[i];
-//     //     sprintf(buffer, "%u,%.6lf\n", results[i].pointer, elapsed.count()*1000);
-//     //     results_file << buffer;
-    // }
-
     // TODO memory releases!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    for (uint16_t level=0; level<CFG_ENGINE_NCRITERIA; level++)
+        free(the_memory[level]);
 
     return EXIT_SUCCESS;
 }

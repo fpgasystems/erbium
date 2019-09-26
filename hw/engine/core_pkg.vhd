@@ -193,9 +193,9 @@ package core_pkg is
         rst_i           :  in std_logic; -- low active
         engine_idle_i   :  in std_logic;
         -- interim result from NFA-PE
-        interim_valid_i :  in std_logic;
+        interim_empty_i :  in std_logic;
         interim_data_i  :  in edge_buffer_type;
-        interim_ready_o : out std_logic;
+        interim_read_o  : out std_logic;
         -- final result to TOP
         result_ready_i  :  in std_logic;
         result_data_o   : out edge_buffer_type;

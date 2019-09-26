@@ -265,6 +265,7 @@ architecture behavioural of engine is
 
     -- CORE INTERFACE ARRAYS
     type edge_buffer_array  is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of edge_buffer_type;
+    type edge_buffer_arrayp1 is array (CFG_ENGINE_NCRITERIA downto 0) of edge_buffer_type;
     type edge_store_array   is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of edge_store_type;
     type weight_array       is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of integer;
     type mem_addr_array     is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
@@ -272,9 +273,9 @@ architecture behavioural of engine is
     type query_buffer_array is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of query_buffer_type;
     --
     signal idle            : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
-    signal prev_empty      : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
-    signal prev_read       : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
-    signal prev_data       : edge_buffer_array;
+    signal prev_empty      : std_logic_vector(0 to CFG_ENGINE_NCRITERIA);
+    signal prev_read       : std_logic_vector(0 to CFG_ENGINE_NCRITERIA);
+    signal prev_data       : edge_buffer_arrayp1;
     signal query           : query_buffer_array;
     signal query_full      : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
     signal query_empty     : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
@@ -289,7 +290,6 @@ architecture behavioural of engine is
     signal next_write      : std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
     -- result reducer
     signal resred_value    : edge_buffer_type;
-    signal resred_ready    : std_logic;
     --
     signal sig_engine_idle : std_logic;
     signal sig_engine_time : std_logic_vector(CFG_DBG_COUNTERS_WIDTH - 1 downto 0);
@@ -379,29 +379,29 @@ gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
         wr_data_i       => mem_i
     );
     
-    gen_fwd : if I /= CFG_ENGINE_NCRITERIA - 1 generate -- from I to I+1
+    -- gen_fwd : if I /= CFG_ENGINE_NCRITERIA - 1 generate -- from I to I+1
+    -- 
+    --     weight_filter(I) <= weight_driver(CFG_ENGINE_NCRITERIA - 1);
+    -- 
+    -- end generate gen_fwd;
 
-        weight_filter(I) <= weight_driver(CFG_ENGINE_NCRITERIA - 1);
-
-        buff_edge_g : buffer_edge generic map
-        (
-            G_DEPTH         => CFG_EDGE_BUFFERS_DEPTH
-        )
-        port map
-        (
-            rst_i           => rst_i,
-            clk_i           => clk_i,
-            --
-            wr_en_i         => next_write(I),
-            wr_data_i       => next_data(I),
-            full_o          => next_full(I),
-            --
-            rd_en_i         => prev_read(I+1),
-            rd_data_o       => prev_data(I+1),
-            empty_o         => prev_empty(I+1)
-        );
-
-    end generate gen_fwd;
+    buff_edge_g : buffer_edge generic map
+    (
+        G_DEPTH         => CFG_EDGE_BUFFERS_DEPTH
+    )
+    port map
+    (
+        rst_i           => rst_i,
+        clk_i           => clk_i,
+        --
+        wr_en_i         => next_write(I),
+        wr_data_i       => next_data(I),
+        full_o          => next_full(I),
+        --
+        rd_en_i         => prev_read(I+1),
+        rd_data_o       => prev_data(I+1),
+        empty_o         => prev_empty(I+1)
+    );
 
 end generate gen_stages;
 
@@ -413,11 +413,11 @@ reducer : result_reducer port map
 (
     clk_i           => clk_i,
     rst_i           => rst_i,
-    engine_idle_i   => sig_engine_idle,
+    engine_idle_i   => sig_cores_idle,
     --
-    interim_valid_i => next_write(CFG_ENGINE_NCRITERIA - 1),
-    interim_data_i  => next_data(CFG_ENGINE_NCRITERIA - 1),
-    interim_ready_o => resred_ready,
+    interim_empty_i => prev_empty(CFG_ENGINE_NCRITERIA),
+    interim_data_i  => prev_data(CFG_ENGINE_NCRITERIA),
+    interim_read_o  => prev_read(CFG_ENGINE_NCRITERIA),
     -- final result to TOP
     result_ready_i  => result_ready_i,
     result_data_o   => resred_value,
@@ -437,7 +437,6 @@ prev_data(0)  <= sig_origin_node;
 
 -- LAST
 query_ready_o  <= not query_full(CFG_ENGINE_NCRITERIA - 1);
-next_full(CFG_ENGINE_NCRITERIA - 1) <= not resred_ready;
 result_value_o <= resred_value.pointer;
 
 sig_engine_idle <= v_and(idle) and not v_or(next_write);

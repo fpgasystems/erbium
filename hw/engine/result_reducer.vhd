@@ -45,6 +45,10 @@ architecture behavioural of result_reducer is
     signal sig_stats_reset      : std_logic;
     signal sig_match_higher_en  : std_logic;
     signal sig_match_lower_en   : std_logic;
+    --
+    signal stats_queries_out    : std_logic_vector(63 downto 0);
+    signal stats_queries_in     : std_logic_vector(63 downto 0);
+    signal stats_queries_in_en  : std_logic;
 begin
 
 ----------------------------------------------------------------------------------------------------
@@ -146,7 +150,7 @@ begin
     if rising_edge(clk_i) then
         if rst_i = '0' then
             result_r.flow_ctrl        <= FLW_CTRL_BUFF;
-            result_r.interim.query_id <=  0 ;
+            result_r.interim.query_id <= C_INIT_QUERY_ID;
             result_r.interim.weight   <=  0 ;
             result_r.valid            <= '0';
             result_r.read             <= '0';
@@ -169,10 +173,14 @@ sig_stats_reset <= rst_i when (result_r.flow_ctrl = FLW_CTRL_READ) else '0';
 sig_match_higher_en <= result_r.read when (result_r.interim.query_id = interim_data_i.query_id and
                                              interim_data_i.weight < result_r.interim.weight)
                        else '0';
+
 sig_match_lower_en  <= result_r.read when (result_r.interim.query_id = interim_data_i.query_id and
                                              interim_data_i.weight > result_r.interim.weight)
                        else '0';
-                        
+
+stats_queries_in_en  <= result_r.read when (result_r.interim.query_id /= interim_data_i.query_id)
+                        else '0';
+
 counter_weight_heigher: simple_counter generic map
 (
     G_WIDTH   => CFG_DBG_COUNTERS_WIDTH
@@ -195,6 +203,30 @@ port map
     rst_i     => sig_stats_reset,
     enable_i  => sig_match_lower_en,
     counter_o => stats_r.match_lower_weight
+);
+
+counter_queries_out: simple_counter generic map
+(
+    G_WIDTH   => 64
+)
+port map
+(
+    clk_i     => clk_i,
+    rst_i     => rst_i,
+    enable_i  => result_r.valid and result_ready_i,
+    counter_o => stats_queries_out
+);
+
+counter_queries_in: simple_counter generic map
+(
+    G_WIDTH   => 64
+)
+port map
+(
+    clk_i     => clk_i,
+    rst_i     => rst_i,
+    enable_i  => stats_queries_in_en,
+    counter_o => stats_queries_in
 );
 
 end architecture behavioural;

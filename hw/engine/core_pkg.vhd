@@ -16,6 +16,7 @@ package core_pkg is
 ----------------------------------------------------------------------------------------------------
 
     -- TODO define range of integer QUERY_ID as a subtype ;)
+    constant C_INIT_QUERY_ID : integer := 2**CFG_QUERY_ID_WIDTH - 1;
 
     type match_structure_type is (STRCT_SIMPLE, STRCT_PAIR);
     type match_pair_function is (FNCTR_PAIR_NOP, FNCTR_PAIR_AND, FNCTR_PAIR_OR, FNCTR_PAIR_XOR, FNCTR_PAIR_NAND, FNCTR_PAIR_NOR);

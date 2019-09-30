@@ -8,7 +8,16 @@ const unsigned char C_CACHELINE_SIZE   = 64; // in bytes
 
 typedef uint16_t                                operands_t;
 
-
+// void hexDump(void *addr, int len)
+// {
+//     unsigned char *pc = (unsigned char*)addr;
+// 
+//     // Process every byte in the data.
+//     for (int i = 0; i < len; i++) {
+//         printf(" %02x", pc[i]);
+//     }
+//     printf("\n");
+// }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //                                                                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -31,7 +40,8 @@ bool load_nfa_from_file(const char* file_name,
     if(file.is_open())
     {
         file.seekg(0, std::ios::end);
-        *raw_size = file.tellg();
+        //*raw_size = ((uint32_t)file.tellg()) - sizeof(*nfa_hash);
+        *raw_size = ((uint32_t)file.tellg()) - sizeof(*nfa_hash);
 
         char* file_buffer = new char[*raw_size];
 
@@ -49,7 +59,6 @@ bool load_nfa_from_file(const char* file_name,
     else
     {
         *raw_size = 0;
-        *nfa_data = new std::vector<uint64_t, aligned_allocator<uint64_t>>(*raw_size);
         printf("[!] Failed to open NFA .bin file\n"); fflush(stdout);
         return false;
     }
@@ -96,7 +105,7 @@ bool load_queries_from_file(const char* file_name,
     }
 }
 
-bool load_workload_from_file(const char* workload_file, uint32_t* benchmark_size, char** benchmark_buff,
+bool load_workload_from_file(const char* workload_file, uint32_t* benchmark_size, char** workload_buff,
     uint32_t* query_size)
 {
     std::ifstream file(workload_file, std::ios::in | std::ios::binary);
@@ -117,8 +126,8 @@ bool load_workload_from_file(const char* workload_file, uint32_t* benchmark_size
             return false;
         }
 
-        *benchmark_buff = new char[raw_size];
-        file.read(*benchmark_buff, raw_size);
+        *workload_buff = new char[raw_size];
+        file.read(*workload_buff, raw_size);
         file.close();
     }
     else
@@ -137,7 +146,7 @@ int main(int argc, char** argv)
 
     printf(">> Parameters\n"); fflush(stdout);
 
-    bool has_statistics;
+    bool has_statistics = false;
     char* bitstream_file = NULL;
     char* workload_file = NULL;
     char* nfadata_file = NULL;
@@ -263,13 +272,13 @@ int main(int argc, char** argv)
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     printf(">> Workload Setup\n"); fflush(stdout);
-    char* benchmark_buff;
+    char* workload_buff;
     uint32_t benchmark_size; // in queries
     uint32_t query_size;     // in bytes with padding
     std::vector<operands_t, aligned_allocator<operands_t>>* queries_data;
     std::vector<uint16_t, aligned_allocator<uint16_t>>* results;
 
-    if(!load_workload_from_file(workload_file, &benchmark_size, &benchmark_buff, &query_size))
+    if(!load_workload_from_file(workload_file, &benchmark_size, &workload_buff, &query_size))
         return EXIT_FAILURE;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -277,13 +286,14 @@ int main(int argc, char** argv)
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::ofstream file_bnchout(bnchmrk_out);
+    std::ofstream file(results_file);
     file_bnchout << "batch_size,overhead,nfa,queries,kernel,result" << std::endl;
     
     uint32_t queries_size;   // in bytes with padding
     uint32_t results_size;   // in bytes without padding
     uint32_t queries_cls;
     uint32_t results_cls;
-    uint32_t aux;
+    uint32_t aux = 0;
 
     std::chrono::duration<double, std::nano> total_ns;
     uint64_t queries_ns;
@@ -291,12 +301,15 @@ int main(int argc, char** argv)
     uint64_t result_ns;
     uint64_t events_ns;
     uint64_t opencl_ns;
+
+    uint32_t* gabarito;
     for (uint32_t bsize = 1; bsize < max_batch_size; bsize = bsize << 1)
     {
         queries_size = bsize * query_size;
         queries_data = new std::vector<operands_t, aligned_allocator<operands_t>>(queries_size);
         results_size = bsize * sizeof(operands_t) * ((has_statistics) ? 4 : 1);
         results = new std::vector<uint16_t, aligned_allocator<uint16_t>>(results_size);
+        gabarito = (uint32_t*) calloc(bsize, sizeof(*gabarito));
 
         queries_cls = queries_size / C_CACHELINE_SIZE;
         results_cls = (results_size / C_CACHELINE_SIZE) + (((results_size % C_CACHELINE_SIZE)==0)?0:1);
@@ -310,12 +323,12 @@ int main(int argc, char** argv)
             auto point = queries_data->data();
             for (uint32_t k = 0; k < bsize; k++)
             {
-                aux = (rand() % benchmark_size) * query_size;
-                memcpy(point, &(benchmark_buff[aux]), query_size);
+                memcpy(point, &(workload_buff[aux * query_size]), query_size);
                 for (uint32_t j = 0; j < query_size / sizeof(operands_t); j++)
                     point++;
+                gabarito[k] = aux;
+                aux = (aux + 1) % benchmark_size;
             }
-
             ////////////////////////////////////////////////////////////////////////////////////////
             // KERNEL EXECUTION                                                                   //
             ////////////////////////////////////////////////////////////////////////////////////////
@@ -371,11 +384,35 @@ int main(int argc, char** argv)
                          << "," << kernel_ns
                          << "," << result_ns << std::endl;
         }
+
+        ////////////////////////////////////////////////////////////////////////////////////////////
+        // RESULTS                                                                                //
+        ////////////////////////////////////////////////////////////////////////////////////////////
+
+        if (has_statistics)
+        {
+            file << "query_id,content_id,clock_cycles,higher_weight,lower_weight\n";
+            for (size_t i = 0; i < bsize*4; i=i+4)
+            {
+                file << gabarito[i/4] << ",";
+                file << (results->data())[i+3] << "," << (results->data())[i+2] << ",";
+                file << (results->data())[i+1] << "," << (results->data())[i] << "\n";
+            }
+        }
+        else
+        {
+            file << "query_id,content_id\n";
+            for (size_t i = 0; i < bsize; ++i)
+                file << gabarito[i] << "," << (results->data())[i] << "\n";
+        }
+
         delete queries_data;
         delete results;
+        free(gabarito);
     }
-    delete [] benchmark_buff;
-
+    delete [] workload_buff;
+    file.close();
+    file_bnchout.close();
 /*
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // KERNEL EXECUTION                                                                           //

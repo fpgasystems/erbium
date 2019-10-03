@@ -25,9 +25,7 @@ entity engine is
         result_stats_o    : out result_stats_type;
         result_valid_o    : out std_logic;
         result_last_o     : out std_logic;
-        result_value_o    : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
-        --
-        stats_idle_time_o : out std_logic_vector(CFG_DBG_COUNTERS_WIDTH - 1 downto 0)
+        result_value_o    : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0)
     );
 end engine;
 
@@ -370,13 +368,16 @@ gen_stages: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
     )
     port map
     (
-        clk_i           => clk_i,
-        rd_en_i         => mem_en(I),
-        rd_addr_i       => mem_addr(I)(clogb2(CFG_CORE_PARAM_ARRAY(I).G_RAM_DEPTH)-1 downto 0),
-        rd_data_o       => uram_rd_data(I),
-        wr_en_i         => mem_wren_i(I),
-        wr_addr_i       => mem_addr_i(clogb2(CFG_CORE_PARAM_ARRAY(I).G_RAM_DEPTH)-1 downto 0),
-        wr_data_i       => mem_i
+        clk_i         => clk_i,
+        core_a_en_i   => mem_en(I),
+        core_a_addr_i => mem_addr(I)(clogb2(CFG_CORE_PARAM_ARRAY(I).G_RAM_DEPTH)-1 downto 0),
+        core_a_data_o => uram_rd_data(I),
+        core_b_en_i   => '0',
+        core_b_addr_i => (others => '0'),
+        core_b_data_o => open,
+        wr_en_i       => mem_wren_i(I),
+        wr_addr_i     => mem_addr_i(clogb2(CFG_CORE_PARAM_ARRAY(I).G_RAM_DEPTH)-1 downto 0),
+        wr_data_i     => mem_i
     );
     
     -- gen_fwd : if I /= CFG_ENGINE_NCRITERIA - 1 generate -- from I to I+1

@@ -39,13 +39,16 @@ PACKAGE std_pkg IS
         G_RAM_DEPTH : integer := 1024                  -- Specify RAM depth (number of entries)
     );
     port (
-        clk_i        :  in std_logic;
-        rd_en_i      :  in std_logic;
-        rd_addr_i    :  in std_logic_vector((clogb2(G_RAM_DEPTH)-1) downto 0);
-        rd_data_o    : out std_logic_vector(G_RAM_WIDTH-1 downto 0);
-        wr_en_i      :  in std_logic;
-        wr_addr_i    :  in std_logic_vector((clogb2(G_RAM_DEPTH)-1) downto 0);
-        wr_data_i    :  in std_logic_vector(G_RAM_WIDTH-1 downto 0)
+        clk_i         :  in std_logic;
+        core_a_en_i   :  in std_logic;
+        core_a_addr_i :  in std_logic_vector((clogb2(G_RAM_DEPTH)-1) downto 0);
+        core_a_data_o : out std_logic_vector(G_RAM_WIDTH-1 downto 0);
+        core_b_en_i   :  in std_logic;
+        core_b_addr_i :  in std_logic_vector((clogb2(G_RAM_DEPTH)-1) downto 0);
+        core_b_data_o : out std_logic_vector(G_RAM_WIDTH-1 downto 0);
+        wr_en_i       :  in std_logic;
+        wr_addr_i     :  in std_logic_vector((clogb2(G_RAM_DEPTH)-1) downto 0);
+        wr_data_i     :  in std_logic_vector(G_RAM_WIDTH-1 downto 0)
     );
     end component;
 

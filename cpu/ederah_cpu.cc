@@ -228,11 +228,14 @@ void compute(const uint16_t* query, const uint16_t level, uint16_t pointer, cons
                 //    std::cout << "Weird\n";
                 result->weight = aux_interim;
                 result->pointer = the_memory[level][pointer].pointer;
-
+                // std::cout << "level " << level << " pointer " << the_memory[level][pointer].pointer
+                //       << " weight " << aux_interim << std::endl;
             }
         }
         else
         {
+            // std::cout << "level " << level << " pointer " << the_memory[level][pointer].pointer
+            //           << " weight " << aux_interim << std::endl;
             compute(query+1, level+1, the_memory[level][pointer].pointer, aux_interim, result);
         }
     } while(!the_memory[level][pointer++].last);
@@ -246,35 +249,39 @@ int main(int argc, char** argv)
 
     std::cout << "# PARAMETERS" << std::endl;
 
-    char* workload_file = NULL;
-    char* nfadata_file = NULL;
-    char* results_file = NULL;
-    char* bnchmrk_out = NULL;
+    char* fullpath_workload = NULL;
+    char* fullpath_nfadata = NULL;
+    char* fullpath_results = NULL;
+    char* fullpath_benchmark = NULL;
     uint32_t max_batch_size = 1<<10;
+    uint32_t min_batch_size = 1;
     uint32_t iterations = 100;
     uint16_t cores_number = 1;
 
     char opt;
-    while ((opt = getopt(argc, argv, "n:w:r:o:m:i:c:h")) != -1) {
+    while ((opt = getopt(argc, argv, "c:f:hi:m:n:o:r:w:")) != -1) {
         switch (opt) {
         case 'n':
-            nfadata_file = (char*) malloc(strlen(optarg)+1);
-            strcpy(nfadata_file, optarg);
+            fullpath_nfadata = (char*) malloc(strlen(optarg)+1);
+            strcpy(fullpath_nfadata, optarg);
             break;
         case 'w':
-            workload_file = (char*) malloc(strlen(optarg)+1);
-            strcpy(workload_file, optarg);
+            fullpath_workload = (char*) malloc(strlen(optarg)+1);
+            strcpy(fullpath_workload, optarg);
             break;
         case 'r':
-            results_file = (char*) malloc(strlen(optarg)+1);
-            strcpy(results_file, optarg);
+            fullpath_results = (char*) malloc(strlen(optarg)+1);
+            strcpy(fullpath_results, optarg);
             break;
         case 'o':
-            bnchmrk_out = (char*) malloc(strlen(optarg)+1);
-            strcpy(bnchmrk_out, optarg);
+            fullpath_benchmark = (char*) malloc(strlen(optarg)+1);
+            strcpy(fullpath_benchmark, optarg);
             break;
         case 'm':
             max_batch_size = atoi(optarg);
+            break;
+        case 'f':
+            min_batch_size = atoi(optarg);
             break;
         case 'i':
             iterations = atoi(optarg);
@@ -286,10 +293,11 @@ int main(int argc, char** argv)
         default: /* '?' */
             std::cerr << "Usage: " << argv[0] << "\n"
                       << "\t-n  nfa_data_file\n"
-                      << "\t-w  workload_file\n"
+                      << "\t-w  fullpath_workload\n"
                       << "\t-r  result_data_file\n"
                       << "\t-o  benchmark_out_file\n"
                       << "\t-m  max_batch_size\n"
+                      << "\t-f  first_batch_size\n"
                       << "\t-i  iterations\n"
                       << "\t-c  cores_number\n"
                       << "\t-h  help\n";
@@ -297,13 +305,14 @@ int main(int argc, char** argv)
         }
     }
 
-    std::cout << "-n nfa_data_file: " << nfadata_file << std::endl;
-    std::cout << "-w workload_file: " << workload_file << std::endl;
-    std::cout << "-r result_data_file: " << results_file << std::endl;
-    std::cout << "-o benchmark_out_file: " << bnchmrk_out << std::endl;
-    std::cout << "-m max_batch_size: " << max_batch_size << std::endl;
-    std::cout << "-i iterations: " << iterations << std::endl;
-    std::cout << "-c cores_number: " << cores_number << std::endl;
+    std::cout << "-n nfa_data_file: "      << fullpath_nfadata   << std::endl;
+    std::cout << "-w fullpath_workload: "  << fullpath_workload  << std::endl;
+    std::cout << "-r result_data_file: "   << fullpath_results   << std::endl;
+    std::cout << "-o benchmark_out_file: " << fullpath_benchmark << std::endl;
+    std::cout << "-m max_batch_size: "     << max_batch_size     << std::endl;
+    std::cout << "-f first_batch_size: "   << min_batch_size     << std::endl;
+    std::cout << "-i iterations: "         << iterations         << std::endl;
+    std::cout << "-c cores_number: "       << cores_number       << std::endl;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // NFA SETUP                                                                                  //
@@ -311,7 +320,7 @@ int main(int argc, char** argv)
     
     std::cout << "# NFA SETUP" << std::endl;
 
-    std::ifstream file_nfadata(nfadata_file, std::ios::in | std::ios::binary);
+    std::ifstream file_nfadata(fullpath_nfadata, std::ios::in | std::ios::binary);
     if(file_nfadata.is_open())
     {
         uint32_t num_edges;
@@ -363,7 +372,7 @@ int main(int argc, char** argv)
     uint32_t workload_size; // in queries
     uint32_t query_size;    // in bytes with padding
 
-    std::ifstream queries_file(workload_file, std::ios::in | std::ios::binary);
+    std::ifstream queries_file(fullpath_workload, std::ios::in | std::ios::binary);
     if(queries_file.is_open())
     {
         queries_file.seekg(0, std::ios::end);
@@ -395,16 +404,18 @@ int main(int argc, char** argv)
     // MULTIPLE BATCH SIZES 2^N                                                                   //
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    std::ofstream file_bnchout(bnchmrk_out);
-    std::ofstream file_result(results_file);
-    file_bnchout << "batch_size,total_ns" << std::endl;
-    file_result << "query_id,content_id\n";
+    std::ofstream file_benchmark(fullpath_benchmark);
+    std::ofstream file_results(fullpath_results);
+    file_benchmark << "batch_size,total_ns" << std::endl;
+    file_results << "query_id,content_id\n";
 
     operands_t* the_queries;
     uint32_t* gabarito;
     result_s* results;
     uint32_t aux = 0;
-    for (uint32_t bsize = 1; bsize < max_batch_size; bsize = bsize << 1)
+    std::chrono::time_point<std::chrono::high_resolution_clock> start, finish;
+    std::chrono::duration<double, std::nano> elapsed;
+    for (uint32_t bsize = min_batch_size; bsize < max_batch_size; bsize = bsize << 1)
     {
         the_queries = (operands_t*) malloc(bsize * CFG_ENGINE_NCRITERIA * sizeof(operands_t));
         results = (result_s*) calloc(bsize, sizeof(*results));
@@ -429,44 +440,37 @@ int main(int argc, char** argv)
             // KERNEL EXECUTION                                                                   //
             ////////////////////////////////////////////////////////////////////////////////////////
 
-            // std::chrono::time_point<std::chrono::high_resolution_clock>* starts;
-            // std::chrono::time_point<std::chrono::high_resolution_clock>* ends;
-            // starts = (std::chrono::time_point<std::chrono::high_resolution_clock>*)
-            //                                                 calloc(bsize, sizeof(*starts));
-            // ends = (std::chrono::time_point<std::chrono::high_resolution_clock>*)
-            //                                                 calloc(bsize, sizeof(*ends));
-
-            auto start = std::chrono::high_resolution_clock::now();
+            start = std::chrono::high_resolution_clock::now();
             #pragma omp parallel for num_threads(cores_number)
             for (uint32_t query=0; query < bsize; query++)
             {
-                // starts[query] = std::chrono::high_resolution_clock::now();
                 compute(&the_queries[query * CFG_ENGINE_NCRITERIA],
                         0, // level
                         the_queries[query * CFG_ENGINE_NCRITERIA], // pointer
                         0, // interim
                         &results[query]);
-                // ends[query] = std::chrono::high_resolution_clock::now();
-                //std::cout << gabarito[query] << " " << results[query].pointer << std::endl;
+                // std::cout << gabarito[query] << " " << results[query].pointer << std::endl
             }
-            auto finish = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double, std::nano> elapsed = finish - start;
+            finish = std::chrono::high_resolution_clock::now();
+            elapsed = finish - start;
 
-            file_bnchout << bsize << "," << elapsed.count() << std::endl;
-
-            ////////////////////////////////////////////////////////////////////////////////////////
-            // RESULTS                                                                            //
-            ////////////////////////////////////////////////////////////////////////////////////////
-            for (uint vtc = 0; vtc < bsize; ++vtc)
-                file_result << gabarito[vtc] << "," << results[vtc].pointer << std::endl;
+            file_benchmark << bsize << "," << elapsed.count() << std::endl;
         }
+
+        ////////////////////////////////////////////////////////////////////////////////////////////
+        // RESULTS                                                                                //
+        ////////////////////////////////////////////////////////////////////////////////////////////
+
+        for (uint vtc = 0; vtc < bsize; ++vtc)
+            file_results << gabarito[vtc] << "," << results[vtc].pointer << std::endl;
+
         free(the_queries);
         free(results);
         free(gabarito);
-    }
+    }   
     delete [] workload_buff;
-
-    // TODO memory releases!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    file_benchmark.close();
+    file_results.close();
 
     for (uint16_t level=0; level<CFG_ENGINE_NCRITERIA; level++)
         free(the_memory[level]);

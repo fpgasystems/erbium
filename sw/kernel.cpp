@@ -40,7 +40,6 @@ bool load_nfa_from_file(const char* file_name,
     if(file.is_open())
     {
         file.seekg(0, std::ios::end);
-        //*raw_size = ((uint32_t)file.tellg()) - sizeof(*nfa_hash);
         *raw_size = ((uint32_t)file.tellg()) - sizeof(*nfa_hash);
 
         char* file_buffer = new char[*raw_size];
@@ -105,10 +104,10 @@ bool load_queries_from_file(const char* file_name,
     }
 }
 
-bool load_workload_from_file(const char* workload_file, uint32_t* benchmark_size, char** workload_buff,
+bool load_workload_from_file(const char* fullpath_workload, uint32_t* benchmark_size, char** workload_buff,
     uint32_t* query_size)
 {
-    std::ifstream file(workload_file, std::ios::in | std::ios::binary);
+    std::ifstream file(fullpath_workload, std::ios::in | std::ios::binary);
     if(file.is_open())
     {
         file.seekg(0, std::ios::end);
@@ -147,36 +146,37 @@ int main(int argc, char** argv)
     printf(">> Parameters\n"); fflush(stdout);
 
     bool has_statistics = false;
-    char* bitstream_file = NULL;
-    char* workload_file = NULL;
-    char* nfadata_file = NULL;
-    char* results_file = NULL;
-    char* bnchmrk_out = NULL;
+    char* fullpath_bitstream = NULL;
+    char* fullpath_workload = NULL;
+    char* fullpath_nfadata = NULL;
+    char* fullpath_results = NULL;
+    char* fullpath_benchmark = NULL;
     uint32_t max_batch_size = 1<<10;
+    uint32_t min_batch_size = 1;
     uint32_t iterations = 100;
     
     char opt;
-    while ((opt = getopt(argc, argv, "b:n:w:r:o:sm:i:h")) != -1) {
+    while ((opt = getopt(argc, argv, "b:f:hi:m:n:o:r:sw:")) != -1) {
         switch (opt) {
         case 'b':
-            bitstream_file = (char*) malloc(strlen(optarg)+1);
-            strcpy(bitstream_file, optarg);
+            fullpath_bitstream = (char*) malloc(strlen(optarg)+1);
+            strcpy(fullpath_bitstream, optarg);
             break;
         case 'n':
-            nfadata_file = (char*) malloc(strlen(optarg)+1);
-            strcpy(nfadata_file, optarg);
+            fullpath_nfadata = (char*) malloc(strlen(optarg)+1);
+            strcpy(fullpath_nfadata, optarg);
             break;
         case 'w':
-            workload_file = (char*) malloc(strlen(optarg)+1);
-            strcpy(workload_file, optarg);
+            fullpath_workload = (char*) malloc(strlen(optarg)+1);
+            strcpy(fullpath_workload, optarg);
             break;
         case 'r':
-            results_file = (char*) malloc(strlen(optarg)+1);
-            strcpy(results_file, optarg);
+            fullpath_results = (char*) malloc(strlen(optarg)+1);
+            strcpy(fullpath_results, optarg);
             break;
         case 'o':
-            bnchmrk_out = (char*) malloc(strlen(optarg)+1);
-            strcpy(bnchmrk_out, optarg);
+            fullpath_benchmark = (char*) malloc(strlen(optarg)+1);
+            strcpy(fullpath_benchmark, optarg);
             break;
         case 's':
             has_statistics = true;
@@ -184,35 +184,40 @@ int main(int argc, char** argv)
         case 'm':
             max_batch_size = atoi(optarg);
             break;
+        case 'f':
+            min_batch_size = atoi(optarg);
+            break;
         case 'i':
             iterations = atoi(optarg);
             break;
         case 'h':
         default: /* '?' */
             std::cerr << "Usage: " << argv[0] << "\n"
-                      << "\t-b  bitstream_file\n"
+                      << "\t-b  fullpath_bitstream\n"
                       << "\t-n  nfa_data_file\n"
-                      << "\t-w  workload_file\n"
+                      << "\t-w  fullpath_workload\n"
                       << "\t-r  result_data_file\n"
                       << "\t-o  benchmark_out_file\n"
                       << "\t-s  statistics\n"
                       << "\t-m  max_batch_size\n"
+                      << "\t-f  first_batch_size\n"
                       << "\t-i  iterations\n"
                       << "\t-h  help\n";
             return EXIT_FAILURE;
         }
     }
 
-    printf("-b bitstream_file: %s\n", bitstream_file);
-    printf("-n nfa_data_file: %s\n", nfadata_file);
-    printf("-w workload_file: %s\n", workload_file);
-    printf("-r result_data_file: %s\n", results_file);
-    printf("-o benchmark_out_file: %s\n", bnchmrk_out);
-    printf("-s statistics: %s\n", (has_statistics) ? "yes" : "no");
-    printf("-m max_batch_size: %u\n", max_batch_size);
-    printf("-i iterations: %u\n", iterations);
+    std::cout << "-b fullpath_bitstream: " << fullpath_bitstream << std::endl;
+    std::cout << "-n nfa_data_file: "      << fullpath_nfadata   << std::endl;
+    std::cout << "-w fullpath_workload: "  << fullpath_workload  << std::endl;
+    std::cout << "-r result_data_file: "   << fullpath_results   << std::endl;
+    std::cout << "-o benchmark_out_file: " << fullpath_benchmark << std::endl;
+    std::cout << "-s statistics: " << ((has_statistics) ? "yes" : "no") << std::endl;
+    std::cout << "-m max_batch_size: "     << max_batch_size     << std::endl;
+    std::cout << "-f first_batch_size: "   << min_batch_size     << std::endl;
+    std::cout << "-i iterations: "         << iterations         << std::endl;
 
-    // TODO print parameters for structure check!
+    // TODO print engine (bitstream) parameters for structure check!
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // HARDWARE SETUP                                                                             //
@@ -230,7 +235,7 @@ int main(int argc, char** argv)
     std::string device_name = device.getInfo<CL_DEVICE_NAME>();
 
     unsigned fileBufSize;
-    char* fileBuf = xcl::read_binary_file(bitstream_file, fileBufSize);
+    char* fileBuf = xcl::read_binary_file(fullpath_bitstream, fileBufSize);
     cl::Program::Binaries bins{{fileBuf, fileBufSize}};
     devices.resize(1);
 
@@ -253,7 +258,7 @@ int main(int argc, char** argv)
 
     std::vector<uint64_t, aligned_allocator<uint64_t>>* nfa_data;
 
-    if(!load_nfa_from_file(nfadata_file, &nfa_data, &nfadata_size, &nfa_hash))
+    if(!load_nfa_from_file(fullpath_nfadata, &nfa_data, &nfadata_size, &nfa_hash))
         return EXIT_FAILURE;
 
     uint32_t nfadata_cls = nfadata_size / C_CACHELINE_SIZE;
@@ -278,16 +283,16 @@ int main(int argc, char** argv)
     std::vector<operands_t, aligned_allocator<operands_t>>* queries_data;
     std::vector<uint16_t, aligned_allocator<uint16_t>>* results;
 
-    if(!load_workload_from_file(workload_file, &benchmark_size, &workload_buff, &query_size))
+    if(!load_workload_from_file(fullpath_workload, &benchmark_size, &workload_buff, &query_size))
         return EXIT_FAILURE;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // MULTIPLE BATCH SIZES 2^N                                                                   //
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    std::ofstream file_bnchout(bnchmrk_out);
-    std::ofstream file(results_file);
-    file_bnchout << "batch_size,overhead,nfa,queries,kernel,result" << std::endl;
+    std::ofstream file_benchmark(fullpath_benchmark);
+    std::ofstream file_results(fullpath_results);
+    file_benchmark << "batch_size,overhead,nfa,queries,kernel,result" << std::endl;
     
     uint32_t queries_size;   // in bytes with padding
     uint32_t results_size;   // in bytes without padding
@@ -303,7 +308,7 @@ int main(int argc, char** argv)
     uint64_t opencl_ns;
 
     uint32_t* gabarito;
-    for (uint32_t bsize = 1; bsize < max_batch_size; bsize = bsize << 1)
+    for (uint32_t bsize = min_batch_size; bsize < max_batch_size; bsize = bsize << 1)
     {
         queries_size = bsize * query_size;
         queries_data = new std::vector<operands_t, aligned_allocator<operands_t>>(queries_size);
@@ -377,7 +382,7 @@ int main(int argc, char** argv)
             result_ns = get_duration_ns(evtResult);
             events_ns = queries_ns + kernel_ns + result_ns;
             opencl_ns = total_ns.count() - events_ns;
-            file_bnchout << bsize
+            file_benchmark << bsize
                          << "," << opencl_ns
                          << "," << nfadata_ns
                          << "," << queries_ns
@@ -391,19 +396,19 @@ int main(int argc, char** argv)
 
         if (has_statistics)
         {
-            file << "query_id,content_id,clock_cycles,higher_weight,lower_weight\n";
+            file_results << "query_id,content_id,clock_cycles,higher_weight,lower_weight\n";
             for (size_t i = 0; i < bsize*4; i=i+4)
             {
-                file << gabarito[i/4] << ",";
-                file << (results->data())[i+3] << "," << (results->data())[i+2] << ",";
-                file << (results->data())[i+1] << "," << (results->data())[i] << "\n";
+                file_results << gabarito[i/4] << ",";
+                file_results << (results->data())[i+3] << "," << (results->data())[i+2] << ",";
+                file_results << (results->data())[i+1] << "," << (results->data())[i] << "\n";
             }
         }
         else
         {
-            file << "query_id,content_id\n";
+            file_results << "query_id,content_id\n";
             for (size_t i = 0; i < bsize; ++i)
-                file << gabarito[i] << "," << (results->data())[i] << "\n";
+                file_results << gabarito[i] << "," << (results->data())[i] << "\n";
         }
 
         delete queries_data;
@@ -411,98 +416,8 @@ int main(int argc, char** argv)
         free(gabarito);
     }
     delete [] workload_buff;
-    file.close();
-    file_bnchout.close();
-/*
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-    // KERNEL EXECUTION                                                                           //
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-
-    // allocate memory on the FPGA
-    cl::Buffer buffer_queries(context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_ONLY,  queries_size, queries->data());
-    cl::Buffer buffer_results(context, CL_MEM_USE_HOST_PTR | CL_MEM_WRITE_ONLY, results_size, results.data());
-
-    // events
-    cl::Event evtQueries;
-    cl::Event evtKernel;
-    cl::Event evtResult;
-    file_bnchout.close();
-
-    double stamp00 = get_time();
-
-    // load data via PCIe to the FPGA on-board DDR
-    queue.enqueueMigrateMemObjects({buffer_queries}, 0, NULL, &evtQueries);
-
-    // kernel arguments
-    kernel.setArg(0, nfadata_cls);
-    kernel.setArg(1, queries_cls);
-    kernel.setArg(2, results_cls);
-    kernel.setArg(3, (has_statistics) ? 1 : 0);
-    kernel.setArg(4, nfa_hash);
-    kernel.setArg(5, buffer_nfadata);
-    kernel.setArg(6, buffer_queries);
-    kernel.setArg(7, buffer_results);
-    kernel.setArg(8, buffer_results);
-    queue.enqueueTask(kernel, NULL, &evtKernel);
-   
-    // load results via PCIe from FPGA on-board DDR
-    queue.enqueueMigrateMemObjects({buffer_results}, CL_MIGRATE_MEM_OBJECT_HOST, NULL, &evtResult);
-
-    queue.finish();
-   
-    double stamp01 = get_time();
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-    // TIMING REPORT                                                                              //
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-
-    uint64_t total_ns = (stamp01-stamp00)*1000*1000*1000;
-    uint64_t nfadata_ns = get_duration_ns(evtNFAdata);
-    uint64_t queries_ns = get_duration_ns(evtQueries);
-    uint64_t kernel_ns = get_duration_ns(evtKernel);
-    uint64_t result_ns = get_duration_ns(evtResult);
-    uint64_t events_ns = nfadata_ns + queries_ns + kernel_ns + result_ns;
-    uint64_t opencl_ns = total_ns - events_ns;
-    double nfadata_pct = ((double) nfadata_ns) / total_ns * 100;
-    double queries_pct = ((double) queries_ns) / total_ns * 100;
-    double kernel_pct = ((double) kernel_ns) / total_ns * 100;
-    double result_pct = ((double) result_ns) / total_ns * 100;
-    double opencl_pct = ((double) opencl_ns) / total_ns * 100;
-
-    printf(">> Timing report: \n");
-    printf("> Invocation overhead (opencl calls): %9lu ns (%5.2f%%)\n", opencl_ns, opencl_pct);
-    printf("> Static data overhead (NFA to DDR):  %9lu ns (%5.2f%%)\n", nfadata_ns, nfadata_pct);
-    printf("> Data transfer (Queries to DDR):     %9lu ns (%5.2f%%)\n", queries_ns, queries_pct);
-    printf("> Wall Clock Time (Kernel execution): %9lu ns (%5.2f%%)\n", kernel_ns, kernel_pct);
-    printf("> Results transfer (back from DDR):   %9lu ns (%5.2f%%)\n", result_ns, result_pct);
-    printf("> Total execution and retrieval time: %9.4f ms\n", (stamp01-stamp00)*1000);
-    printf("> Query latancy (wall clock): %2.4f us\n", ((double) kernel_ns) / 1000 / num_queries);
-    printf("> Query latency (total exec): %2.4f us\n", ((double) total_ns) / 1000 / num_queries);
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-    // RESULTS                                                                                    //
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-
-    std::ofstream file;
-    file.open(results_file);
-
-    if (has_statistics)
-    {
-        file << "value_id,clock_cycles,higher_weight,lower_weight\n";
-        for (size_t i = 0; i < num_queries*4; i=i+4)
-        {
-            file << (results.data())[i+3] << "," << (results.data())[i+2] << ",";
-            file << (results.data())[i+1] << "," << (results.data())[i] << "\n";
-        }   
-    }
-    else
-    {
-        for (size_t i = 0; i < num_queries; ++i)
-            file << (results.data())[i] << "\n";
-    }
-    file.close();
-    
-    // TODO detele and release memory allocations!*/
+    file_benchmark.close();
+    file_results.close();
 
     return (1 ? EXIT_SUCCESS : EXIT_FAILURE);
 }

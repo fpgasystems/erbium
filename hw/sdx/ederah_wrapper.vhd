@@ -483,13 +483,14 @@ begin
             v.valid := '1';
 
             if wr_ready_i = '1' then
-                v.valid     := '0';
+                v.ready := '1';
+                v.valid := '0';
                 v.flow_ctrl := FLW_CTRL_READ;
             end if;
         
       when others =>
 
-            v.ready := '0';
+            v.ready := '1';
             v.slice :=  0 ;
             v.valid := '0';
             v.flow_ctrl := FLW_CTRL_READ;
@@ -504,7 +505,7 @@ begin
     if rising_edge(clk_i) then
         if rst_i = '0' then
             -- default rst
-            result_r.ready     <= '0';
+            result_r.ready     <= '1';
             result_r.slice     <=  0 ;
             result_r.valid     <= '0';
             result_r.flow_ctrl <= FLW_CTRL_READ;

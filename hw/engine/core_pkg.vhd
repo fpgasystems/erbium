@@ -38,6 +38,7 @@ package core_pkg is
         query_id        : integer range 0 to 2**CFG_QUERY_ID_WIDTH - 1;
         weight          : integer range 0 to 2**CFG_WEIGHT_WIDTH - 1;
         clock_cycles    : std_logic_vector(CFG_DBG_N_OF_CLK_CYCS_WIDTH - 1 downto 0);
+        has_match       : std_logic;
     end record;
 
     type query_buffer_type is record
@@ -67,6 +68,7 @@ package core_pkg is
         inference_res   : std_logic;
         writing_edge    : edge_buffer_type;
         weight_filter   : integer range 0 to 2**CFG_WEIGHT_WIDTH - 1;
+        has_match       : std_logic;
     end record;
 
     type mem_delay_type is record

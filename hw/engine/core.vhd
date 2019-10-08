@@ -73,7 +73,7 @@ begin
 query_read_o <= query_r.read_en;
 
 query_comb: process(query_r, prev_data_i.query_id, fetch_r.buffer_rd_en, query_i, query_empty_i)
-    variable v     : query_flow_type;
+    variable v : query_flow_type;
 begin
     v := query_r;
 
@@ -133,7 +133,7 @@ begin
 
             if v_empty = '0' and next_full_i = '0' then
                 v.buffer_rd_en := '1';
-                v.mem_rd_en    := '1';
+                v.mem_rd_en    := prev_data_i.has_match;
                 v.mem_addr     := prev_data_i.pointer;
                 v.query_id     := prev_data_i.query_id;
                 v.weight       := prev_data_i.weight;
@@ -146,7 +146,7 @@ begin
             if v_branch = '1' then
                 if (v_empty or next_full_i) = '0' then
                     v.buffer_rd_en := '1';
-                    v.mem_rd_en    := '1';
+                    v.mem_rd_en    := prev_data_i.has_match;
                     v.mem_addr     := prev_data_i.pointer;
                     v.query_id     := prev_data_i.query_id;
                     v.weight       := prev_data_i.weight;
@@ -179,7 +179,7 @@ begin
             fetch_r.flow_ctrl    <= FLW_CTRL_BUFFER;
             fetch_r.buffer_rd_en <= '0';
             fetch_r.mem_rd_en    <= '0';
-            fetch_r.query_id     <=  0;
+            fetch_r.query_id     <=  C_INIT_QUERY_ID;
         else
             fetch_r <= fetch_rin;
         end if;
@@ -248,7 +248,8 @@ port map
     wildcard_o      => sig_exe_match_wildcard
 );
 
-execute_comb : process(execute_r, weight_filter_i, sig_exe_match_result, fetch_r, mem_r.valid, mem_edge_i, fetch_r.clock_cycles)
+execute_comb : process(execute_r, weight_filter_i, sig_exe_match_result, fetch_r, mem_r.valid,
+    mem_edge_i, fetch_r.clock_cycles, query_r.read_en)
     variable v : execute_out_type;
     variable v_wildcard : std_logic;
 begin
@@ -279,6 +280,21 @@ begin
         v.weight_filter := mem_edge_i.weight;
     end if;
 
+    -- has match check
+    if v.inference_res = '1' then
+        v.has_match := '1';
+    end if;
+
+    if query_r.read_en = '1' then
+        -- trigger
+        if v.has_match = '0' then
+            v.inference_res := '1'; -- write a 'no match edge'
+        end if;
+        v.has_match := '0';
+    end if;
+
+    v.writing_edge.has_match := v.has_match;
+
     execute_rin <= v;
 end process;
 
@@ -287,7 +303,8 @@ begin
     if rising_edge(clk_i) then
         if rst_i = '0' then
             execute_r.inference_res <= '0';
-            execute_r.weight_filter <=  0;
+            execute_r.weight_filter <=  0 ;
+            execute_r.has_match     <= '1';
         else
             execute_r <= execute_rin;
         end if;
@@ -337,6 +354,18 @@ idle_o <= prev_empty_i and query_empty_i when (fetch_r.flow_ctrl = FLW_CTRL_BUFF
 --     end if;
 -- end process p_assert;
 -- -- synthesis translate_on
+
+-- counter_queries: simple_counter generic map
+-- (
+--     G_WIDTH   => CFG_DBG_COUNTERS_WIDTH
+-- )
+-- port map
+-- (
+--     clk_i     => clk_i,
+--     rst_i     => rst_i,
+--     enable_i  => query_r.read_en,
+--     counter_o => sig_queries_in
+-- );
 
 end architecture behavioural;
 

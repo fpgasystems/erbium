@@ -823,10 +823,10 @@ valueid_t NFAHandler::date_check(const uint16_t& d, uint16_t m, uint16_t y) cons
     // const uint32_t JANFIRST9999  = 3651695; // 1st Jan 9999 - infinity up
     const uint32_t JANFIRST1990  =  726468; // 1st Jan 1990 - infinity down
     const uint32_t JANFIRST2006  =  732312; // 1st Jan 2006 - start date
-    const uint32_t NOVNINETH2050 = (1 << CFG_ENGINE_CRITERION_WIDTH) - 2; // end date
-    const uint32_t JANFIRST9999  = (1 << CFG_ENGINE_CRITERION_WIDTH) - 1; // 1st Jan 9999 - infinity up
+    const uint32_t NOVNINETH2050 = JANFIRST2006 + (1 << CFG_ENGINE_CRITERION_WIDTH) - 2; // end date
+    const uint32_t JANFIRST9999  = 3651695; // 1st Jan 9999 - infinity up
     // using 1st Jan 2006 as start day, the end day is:
-    //   - 13 bits: 1 Jun 2028
+    //   - 13 bits: 2 Jun 2028
     //   - 14 bits: 6 Nov 2050
     uint32_t interim = full_rata_die_day(d, m, y);
 

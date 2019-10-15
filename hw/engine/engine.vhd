@@ -406,7 +406,8 @@ gen_dopio: for D in 0 to CFG_ENGINE_DOPIO_CORES - 1 generate
 
     buff_edge_g : buffer_edge generic map
     (
-        G_DEPTH         => CFG_EDGE_BUFFERS_DEPTH
+        G_DEPTH         => CFG_EDGE_BUFFERS_DEPTH,
+        G_ALMST         => CFG_MEM_RD_LATENCY + 2
     )
     port map
     (
@@ -415,13 +416,13 @@ gen_dopio: for D in 0 to CFG_ENGINE_DOPIO_CORES - 1 generate
         --
         wr_en_i         => next_write(D)(I),
         wr_data_i       => next_data(D)(I),
-        full_o          => next_full(D)(I),
+        almost_full_o   => next_full(D)(I),
+        full_o          => open,
         --
         rd_en_i         => prev_read(D)(I+1),
         rd_data_o       => prev_data(D)(I+1),
         empty_o         => prev_empty(D)(I+1)
     );
-
 
   end generate gen_stages;
 
@@ -458,7 +459,7 @@ gen_dopio: for D in 0 to CFG_ENGINE_DOPIO_CORES - 1 generate
 
     -- ORIGIN LOOK-UP
     gen_lookup : if CFG_FIRST_CRITERION_LOOKUP generate
-        sig_origin_node(D).pointer  <= '0' & query(D)(0).operand;
+        sig_origin_node(D).pointer  <= (CFG_MEM_ADDR_WIDTH - 1 downto CFG_CRITERION_VALUE_WIDTH => '0') & query(D)(0).operand;
     end generate gen_lookup;
 
     gen_lookup_n : if not CFG_FIRST_CRITERION_LOOKUP generate
@@ -478,7 +479,8 @@ gen_stages_mem: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
     uram_g : uram_wrapper generic map
     (
         G_RAM_WIDTH     => CFG_EDGE_BRAM_WIDTH,
-        G_RAM_DEPTH     => CFG_CORE_PARAM_ARRAY(I).G_RAM_DEPTH
+        G_RAM_DEPTH     => CFG_CORE_PARAM_ARRAY(I).G_RAM_DEPTH,
+        G_RD_LATENCY    => CFG_MEM_RD_LATENCY
     )
     port map
     (

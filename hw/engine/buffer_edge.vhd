@@ -6,19 +6,21 @@ use bre.core_pkg.all;
 
 entity buffer_edge is
     generic (
-        G_DEPTH : integer := 32
+        G_DEPTH   : integer := 32;
+        G_ALMST   : integer := 1
     );
     port (
-        rst_i      :  in std_logic;
-        clk_i      :  in std_logic;
+        rst_i         :  in std_logic;
+        clk_i         :  in std_logic;
         -- FIFO Write Interface
-        wr_en_i    :  in std_logic;
-        wr_data_i  :  in edge_buffer_type;
-        full_o     : out std_logic;
+        wr_en_i       :  in std_logic;
+        wr_data_i     :  in edge_buffer_type;
+        full_o        : out std_logic;
+        almost_full_o : out std_logic;
         -- FIFO Read Interface
-        rd_en_i    :  in std_logic;
-        rd_data_o  : out edge_buffer_type;
-        empty_o    : out std_logic
+        rd_en_i       :  in std_logic;
+        rd_data_o     : out edge_buffer_type;
+        empty_o       : out std_logic
     );
 end buffer_edge;
  
@@ -33,10 +35,9 @@ architecture rtl of buffer_edge is
     signal wr_index_reg  : integer range 0 to G_DEPTH-1;
     signal rd_index_reg  : integer range 0 to G_DEPTH-1;
 
+    signal sig_almst     : std_logic;
     signal sig_full      : std_logic;
     signal sig_empty     : std_logic;
-
-    signal sig_satur     : std_logic; -- saturation (strictly full)
 
 begin
  
@@ -57,7 +58,7 @@ begin
             end if;
  
             -- Keeps track of the write index (and controls roll-over)
-            if (wr_en_i = '1' and sig_satur = '0') then
+            if (wr_en_i = '1' and sig_full = '0') then
                 if wr_index_reg = G_DEPTH-1 then
                     wr_index_reg <= 0;
                 else
@@ -85,15 +86,12 @@ end process p_ctrl;
 
 rd_data_o <= fifo_data_reg(rd_index_reg);
  
-sig_full  <= '1' when fifo_cntr_reg = G_DEPTH   or 
-                      fifo_cntr_reg = G_DEPTH-1 or 
-                      fifo_cntr_reg = G_DEPTH-2 or
-                      fifo_cntr_reg = G_DEPTH-3 or
-                      fifo_cntr_reg = G_DEPTH-4 
+sig_almst <= '1' when fifo_cntr_reg >= G_DEPTH-G_ALMST
                  else '0';
-sig_satur <= '1' when fifo_cntr_reg = G_DEPTH else '0';
+sig_full  <= '1' when fifo_cntr_reg = G_DEPTH else '0';
 sig_empty <= '1' when fifo_cntr_reg = 0       else '0';
  
+almost_full_o <= sig_almst;
 full_o  <= sig_full;
 empty_o <= sig_empty;
    
@@ -102,7 +100,7 @@ empty_o <= sig_empty;
 p_assert : process (clk_i) is
 begin
     if rising_edge(clk_i) then
-        if wr_en_i = '1' and sig_satur = '1' then
+        if wr_en_i = '1' and sig_full = '1' then
             report "ASSERT FAILURE - MODULE_REGISTER_FIFO: FIFO IS FULL AND BEING WRITTEN " severity failure;
         end if;
  

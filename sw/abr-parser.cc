@@ -12,7 +12,7 @@
 #include "dictionnary.h"
 #include "nfa_handler.h"
 
-enum SortOption { None, Ascending, Descending, MCT_DESC, MCT_PERF };
+enum SortOption { None, Ascending, Descending, MCT_DESC, MCT_PERF_ASC, MCT_PERF_DESC };
 
 //#define _DEBUG true
 
@@ -51,7 +51,7 @@ int main(int argc, char** argv)
             std::cerr << "Usage: " << argv[0] << "\n"
                       << "\t-d  destination folder\n"
                       << "\t-r  rules file\n"
-                      << "\t-s  sorting: 0=none 1=asc 2=desc 3=mct_asc 4=mct_perf\n"
+                      << "\t-s  sorting: 0=none 1=asc 2=desc 3=mct_asc 4=mct_perf_asc 5=mct_perf_desc\n"
                       << "\t-z  [ZRH workload]\n"
                       << "\t-h  help\n";
             exit(EXIT_FAILURE);
@@ -63,12 +63,13 @@ int main(int argc, char** argv)
 
     std::cout << "-d destination folder: " << dest_folder << std::endl;
     std::cout << "-r rules file: " << rules_file << std::endl;
-    printf("-s sorting: [%c]none [%c]asc [%c]desc [%c]mct_desc [%c]mct_perf\n",
+    printf("-s sorting: [%c]none [%c]asc [%c]desc [%c]mct_desc [%c]mct_perf_asc [%c]mct_perf_desc\n",
             (sorting_option==SortOption::None)       ? 'x' : ' ',
             (sorting_option==SortOption::Ascending)  ? 'x' : ' ',
             (sorting_option==SortOption::Descending) ? 'x' : ' ',
             (sorting_option==SortOption::MCT_DESC)   ? 'x' : ' ',
-            (sorting_option==SortOption::MCT_PERF)   ? 'x' : ' ');
+            (sorting_option==SortOption::MCT_PERF_ASC)  ? 'x' : ' ',
+            (sorting_option==SortOption::MCT_PERF_DESC)  ? 'x' : ' ');
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // LOAD                                                                                       //
@@ -95,7 +96,7 @@ int main(int argc, char** argv)
     
     nfa_bre::Dictionnary the_dictionnary(rp);
 
-    switch (sorting_option) // todo enum
+    switch (sorting_option)
     {
         case SortOption::Ascending:
             std::cout << "Ascending sort" << std::endl;
@@ -137,14 +138,31 @@ int main(int argc, char** argv)
         }
             break;
 
-        case SortOption::MCT_PERF:
+        case SortOption::MCT_PERF_ASC:
         {
-            std::cout << "Arbitrary order MCT_PERF" << std::endl;
+            std::cout << "Arbitrary order MCT_PERF_ASC" << std::endl;
             std::vector<int16_t> arbitrary; // key=position; value=criteria_id
             for (auto& aux __attribute__((unused)) : rp.m_ruleType.m_criterionDefinition)
                  arbitrary.push_back(-1);
             arbitrary[ 0] = rp.m_ruleType.get_criterion_id("MCT_OFF");
             arbitrary[ 1] = rp.m_ruleType.get_criterion_id("MCT_BRD");
+            arbitrary[ 2] = rp.m_ruleType.get_criterion_id("CTN_TYPE");
+            arbitrary[19] = rp.m_ruleType.get_criterion_id("MCT_PRD");
+            arbitrary[20] = rp.m_ruleType.get_criterion_id("OUT_FLT_RG");
+            arbitrary[21] = rp.m_ruleType.get_criterion_id("IN_FLT_RG");
+            the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Ascending, &arbitrary);
+        }
+            break;
+
+        case SortOption::MCT_PERF_DESC:
+        {
+            std::cout << "Arbitrary order MCT_PERF_DESC" << std::endl;
+            std::vector<int16_t> arbitrary; // key=position; value=criteria_id
+            for (auto& aux __attribute__((unused)) : rp.m_ruleType.m_criterionDefinition)
+                 arbitrary.push_back(-1);
+            arbitrary[ 0] = rp.m_ruleType.get_criterion_id("MCT_OFF");
+            arbitrary[ 1] = rp.m_ruleType.get_criterion_id("MCT_BRD");
+            arbitrary[ 2] = rp.m_ruleType.get_criterion_id("CTN_TYPE");
             arbitrary[19] = rp.m_ruleType.get_criterion_id("MCT_PRD");
             arbitrary[20] = rp.m_ruleType.get_criterion_id("OUT_FLT_RG");
             arbitrary[21] = rp.m_ruleType.get_criterion_id("IN_FLT_RG");

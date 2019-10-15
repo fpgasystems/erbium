@@ -17,9 +17,9 @@ const uint16_t C_RAW_RESUTLS_SIZE = sizeof(uint16_t);
 const uint16_t C_RAW_RESULT_STATS_WIDTH = sizeof(uint64_t);
 
 // TODO a parameters struct and handle imports, exports, checks etc
-const uint16_t CFG_ENGINE_CRITERION_WIDTH = 14;
+const uint16_t CFG_ENGINE_CRITERION_WIDTH = 13;
 const uint16_t CFG_WEIGHT_WIDTH           = 20;
-const uint16_t CFG_MEM_ADDR_WIDTH         = 15;  // ceil(log2(n_bram_edges_max));
+const uint16_t CFG_MEM_ADDR_WIDTH         = 16;  // ceil(log2(n_bram_edges_max));
 
 const uint64_t MASK_WEIGHT     = 0xFFFFF;
 const uint64_t MASK_POINTER    = 0x7FFF;

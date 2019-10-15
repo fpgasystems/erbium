@@ -35,8 +35,9 @@ PACKAGE std_pkg IS
 
     component uram_wrapper is
     generic (
-        G_RAM_WIDTH : integer := 64;                   -- Specify RAM witdh (number of bits per row)
-        G_RAM_DEPTH : integer := 1024                  -- Specify RAM depth (number of entries)
+        G_RAM_WIDTH  : integer := 64;                  -- Specify RAM witdh (number of bits per row)
+        G_RAM_DEPTH  : integer := 1024;                -- Specify RAM depth (number of entries)
+        G_RD_LATENCY : integer := 2                    -- Specify RAM read latency
     );
     port (
         clk_i         :  in std_logic;

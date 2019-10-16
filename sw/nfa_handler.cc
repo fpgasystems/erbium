@@ -1,10 +1,12 @@
 #include "nfa_handler.h"
 
 #include <boost/graph/graphviz.hpp>
-#include <iostream>
+#include <iostream>                     // std::cout
 #include <fstream>
 #include <stdio.h>
 #include <omp.h>
+#include <random>                       // std::default_random_engine
+#include <algorithm>                    // std::random_shuffle
 
 namespace nfa_bre {
 
@@ -515,7 +517,12 @@ std::fstream NFAHandler::dump_workload(const std::string& filename, const rulePa
     criterionid_t the_level;
     const criterion_s* aux_criterion;
     const criterionDefinition_s* aux_definition;
-    for (auto& rule : rulepack.m_rules)
+
+    // shuffle rules so benchmark has no similar consecutive queries
+    std::vector<rule_s> the_rules(rulepack.m_rules.begin(), rulepack.m_rules.end());
+    std::shuffle(the_rules.begin(), the_rules.end(), std::default_random_engine(0));
+
+    for (auto& rule : the_rules)
     {
         the_level = 0;
         filecsv << rule.m_ruleId << "," << rule.m_weight;

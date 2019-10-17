@@ -56,7 +56,7 @@ architecture rtl of ederah_wrapper is
     signal sig_result_stats   : result_stats_type;
     signal sig_resstats_value : std_logic_vector(CFG_RAW_RESULT_STATS_WIDTH - 1 downto 0);
     
-    type flow_ctrl_type is (FLW_CTRL_WAIT, FLW_CTRL_READ, FLW_CTRL_WRITE);
+    type flow_ctrl_type is (FLW_CTRL_WAIT, FLW_CTRL_READ, FLW_CTRL_WRITE, FLW_CTRL_DLAY);
     
     type query_reg_type is record
         flow_ctrl       : flow_ctrl_type;
@@ -92,7 +92,7 @@ architecture rtl of ederah_wrapper is
 
 begin
 
-rd_ready_o <= query_r.ready or nfa_rin.ready;
+rd_ready_o <= query_r.ready or nfa_r.ready;
 
 ----------------------------------------------------------------------------------------------------
 -- QUERY DESERIALISER                                                                             --
@@ -120,7 +120,7 @@ begin
 
             if rd_stype_i = CFG_RD_TYPE_QUERY and rd_valid_i = '1' then
                 v.flow_ctrl := FLW_CTRL_READ;
-                v.counter   := 0;
+                v.counter   :=  0;
                 v.ready     := '1';
             end if;
 
@@ -180,6 +180,11 @@ begin
                 v.flow_ctrl := FLW_CTRL_WAIT;
             end if;
 
+      when others =>
+            v.flow_ctrl := FLW_CTRL_WAIT;
+            v.ready     := '0';
+            v.wr_en     := '0';
+
     end case;
 
     query_rin <= v;
@@ -220,10 +225,9 @@ begin
 
       when FLW_CTRL_WAIT =>
 
-            v.ready      := '0';
+            v.ready := '0';
             if rd_stype_i = CFG_RD_TYPE_NFA and rd_valid_i = '1' then
                 v.flow_ctrl     := FLW_CTRL_READ;
-                v.ready         := '0';
                 v.cnt_criterium :=  0 ;
                 v.engine_rst    := '0';
             end if;
@@ -261,16 +265,27 @@ begin
                 v.mem_wren(nfa_r.cnt_criterium) := '1';
                 
                 if v.cnt_slice = C_EDGES_PARTITIONS then
-                    v.cnt_slice := 0;
+                    v.flow_ctrl := FLW_CTRL_DLAY; -- then go to FLW_CTRL_WRITE
+                    v.cnt_slice :=  0;
                     v.ready     := '1';
                 end if;
 
-                if v.mem_addr = nfa_r.cnt_edge then
-                    v.flow_ctrl     := FLW_CTRL_READ;
+                if v.mem_addr = nfa_r.cnt_edge - 1 then
+                    v.flow_ctrl     := FLW_CTRL_DLAY; -- then go to FLW_CTRL_READ
                     v.cnt_criterium := nfa_r.cnt_criterium + 1;
-                    v.mem_wren      := (others => '0');
-                    v.ready         := not nfa_r.ready;
+                    v.ready         := '1';
                 end if;
+            end if;
+
+      when FLW_CTRL_DLAY =>
+            -- So the ready='1' signal can be perceived
+            v.ready    := '0';
+            v.mem_wren := (others => '0');
+
+            if nfa_r.mem_addr = nfa_r.cnt_edge - 1 then
+                v.flow_ctrl := FLW_CTRL_READ;
+            else
+                v.flow_ctrl := FLW_CTRL_WRITE;
             end if;
 
     end case;
@@ -298,9 +313,6 @@ end process;
 -- consume the outputed sig_result_value and fill in a cache line to write back on the wr_data_o bus
 -- A query result consists of the index of the content it points to. This result value occupies
 -- CFG_MEM_ADDR_WIDTH bits (into a CFG_RAW_RESULTS_WIDTH bits field).
-
--- wr_data_o    : out std_logic_vector(G_DATA_BUS_WIDTH - 1 downto 0);
--- wr_valid_o   : out std_logic;
 
 sig_resstats_value <= (CFG_RAW_RESULT_STATS_WIDTH - 1
                         downto

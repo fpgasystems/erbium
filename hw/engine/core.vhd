@@ -187,7 +187,7 @@ begin
 end process;
 
 ----------------------------------------------------------------------------------------------------
--- MEMORY DELAY (2 CYCLES)                                                                        --
+-- MEMORY DELAY (3 CYCLES)                                                                        --
 ----------------------------------------------------------------------------------------------------
 
 mem_comb: process(mem_r, fetch_r.mem_rd_en, mem_edge_i.last, sig_exe_branch)
@@ -199,13 +199,13 @@ begin
     v_branch := (mem_edge_i.last and mem_r.valid) or sig_exe_branch;
 
     -- delay it
-    v.rden_dlay := fetch_r.mem_rd_en;
-    v.last_dlay := v_branch;
+    v.rden_dlay := fetch_r.mem_rd_en & mem_r.rden_dlay(CFG_MEM_RD_LATENCY - 2 downto 1);
+    v.last_dlay := v_branch & mem_r.last_dlay(CFG_MEM_RD_LATENCY - 2 downto 1);
 
-    if (v_branch or mem_r.last_dlay) = '1' then
+    if (v_branch or v_or(mem_r.last_dlay)) = '1' then
         v.valid := '0';
     else
-        v.valid := mem_r.rden_dlay;
+        v.valid := mem_r.rden_dlay(0);
     end if;
 
     mem_rin <= v;
@@ -216,8 +216,8 @@ begin
     if rising_edge(clk_i) then
         if rst_i = '0' then
             mem_r.valid     <= '0';
-            mem_r.rden_dlay <= '0';
-            mem_r.last_dlay <= '0';
+            mem_r.rden_dlay <= (others => '0');
+            mem_r.last_dlay <= (others => '0');
         else
             mem_r <= mem_rin;
         end if;

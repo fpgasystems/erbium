@@ -353,6 +353,8 @@ void NFAHandler::dump_nfa_state(std::fstream* outfile,
         mem_int |= ((uint64_t)(m_graph[itr].dump_pointer) & MASK_POINTER) << SHIFT_POINTER;
         mem_int |= ((uint64_t)(mem_opb & MASK_OPERAND_B)) << SHIFT_OPERAND_B;
         mem_int |= ((uint64_t)(mem_opa & MASK_OPERAND_A)) << SHIFT_OPERAND_A;
+        // std::cout << mem_int << " p=" << m_graph[itr].dump_pointer << " a=" << mem_opa
+        //           << " b=" << mem_opb << std::endl;
         outfile->write((char*)&mem_int, sizeof(mem_int));
     }
 }
@@ -657,7 +659,6 @@ void NFAHandler::dump_core_parameters(const std::string& filename, const rulePac
     for (auto& ord : m_dic->m_sorting_map)
     {
         criterion_def = &(*std::next(rulepack.m_ruleType.m_criterionDefinition.begin(), ord));
-
 
         switch(criterion_def->m_functor)
         {

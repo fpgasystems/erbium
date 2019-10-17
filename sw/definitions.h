@@ -22,9 +22,9 @@ const uint16_t CFG_WEIGHT_WIDTH           = 20;
 const uint16_t CFG_MEM_ADDR_WIDTH         = 16;  // ceil(log2(n_bram_edges_max));
 
 const uint64_t MASK_WEIGHT     = 0xFFFFF;
-const uint64_t MASK_POINTER    = 0x7FFF;
-const uint64_t MASK_OPERAND_B  = 0x3FFF; // depends on CFG_ENGINE_CRITERION_WIDTH
-const uint64_t MASK_OPERAND_A  = 0x3FFF; // depends on CFG_ENGINE_CRITERION_WIDTH
+const uint64_t MASK_POINTER    = 0xFFFF; // depends on CFG_MEM_ADDR_WIDTH
+const uint64_t MASK_OPERAND_B  = 0x1FFF; // depends on CFG_ENGINE_CRITERION_WIDTH
+const uint64_t MASK_OPERAND_A  = 0x1FFF; // depends on CFG_ENGINE_CRITERION_WIDTH
 const uint64_t SHIFT_LAST      = CFG_WEIGHT_WIDTH+CFG_MEM_ADDR_WIDTH+2*CFG_ENGINE_CRITERION_WIDTH;
 const uint64_t SHIFT_WEIGHT    = CFG_MEM_ADDR_WIDTH+2*CFG_ENGINE_CRITERION_WIDTH;
 const uint64_t SHIFT_POINTER   = 2*CFG_ENGINE_CRITERION_WIDTH;

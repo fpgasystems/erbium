@@ -10,15 +10,16 @@
 #include <unistd.h>     // parameters
 
 #define CFG_ENGINE_NCRITERIA 22
+#define EXEC_DEBUG true
 
 typedef uint16_t                                operands_t;
 
 const uint16_t C_CACHE_LINE_WIDTH = 64;
 const uint16_t C_EDGES_PER_CACHE_LINE = C_CACHE_LINE_WIDTH / sizeof(uint64_t);
 const uint16_t C_RAW_CRITERION_SIZE = sizeof(uint16_t);
-const uint16_t CFG_ENGINE_CRITERION_WIDTH = 14;
+const uint16_t CFG_ENGINE_CRITERION_WIDTH = 13;
 const uint16_t CFG_WEIGHT_WIDTH           = 20;
-const uint16_t CFG_MEM_ADDR_WIDTH         = 15;  // ceil(log2(n_bram_edges_max));
+const uint16_t CFG_MEM_ADDR_WIDTH         = 16;  // ceil(log2(n_bram_edges_max));
 
 const uint64_t MASK_WEIGHT     = 0xFFFFF;
 const uint64_t MASK_POINTER    = 0x7FFF;
@@ -228,14 +229,24 @@ void compute(const uint16_t* query, const uint16_t level, uint16_t pointer, cons
                 //    std::cout << "Weird\n";
                 result->weight = aux_interim;
                 result->pointer = the_memory[level][pointer].pointer;
-                // std::cout << "level " << level << " pointer " << the_memory[level][pointer].pointer
-                //       << " weight " << aux_interim << std::endl;
+                #ifdef EXEC_DEBUG
+                std::cout << " level=" << level << "query=" << *query
+                          << " opA=" << the_memory[level][pointer].operand_a
+                          << " opB=" << the_memory[level][pointer].operand_b
+                          << " pointer=" << the_memory[level][pointer].pointer
+                          << " weight=" << aux_interim << std::endl;
+                #endif
             }
         }
         else
         {
-            // std::cout << "level " << level << " pointer " << the_memory[level][pointer].pointer
-            //           << " weight " << aux_interim << std::endl;
+            #ifdef EXEC_DEBUG
+            std::cout << " level=" << level << "query=" << *query
+                      << " opA=" << the_memory[level][pointer].operand_a
+                      << " opB=" << the_memory[level][pointer].operand_b
+                      << " pointer=" << the_memory[level][pointer].pointer
+                      << " weight=" << aux_interim << std::endl;
+            #endif
             compute(query+1, level+1, the_memory[level][pointer].pointer, aux_interim, result);
         }
     } while(!the_memory[level][pointer++].last);
@@ -344,12 +355,17 @@ int main(int argc, char** argv)
                 the_memory[level][i].operand_b = (raw_edge >> SHIFT_OPERAND_B) & MASK_OPERAND_B;
                 the_memory[level][i].pointer = (raw_edge >> SHIFT_POINTER) & MASK_POINTER;
                 the_memory[level][i].last = (raw_edge >> SHIFT_LAST) & 1;
+                #ifdef EXEC_DEBUG
+                std::cout << "level=" << level << " edge=" << i << " data=" << raw_edge << std::endl;
+                #endif
             }
-
             // Padding
             padding = (num_edges + 1) % C_EDGES_PER_CACHE_LINE;
             padding = (padding == 0) ? 0 : C_EDGES_PER_CACHE_LINE - padding;
             file_nfadata.seekg(padding * sizeof(raw_edge), std::ios::cur);
+            #ifdef EXEC_DEBUG
+            std::cout << std::endl;
+            #endif
         }
         file_nfadata.seekg(0, std::ios::end);
         const uint32_t raw_size = ((uint32_t)file_nfadata.tellg()) - sizeof(nfa_hash);

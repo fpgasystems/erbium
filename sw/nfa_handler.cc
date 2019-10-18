@@ -695,7 +695,7 @@ void NFAHandler::dump_core_parameters(const std::string& filename, const rulePac
                         "        G_MATCH_FUNCTION_B    => %s,\n"
                         "        G_MATCH_FUNCTION_PAIR => %s,\n"
                         "        G_MATCH_MODE          => %s,\n"
-                        "        G_WEIGHT              => %u,\n"
+                        "        G_WEIGHT              => std_logic_vector(to_unsigned(%u, CFG_WEIGHT_WIDTH)),\n"
                         "        G_WILDCARD_ENABLED    => '%u'\n"
                         "    );\n",
             the_level,

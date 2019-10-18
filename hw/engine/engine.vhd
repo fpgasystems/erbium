@@ -41,7 +41,7 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => 0,
+        G_WEIGHT              => std_logic_vector(to_unsigned(0, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '0'
     );
     constant CORE_PARAM_1 : core_parameters_type := (
@@ -51,7 +51,7 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => 0,
+        G_WEIGHT              => std_logic_vector(to_unsigned(0, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '0'
     );
     constant CORE_PARAM_2 : core_parameters_type := (
@@ -61,7 +61,7 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => 512,
+        G_WEIGHT              => std_logic_vector(to_unsigned(512, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_3 : core_parameters_type := (
@@ -71,7 +71,7 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => 524288,
+        G_WEIGHT              => std_logic_vector(to_unsigned(524288, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_4 : core_parameters_type := (
@@ -81,7 +81,7 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND,
         G_MATCH_MODE          => MODE_FULL_ITERATION,
-        G_WEIGHT              => 256,
+        G_WEIGHT              => std_logic_vector(to_unsigned(256, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_5 : core_parameters_type := (
@@ -91,7 +91,7 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND,
         G_MATCH_MODE          => MODE_FULL_ITERATION,
-        G_WEIGHT              => 262144,
+        G_WEIGHT              => std_logic_vector(to_unsigned(262144, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_6 : core_parameters_type := (
@@ -101,7 +101,7 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => 65536,
+        G_WEIGHT              => std_logic_vector(to_unsigned(65536, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_7 : core_parameters_type := (
@@ -111,7 +111,7 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => 64,
+        G_WEIGHT              => std_logic_vector(to_unsigned(64, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_8 : core_parameters_type := (
@@ -121,7 +121,7 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND,
         G_MATCH_MODE          => MODE_FULL_ITERATION,
-        G_WEIGHT              => 1,
+        G_WEIGHT              => std_logic_vector(to_unsigned(1, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_9 : core_parameters_type := (
@@ -131,7 +131,7 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => 128,
+        G_WEIGHT              => std_logic_vector(to_unsigned(128, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_10 : core_parameters_type := (
@@ -141,7 +141,7 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => 131072,
+        G_WEIGHT              => std_logic_vector(to_unsigned(131072, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_11 : core_parameters_type := (
@@ -151,7 +151,7 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => 16,
+        G_WEIGHT              => std_logic_vector(to_unsigned(16, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_12 : core_parameters_type := (
@@ -161,7 +161,7 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => 16384,
+        G_WEIGHT              => std_logic_vector(to_unsigned(16384, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_13 : core_parameters_type := (
@@ -171,7 +171,7 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => 2,
+        G_WEIGHT              => std_logic_vector(to_unsigned(2, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_14 : core_parameters_type := (
@@ -181,7 +181,7 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => 4,
+        G_WEIGHT              => std_logic_vector(to_unsigned(4, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_15 : core_parameters_type := (
@@ -191,7 +191,7 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => 4096,
+        G_WEIGHT              => std_logic_vector(to_unsigned(4096, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_16 : core_parameters_type := (
@@ -201,7 +201,7 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => 2048,
+        G_WEIGHT              => std_logic_vector(to_unsigned(2048, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_17 : core_parameters_type := (
@@ -211,7 +211,7 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => 32768,
+        G_WEIGHT              => std_logic_vector(to_unsigned(32768, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_18 : core_parameters_type := (
@@ -221,7 +221,7 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => 32,
+        G_WEIGHT              => std_logic_vector(to_unsigned(32, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_19 : core_parameters_type := (
@@ -231,7 +231,7 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => 0,
+        G_WEIGHT              => std_logic_vector(to_unsigned(0, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '0'
     );
     constant CORE_PARAM_20 : core_parameters_type := (
@@ -241,7 +241,7 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => 8192,
+        G_WEIGHT              => std_logic_vector(to_unsigned(8192, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_21 : core_parameters_type := (
@@ -251,7 +251,7 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => 8,
+        G_WEIGHT              => std_logic_vector(to_unsigned(8, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
 
@@ -266,7 +266,6 @@ architecture behavioural of engine is
     type edge_buffer_array  is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of edge_buffer_type;
     type edge_buffer_arrayp1 is array (CFG_ENGINE_NCRITERIA downto 0) of edge_buffer_type;
     type edge_store_array   is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of edge_store_type;
-    type weight_array       is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of integer;
     type mem_addr_array     is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
     type mem_data_array     is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of std_logic_vector(CFG_EDGE_BRAM_WIDTH - 1 downto 0);
     type query_buffer_array is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of query_buffer_type;
@@ -275,7 +274,6 @@ architecture behavioural of engine is
     type edge_buffer_dopio  is array (CFG_ENGINE_DOPIO_CORES - 1 downto 0) of edge_buffer_array;
     type edge_buffer_dopiop1 is array (CFG_ENGINE_DOPIO_CORES - 1 downto 0) of edge_buffer_arrayp1;
     type edge_store_dopio   is array (CFG_ENGINE_DOPIO_CORES - 1 downto 0) of edge_store_array;
-    type weight_dopio       is array (CFG_ENGINE_DOPIO_CORES - 1 downto 0) of weight_array;
     type mem_addr_dopio     is array (CFG_ENGINE_DOPIO_CORES - 1 downto 0) of mem_addr_array;
     type mem_data_dopio     is array (CFG_ENGINE_DOPIO_CORES - 1 downto 0) of mem_data_array;
     type query_buffer_dopio is array (CFG_ENGINE_DOPIO_CORES - 1 downto 0) of query_buffer_array;
@@ -293,8 +291,6 @@ architecture behavioural of engine is
     signal query_full      : ncrieria_dopio;
     signal query_empty     : ncrieria_dopio;
     signal query_read      : ncrieria_dopio;
-    signal weight_filter   : weight_dopio;
-    signal weight_driver   : weight_dopio;
     signal mem_edge        : edge_store_dopio;
     signal mem_addr        : mem_addr_dopio;
     signal mem_en          : ncrieria_dopio;
@@ -385,9 +381,6 @@ gen_dopio: for D in 0 to CFG_ENGINE_DOPIO_CORES - 1 generate
         query_i         => query(D)(I),
         query_empty_i   => query_empty(D)(I),
         query_read_o    => query_read(D)(I),
-        --
-        weight_filter_i => weight_filter(D)(I),
-        weight_filter_o => weight_driver(D)(I),
         -- MEMORY
         mem_edge_i      => mem_edge(D)(I),
         mem_addr_o      => mem_addr(D)(I),
@@ -397,12 +390,6 @@ gen_dopio: for D in 0 to CFG_ENGINE_DOPIO_CORES - 1 generate
         next_data_o     => next_data(D)(I),
         next_write_o    => next_write(D)(I)
     );
-    
-    -- gen_fwd : if I /= CFG_ENGINE_NCRITERIA - 1 generate -- from I to I+1
-    -- 
-    --     weight_filter(D)(I) <= weight_driver(D)(CFG_ENGINE_NCRITERIA - 1);
-    -- 
-    -- end generate gen_fwd;
 
     buff_edge_g : buffer_edge generic map
     (
@@ -451,7 +438,7 @@ gen_dopio: for D in 0 to CFG_ENGINE_DOPIO_CORES - 1 generate
 
     -- ORIGIN
     sig_origin_node(D).query_id     <= query(D)(0).query_id;
-    sig_origin_node(D).weight       <= 0;
+    sig_origin_node(D).weight       <= (others => '0');
     sig_origin_node(D).clock_cycles <= (others => '0');
     sig_origin_node(D).has_match    <= '1';
     prev_empty(D)(0) <= query_empty(D)(0);

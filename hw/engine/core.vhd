@@ -27,7 +27,7 @@ entity core is
         G_MATCH_FUNCTION_B    : match_simp_function  := FNCTR_SIMP_NOP;
         G_MATCH_FUNCTION_PAIR : match_pair_function  := FNCTR_PAIR_NOP;
         G_MATCH_MODE          : match_mode_type      := MODE_FULL_ITERATION;
-        G_WEIGHT              : integer              :=  0;
+        G_WEIGHT              : std_logic_vector(CFG_WEIGHT_WIDTH - 1 downto 0) := (others=>'0');
         G_WILDCARD_ENABLED    : std_logic            := '1'
     );
     port (
@@ -42,9 +42,6 @@ entity core is
         query_i         :  in query_buffer_type;
         query_empty_i   :  in std_logic;
         query_read_o    : out std_logic;
-        --
-        weight_filter_i :  in integer;
-        weight_filter_o :  in integer; -- only used in last level
         -- MEMORY
         mem_edge_i      :  in edge_store_type;
         mem_addr_o      : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
@@ -248,20 +245,12 @@ port map
     wildcard_o      => sig_exe_match_wildcard
 );
 
-execute_comb : process(execute_r, weight_filter_i, sig_exe_match_result, fetch_r, mem_r.valid,
+execute_comb : process(execute_r, sig_exe_match_result, fetch_r, mem_r.valid,
     mem_edge_i, fetch_r.clock_cycles, query_r.read_en)
     variable v : execute_out_type;
     variable v_wildcard : std_logic;
 begin
     v := execute_r;
-
-    -- weight_control    
-    -- if mem_edge_i.weight >= weight_filter_i then
-    --     v_weight_check := '1';
-    -- else
-    --     v_weight_check := '0';
-    -- end if;
-    -- v.inference_res := sig_exe_match_result and v_weight_check and mem_r.valid;
 
     -- result of EXE
     v.inference_res             := sig_exe_match_result and mem_r.valid;
@@ -270,14 +259,9 @@ begin
     v.writing_edge.clock_cycles := increment(fetch_r.clock_cycles);
 
     if v.inference_res = '1' and sig_exe_match_wildcard = '0' then
-        v.writing_edge.weight := fetch_r.weight + G_WEIGHT;
+        v.writing_edge.weight := fetch_r.weight or G_WEIGHT;
     else
         v.writing_edge.weight := fetch_r.weight;
-    end if;
-
-    -- effectively used only in the last level instance
-    if v.inference_res = '1' then
-        v.weight_filter := mem_edge_i.weight;
     end if;
 
     -- has match check
@@ -303,7 +287,6 @@ begin
     if rising_edge(clk_i) then
         if rst_i = '0' then
             execute_r.inference_res <= '0';
-            execute_r.weight_filter <=  0 ;
             execute_r.has_match     <= '1';
         else
             execute_r <= execute_rin;

@@ -26,7 +26,6 @@ package core_pkg is
     type core_flow_control is (FLW_CTRL_BUFFER, FLW_CTRL_MEM);
 
     type edge_store_type is record
-        weight          : integer range 0 to 2**CFG_WEIGHT_WIDTH - 1;
         operand_a       : std_logic_vector(CFG_CRITERION_VALUE_WIDTH - 1 downto 0);
         operand_b       : std_logic_vector(CFG_CRITERION_VALUE_WIDTH - 1 downto 0);
         pointer         : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
@@ -36,7 +35,7 @@ package core_pkg is
     type edge_buffer_type is record
         pointer         : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
         query_id        : integer range 0 to 2**CFG_QUERY_ID_WIDTH - 1;
-        weight          : integer range 0 to 2**CFG_WEIGHT_WIDTH - 1;
+        weight          : std_logic_vector(CFG_WEIGHT_WIDTH - 1 downto 0);
         clock_cycles    : std_logic_vector(CFG_DBG_N_OF_CLK_CYCS_WIDTH - 1 downto 0);
         has_match       : std_logic;
     end record;
@@ -60,14 +59,13 @@ package core_pkg is
         mem_addr        : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
         flow_ctrl       : core_flow_control;
         query_id        : integer range 0 to 2**CFG_QUERY_ID_WIDTH - 1;
-        weight          : integer range 0 to 2**CFG_WEIGHT_WIDTH - 1;
+        weight          : std_logic_vector(CFG_WEIGHT_WIDTH - 1 downto 0);
         clock_cycles    : std_logic_vector(CFG_DBG_N_OF_CLK_CYCS_WIDTH - 1 downto 0);
     end record;
 
     type execute_out_type is record
         inference_res   : std_logic;
         writing_edge    : edge_buffer_type;
-        weight_filter   : integer range 0 to 2**CFG_WEIGHT_WIDTH - 1;
         has_match       : std_logic;
     end record;
 
@@ -92,7 +90,7 @@ package core_pkg is
         G_MATCH_FUNCTION_B    : match_simp_function;
         G_MATCH_FUNCTION_PAIR : match_pair_function;
         G_MATCH_MODE          : match_mode_type;
-        G_WEIGHT              : integer range 0 to 2**CFG_WEIGHT_WIDTH - 1;
+        G_WEIGHT              : std_logic_vector(CFG_WEIGHT_WIDTH - 1 downto 0);
         G_WILDCARD_ENABLED    : std_logic;
     end record;
 
@@ -161,7 +159,7 @@ package core_pkg is
             G_MATCH_FUNCTION_B    : match_simp_function  := FNCTR_SIMP_NOP;
             G_MATCH_FUNCTION_PAIR : match_pair_function  := FNCTR_PAIR_NOP;
             G_MATCH_MODE          : match_mode_type      := MODE_FULL_ITERATION;
-            G_WEIGHT              : integer              :=  0;
+            G_WEIGHT              : std_logic_vector(CFG_WEIGHT_WIDTH - 1 downto 0) := (others=>'0');
             G_WILDCARD_ENABLED    : std_logic            := '1'
         );
         port (
@@ -176,9 +174,6 @@ package core_pkg is
             query_i         :  in query_buffer_type;
             query_empty_i   :  in std_logic;
             query_read_o    : out std_logic;
-            --
-            weight_filter_i :  in integer;
-            weight_filter_o :  in integer; -- only used in last level
             -- MEMORY
             mem_edge_i      :  in edge_store_type;
             mem_addr_o      : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
@@ -265,7 +260,6 @@ function deserialise_edge_store(vec : std_logic_vector) return edge_store_type i
     res.operand_a := vec_buff(RNG_BRAM_EDGE_STORE_OPERAND_A);
     res.operand_b := vec_buff(RNG_BRAM_EDGE_STORE_OPERAND_B);
     res.pointer   := vec_buff(RNG_BRAM_EDGE_STORE_POINTER);
-    res.weight    := to_integer(unsigned(vec_buff(RNG_BRAM_EDGE_STORE_WEIGHT)));
     res.last      := vec_buff(RNG_BRAM_EDGE_STORE_LAST'left);
     return res;
 end deserialise_edge_store;

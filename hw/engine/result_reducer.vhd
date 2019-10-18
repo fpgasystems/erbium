@@ -62,8 +62,10 @@ result_valid_o  <= result_r.valid;
 result_stats_o  <= stats_r;
 
 result_comb: process(result_r, interim_empty_i, interim_data_i, result_ready_i, engine_idle_i)
-    variable v     : result_reg_type;
-    variable v_new : std_logic;
+    variable v          : result_reg_type;
+    variable v_new      : std_logic;
+    variable v_winterim : integer range 0 to 2**CFG_WEIGHT_WIDTH - 1;
+    variable v_wresult  : integer range 0 to 2**CFG_WEIGHT_WIDTH - 1;
 begin
     v := result_r;
 
@@ -72,6 +74,9 @@ begin
     else
         v_new := '0';
     end if;
+
+    v_winterim := my_conv_integer(interim_data_i.weight);
+    v_wresult  := my_conv_integer(result_r.interim.weight);
 
     case result_r.flow_ctrl is
 
@@ -115,7 +120,7 @@ begin
 
             -- INTERIM
             v.interim.clock_cycles := increment(result_r.interim.clock_cycles);
-            if v_new = '1' or interim_data_i.weight >= result_r.interim.weight then
+            if v_new = '1' or v_winterim >= v_wresult then
                 v.interim := interim_data_i;
                 v.interim.clock_cycles := increment(interim_data_i.clock_cycles);
             end if;
@@ -151,7 +156,7 @@ begin
         if rst_i = '0' then
             result_r.flow_ctrl        <= FLW_CTRL_BUFF;
             result_r.interim.query_id <= C_INIT_QUERY_ID;
-            result_r.interim.weight   <=  0 ;
+            result_r.interim.weight   <= (others => '0');
             result_r.valid            <= '0';
             result_r.read             <= '0';
             result_r.empty            <= '1';
@@ -171,11 +176,11 @@ stats_r.clock_cycle_counter <= increment(result_r.result.clock_cycles);
 sig_stats_reset <= rst_i when (result_r.flow_ctrl = FLW_CTRL_READ) else '0';
 
 sig_match_higher_en <= result_r.read when (result_r.interim.query_id = interim_data_i.query_id and
-                                             interim_data_i.weight < result_r.interim.weight)
+                my_conv_integer(interim_data_i.weight) < my_conv_integer(result_r.interim.weight))
                        else '0';
 
 sig_match_lower_en  <= result_r.read when (result_r.interim.query_id = interim_data_i.query_id and
-                                             interim_data_i.weight > result_r.interim.weight)
+                my_conv_integer(interim_data_i.weight) > my_conv_integer(result_r.interim.weight))
                        else '0';
 
 stats_queries_in_en  <= result_r.read when (result_r.interim.query_id /= interim_data_i.query_id)

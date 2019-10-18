@@ -538,7 +538,7 @@ std::fstream NFAHandler::dump_workload(const std::string& filename, const rulePa
                         &mem_opa,
                         &mem_opb,
                         aux_definition);
-
+            mem_opa = mem_opa & MASK_OPERAND_A;
             fileaux.write((char*)&mem_opa, sizeof(mem_opa));
             filecsv << "," << aux_criterion->m_value;
             the_level++;

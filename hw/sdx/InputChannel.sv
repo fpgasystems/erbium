@@ -128,9 +128,18 @@ reg  [C_XFER_SIZE_WIDTH-1:0]  query_num_cls_received;
 reg  [64-1:0]                 nfa_hash_r;
 wire                          nfa_reload;
 
+reg [C_XFER_SIZE_WIDTH-1:6]   nfa_xfer_size_in_bytes_dlay;
+reg [C_XFER_SIZE_WIDTH-1:6]   query_xfer_size_in_bytes_dlay;
+
 ///////////////////////////////////////////////////////////////////////////////
 // AXI Read Address Channel
 ///////////////////////////////////////////////////////////////////////////////
+
+// register IO
+always@(posedge data_clk) begin
+  nfa_xfer_size_in_bytes_dlay <= nfa_xfer_size_in_bytes[C_XFER_SIZE_WIDTH-1:6] - 2'd1;
+  query_xfer_size_in_bytes_dlay <= query_xfer_size_in_bytes[C_XFER_SIZE_WIDTH-1:6] - 2'd1;
+end
 
 // NFA ID control
 always@(posedge data_clk) begin
@@ -223,8 +232,8 @@ always@(posedge m_axis_aclk) begin
   end
 end
 
-assign nfa_read_done   = nfa_rd_tvalid && nfa_rd_tready && (nfa_num_cls_received == (nfa_xfer_size_in_bytes[C_XFER_SIZE_WIDTH-1:6] - 2'd1));
-assign query_read_done = query_rd_tvalid && query_rd_tready  && (query_num_cls_received  == (query_xfer_size_in_bytes[C_XFER_SIZE_WIDTH-1:6] - 2'd1));
+assign nfa_read_done   = nfa_rd_tvalid && nfa_rd_tready && (nfa_num_cls_received == nfa_xfer_size_in_bytes_dlay);
+assign query_read_done = query_rd_tvalid && query_rd_tready  && (query_num_cls_received  == query_xfer_size_in_bytes_dlay);
 
 // AXI4 Read Master, output format is an AXI4-Stream master, one stream per thread.
 ederah_kernel_axi_read_master #(

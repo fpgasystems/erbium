@@ -66,6 +66,9 @@ logic                           ap_done_r                      = 1'b0;
 logic [32-1:0]                  ctrl_xfer_size_in_bytes        = LP_DEFAULT_LENGTH_IN_BYTES;
 logic [32-1:0]                  ctrl_constant                  = 32'd1;
 
+reg [32-1:0]                    queries_cls_dlay;
+reg [32-1:0]                    nfadata_cls_dlay;
+
 wire                            wr_tvalid;
 wire                            wr_tready;
 wire [C_M00_AXI_DATA_WIDTH-1:0] wr_tdata;
@@ -106,6 +109,12 @@ assign ap_done = ap_done_r;
 
 assign ap_done_i = write_done;
 
+
+always @(posedge data_clk) begin
+  queries_cls_dlay <= queries_cls;
+  nfadata_cls_dlay <= nfadata_cls;
+end
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Input Channel                                                                                  //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -125,9 +134,9 @@ inst_InputChannel (
   .ctrl_done                ( read_done            ),
   .nfa_hash                 ( nfa_hash             ),
   .nfadata_ptr              ( nfadata_ptr          ),
-  .nfa_xfer_size_in_bytes   ( (nfadata_cls << 6)   ),
+  .nfa_xfer_size_in_bytes   ( (nfadata_cls_dlay << 6) ),
   .queries_ptr              ( queries_ptr          ),
-  .query_xfer_size_in_bytes ( (queries_cls << 6)   ),
+  .query_xfer_size_in_bytes ( (queries_cls_dlay << 6) ),
   .m_axi_arvalid            ( m00_axi_arvalid      ),
   .m_axi_arready            ( m00_axi_arready      ),
   .m_axi_araddr             ( m00_axi_araddr       ),

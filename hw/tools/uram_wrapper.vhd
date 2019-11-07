@@ -80,18 +80,18 @@ port map (
     douta => core_a_data_o,
     dina => (others => '0'),
     wea => (others => '0'),
+    regcea => '1',
     -- PORT B
     enb => portb_en,
     addrb => portb_addr,
     doutb => core_b_data_o,
     dinb => wr_data_i,
     web => portb_wen,
+    regceb => '1',
     --
     rsta => '0',
     rstb => '0',
     sleep => '0',
-    regcea => '1',
-    regceb => '1',
     dbiterra => open,
     dbiterrb => open,
     sbiterra => open,
@@ -101,55 +101,5 @@ port map (
     injectsbiterra => '0',
     injectsbiterrb => '0'
 );
-
-
--- -- xpm_memory_sdpram: Simple Dual Port RAM
--- -- Xilinx Parameterized Macro, version 2018.2
--- 
--- xpm_memory_sdpram_inst : xpm_memory_sdpram
--- generic map (
---     ADDR_WIDTH_A          => clogb2(G_RAM_DEPTH),
---     ADDR_WIDTH_B          => clogb2(G_RAM_DEPTH),
---     WRITE_DATA_WIDTH_A    => G_RAM_WIDTH,
---     READ_DATA_WIDTH_B     => G_RAM_WIDTH,
---     BYTE_WRITE_WIDTH_A    => G_RAM_WIDTH,
---     MEMORY_PRIMITIVE      => "ultra", --"auto", "distributed", "block" or "ultra"
---     MEMORY_SIZE           => G_RAM_DEPTH * G_RAM_WIDTH,
---     --
---     AUTO_SLEEP_TIME       => 0,
---     MEMORY_INIT_FILE      => "none",
---     MEMORY_INIT_PARAM     => "0",
---     MEMORY_OPTIMIZATION   => "true",
---     MESSAGE_CONTROL       => 0,
---     READ_LATENCY_B        => G_RD_LATENCY,
---     READ_RESET_VALUE_B    => "00000000",
---     USE_EMBEDDED_CONSTRAINT => 0,
---     USE_MEM_INIT          => 1,
---     WAKEUP_TIME           => "disable_sleep",
---     WRITE_MODE_B          => "read_first",
---     CLOCKING_MODE         => "common_clock",
---     ECC_MODE              => "no_ecc"
--- )
--- port map (
---     clka                  => clk_i,
---     clkb                  => clk_i,
---     -- read port
---     doutb                 => core_a_data_o,
---     addrb                 => core_a_addr_i,
---     enb                   => core_a_en_i,
---     regceb                => '1',
---     rstb                  => '0',
---     -- write port
---     addra                 => portb_addr,
---     dina                  => wr_data_i,
---     ena                   => portb_en,
---     wea                   => portb_wen,
---     --
---     dbiterrb              => open,
---     sbiterrb              => open,
---     injectdbiterra        => '0',
---     injectsbiterra        => '0',
---     sleep                 => '0'
--- );
 
 end behavioural;

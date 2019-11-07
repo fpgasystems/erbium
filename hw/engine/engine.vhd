@@ -36,6 +36,7 @@ architecture behavioural of engine is
     -- CORE PARAMETERS
     constant CORE_PARAM_0 : core_parameters_type := (
         G_RAM_DEPTH           => 4096,
+        G_RAM_LATENCY         => 3,
         G_MATCH_STRCT         => STRCT_SIMPLE,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
@@ -46,6 +47,7 @@ architecture behavioural of engine is
     );
     constant CORE_PARAM_1 : core_parameters_type := (
         G_RAM_DEPTH           => 4096,
+        G_RAM_LATENCY         => 3,
         G_MATCH_STRCT         => STRCT_SIMPLE,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
@@ -56,6 +58,7 @@ architecture behavioural of engine is
     );
     constant CORE_PARAM_2 : core_parameters_type := (
         G_RAM_DEPTH           => 8192,
+        G_RAM_LATENCY         => 3,
         G_MATCH_STRCT         => STRCT_SIMPLE,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
@@ -66,6 +69,7 @@ architecture behavioural of engine is
     );
     constant CORE_PARAM_3 : core_parameters_type := (
         G_RAM_DEPTH           => 8192,
+        G_RAM_LATENCY         => 3,
         G_MATCH_STRCT         => STRCT_SIMPLE,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
@@ -76,6 +80,7 @@ architecture behavioural of engine is
     );
     constant CORE_PARAM_4 : core_parameters_type := (
         G_RAM_DEPTH           => 16384,
+        G_RAM_LATENCY         => 4,
         G_MATCH_STRCT         => STRCT_PAIR,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
@@ -86,6 +91,7 @@ architecture behavioural of engine is
     );
     constant CORE_PARAM_5 : core_parameters_type := (
         G_RAM_DEPTH           => 32768,
+        G_RAM_LATENCY         => 8,
         G_MATCH_STRCT         => STRCT_PAIR,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
@@ -96,6 +102,7 @@ architecture behavioural of engine is
     );
     constant CORE_PARAM_6 : core_parameters_type := (
         G_RAM_DEPTH           => 16384,
+        G_RAM_LATENCY         => 4,
         G_MATCH_STRCT         => STRCT_SIMPLE,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
@@ -106,6 +113,7 @@ architecture behavioural of engine is
     );
     constant CORE_PARAM_7 : core_parameters_type := (
         G_RAM_DEPTH           => 16384,
+        G_RAM_LATENCY         => 4,
         G_MATCH_STRCT         => STRCT_SIMPLE,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
@@ -116,6 +124,7 @@ architecture behavioural of engine is
     );
     constant CORE_PARAM_8 : core_parameters_type := (
         G_RAM_DEPTH           => 16384,
+        G_RAM_LATENCY         => 4,
         G_MATCH_STRCT         => STRCT_PAIR,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
@@ -126,6 +135,7 @@ architecture behavioural of engine is
     );
     constant CORE_PARAM_9 : core_parameters_type := (
         G_RAM_DEPTH           => 32768,
+        G_RAM_LATENCY         => 8,
         G_MATCH_STRCT         => STRCT_SIMPLE,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
@@ -136,6 +146,7 @@ architecture behavioural of engine is
     );
     constant CORE_PARAM_10 : core_parameters_type := (
         G_RAM_DEPTH           => 32768,
+        G_RAM_LATENCY         => 8,
         G_MATCH_STRCT         => STRCT_SIMPLE,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
@@ -146,6 +157,7 @@ architecture behavioural of engine is
     );
     constant CORE_PARAM_11 : core_parameters_type := (
         G_RAM_DEPTH           => 32768,
+        G_RAM_LATENCY         => 8,
         G_MATCH_STRCT         => STRCT_SIMPLE,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
@@ -156,6 +168,7 @@ architecture behavioural of engine is
     );
     constant CORE_PARAM_12 : core_parameters_type := (
         G_RAM_DEPTH           => 16384,
+        G_RAM_LATENCY         => 4,
         G_MATCH_STRCT         => STRCT_SIMPLE,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
@@ -166,6 +179,7 @@ architecture behavioural of engine is
     );
     constant CORE_PARAM_13 : core_parameters_type := (
         G_RAM_DEPTH           => 8192,
+        G_RAM_LATENCY         => 3,
         G_MATCH_STRCT         => STRCT_SIMPLE,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
@@ -176,6 +190,7 @@ architecture behavioural of engine is
     );
     constant CORE_PARAM_14 : core_parameters_type := (
         G_RAM_DEPTH           => 16384,
+        G_RAM_LATENCY         => 4,
         G_MATCH_STRCT         => STRCT_SIMPLE,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
@@ -186,6 +201,7 @@ architecture behavioural of engine is
     );
     constant CORE_PARAM_15 : core_parameters_type := (
         G_RAM_DEPTH           => 16384,
+        G_RAM_LATENCY         => 4,
         G_MATCH_STRCT         => STRCT_SIMPLE,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
@@ -196,6 +212,7 @@ architecture behavioural of engine is
     );
     constant CORE_PARAM_16 : core_parameters_type := (
         G_RAM_DEPTH           => 8192,
+        G_RAM_LATENCY         => 3,
         G_MATCH_STRCT         => STRCT_SIMPLE,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
@@ -206,6 +223,7 @@ architecture behavioural of engine is
     );
     constant CORE_PARAM_17 : core_parameters_type := (
         G_RAM_DEPTH           => 4096,
+        G_RAM_LATENCY         => 3,
         G_MATCH_STRCT         => STRCT_SIMPLE,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
@@ -216,6 +234,7 @@ architecture behavioural of engine is
     );
     constant CORE_PARAM_18 : core_parameters_type := (
         G_RAM_DEPTH           => 4096,
+        G_RAM_LATENCY         => 3,
         G_MATCH_STRCT         => STRCT_SIMPLE,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
@@ -226,6 +245,7 @@ architecture behavioural of engine is
     );
     constant CORE_PARAM_19 : core_parameters_type := (
         G_RAM_DEPTH           => 8192,
+        G_RAM_LATENCY         => 3,
         G_MATCH_STRCT         => STRCT_SIMPLE,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
@@ -236,6 +256,7 @@ architecture behavioural of engine is
     );
     constant CORE_PARAM_20 : core_parameters_type := (
         G_RAM_DEPTH           => 1024,
+        G_RAM_LATENCY         => 3,
         G_MATCH_STRCT         => STRCT_SIMPLE,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
@@ -246,6 +267,7 @@ architecture behavioural of engine is
     );
     constant CORE_PARAM_21 : core_parameters_type := (
         G_RAM_DEPTH           => 512,
+        G_RAM_LATENCY         => 3,
         G_MATCH_STRCT         => STRCT_SIMPLE,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
@@ -254,7 +276,6 @@ architecture behavioural of engine is
         G_WEIGHT              => std_logic_vector(to_unsigned(8, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
-
     constant CFG_CORE_PARAM_ARRAY : CORE_PARAM_ARRAY := (
         CORE_PARAM_0,  CORE_PARAM_1,  CORE_PARAM_2,  CORE_PARAM_3,  CORE_PARAM_4,  CORE_PARAM_5, 
         CORE_PARAM_6,  CORE_PARAM_7,  CORE_PARAM_8,  CORE_PARAM_9,  CORE_PARAM_10, CORE_PARAM_11,
@@ -365,6 +386,7 @@ gen_dopio: for D in 0 to CFG_ENGINE_DOPIO_CORES - 1 generate
         G_MATCH_FUNCTION_B    => CFG_CORE_PARAM_ARRAY(I).G_MATCH_FUNCTION_B,
         G_MATCH_FUNCTION_PAIR => CFG_CORE_PARAM_ARRAY(I).G_MATCH_FUNCTION_PAIR,
         G_MATCH_MODE          => CFG_CORE_PARAM_ARRAY(I).G_MATCH_MODE,
+        G_MEM_RD_LATENCY      => CFG_CORE_PARAM_ARRAY(I).G_RAM_LATENCY,
         G_WEIGHT              => CFG_CORE_PARAM_ARRAY(I).G_WEIGHT,
         G_WILDCARD_ENABLED    => CFG_CORE_PARAM_ARRAY(I).G_WILDCARD_ENABLED
     )
@@ -394,7 +416,7 @@ gen_dopio: for D in 0 to CFG_ENGINE_DOPIO_CORES - 1 generate
     buff_edge_g : buffer_edge generic map
     (
         G_DEPTH         => CFG_EDGE_BUFFERS_DEPTH,
-        G_ALMST         => CFG_MEM_RD_LATENCY + 2
+        G_ALMST         => CFG_CORE_PARAM_ARRAY(I).G_RAM_LATENCY + 2
     )
     port map
     (
@@ -467,7 +489,7 @@ gen_stages_mem: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
     (
         G_RAM_WIDTH     => CFG_EDGE_BRAM_WIDTH,
         G_RAM_DEPTH     => CFG_CORE_PARAM_ARRAY(I).G_RAM_DEPTH,
-        G_RD_LATENCY    => CFG_MEM_RD_LATENCY
+        G_RD_LATENCY    => CFG_CORE_PARAM_ARRAY(I).G_RAM_LATENCY
     )
     port map
     (
@@ -490,7 +512,8 @@ gen_stages_mem: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
     uram_g : uram_wrapper generic map
     (
         G_RAM_WIDTH     => CFG_EDGE_BRAM_WIDTH,
-        G_RAM_DEPTH     => CFG_CORE_PARAM_ARRAY(I).G_RAM_DEPTH
+        G_RAM_DEPTH     => CFG_CORE_PARAM_ARRAY(I).G_RAM_DEPTH,
+        G_RD_LATENCY    => CFG_CORE_PARAM_ARRAY(I).G_RAM_LATENCY
     )
     port map
     (

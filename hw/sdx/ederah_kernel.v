@@ -105,10 +105,31 @@ wire [64-1:0]                       nfadata_ptr                   ;
 wire [64-1:0]                       queries_ptr                   ;
 wire [64-1:0]                       results_ptr                   ;
 wire [64-1:0]                       axi00_ptr3                    ;
+//
+reg                                ap_start_dlay                 ;
+reg [32-1:0]                       nfadata_cls_dlay              ;
+reg [32-1:0]                       queries_cls_dlay              ;
+reg [32-1:0]                       results_cls_dlay              ;
+reg [32-1:0]                       scalar03_dlay                 ;
+reg [64-1:0]                       nfa_hash_dlay                 ;
+reg [64-1:0]                       nfadata_ptr_dlay              ;
+reg [64-1:0]                       queries_ptr_dlay              ;
+reg [64-1:0]                       results_ptr_dlay              ;
+reg [64-1:0]                       axi00_ptr3_dlay               ;
 
 // Register and invert reset signal.
 always @(posedge ap_clk) begin
   areset <= ~ap_rst_n;
+  ap_start_dlay    <= ap_start;
+  nfadata_cls_dlay <= nfadata_cls;
+  queries_cls_dlay <= queries_cls;
+  results_cls_dlay <= results_cls;
+  scalar03_dlay    <= scalar03;
+  nfa_hash_dlay    <= nfa_hash;
+  nfadata_ptr_dlay <= nfadata_ptr;
+  queries_ptr_dlay <= queries_ptr;
+  results_ptr_dlay <= results_ptr;
+  axi00_ptr3_dlay  <= axi00_ptr3;
 end
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -190,18 +211,18 @@ inst_ederah (
   .m00_axi_rready  ( m00_axi_rready  ),
   .m00_axi_rdata   ( m00_axi_rdata   ),
   .m00_axi_rlast   ( m00_axi_rlast   ),
-  .ap_start        ( ap_start        ),
+  .ap_start        ( ap_start_dlay   ),
   .ap_done         ( ap_done         ),
   .ap_idle         ( ap_idle         ),
-  .nfadata_cls     ( nfadata_cls     ),
-  .queries_cls     ( queries_cls     ),
-  .results_cls     ( results_cls     ),
-  .scalar03        ( scalar03        ),
-  .nfa_hash        ( nfa_hash        ),
-  .nfadata_ptr     ( nfadata_ptr     ),
-  .queries_ptr     ( queries_ptr     ),
-  .results_ptr     ( results_ptr     ),
-  .axi00_ptr3      ( axi00_ptr3      )
+  .nfadata_cls     ( nfadata_cls_dlay ),
+  .queries_cls     ( queries_cls_dlay ),
+  .results_cls     ( results_cls_dlay ),
+  .scalar03        ( scalar03_dlay   ),
+  .nfa_hash        ( nfa_hash_dlay   ),
+  .nfadata_ptr     ( nfadata_ptr_dlay ),
+  .queries_ptr     ( queries_ptr_dlay ),
+  .results_ptr     ( results_ptr_dlay ),
+  .axi00_ptr3      ( axi00_ptr3_dlay )
 );
 
 endmodule

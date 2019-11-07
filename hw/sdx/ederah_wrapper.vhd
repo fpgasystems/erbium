@@ -20,7 +20,8 @@ use bre.core_pkg.all;
 
 entity ederah_wrapper is
     generic (
-        G_DATA_BUS_WIDTH : integer := 512
+        G_DATA_BUS_WIDTH : integer := 512;
+        G_INOUT_LATENCY  : integer := 2
     );
     port (
         clk_i        :  in std_logic;
@@ -89,6 +90,20 @@ architecture rtl of ederah_wrapper is
     signal query_r, query_rin   : query_reg_type;
     signal nfa_r, nfa_rin       : nfa_reg_type;
     signal result_r, result_rin : result_reg_type;
+
+    -- IN/OUT REGISTER WRAPPER (REDUCE ROUTING TIMES)
+    type inout_wrapper_type is record
+        -- stats option
+        stats_on   : std_logic;
+        -- nfa to mem
+        mem_data   : std_logic_vector(CFG_EDGE_BRAM_WIDTH - 1 downto 0);
+        mem_wren   : std_logic_vector(CFG_ENGINE_NCRITERIA - 1 downto 0);
+        mem_addr   : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+    end record;
+    type inout_wrapper_array is array (G_INOUT_LATENCY - 1 downto 0) of inout_wrapper_type;
+
+    signal inout_r, inout_rin : inout_wrapper_array;
+    signal io_r : inout_wrapper_type;
 
 begin
 
@@ -325,7 +340,7 @@ sig_resstats_value <= (CFG_RAW_RESULT_STATS_WIDTH - 1
 wr_data_o  <= result_r.value;
 wr_valid_o <= result_r.valid;
 
-result_comb : process(result_r, sig_result_valid, sig_result_value, wr_ready_i, stats_on_i, sig_resstats_value, sig_result_last)
+result_comb : process(result_r, sig_result_valid, sig_result_value, wr_ready_i, io_r.stats_on, sig_resstats_value, sig_result_last)
     variable v : result_reg_type;
 begin
     v := result_r;
@@ -337,7 +352,7 @@ begin
             v.ready := '1';
             v.valid := '0';
 
-            if sig_result_valid = '1' and stats_on_i = '0' then
+            if sig_result_valid = '1' and io_r.stats_on = '0' then
 
                 v.slice := result_r.slice + 1;
 
@@ -449,7 +464,7 @@ begin
                     v.flow_ctrl := FLW_CTRL_WRITE;
                 end if;
 
-            elsif sig_result_valid = '1' and stats_on_i = '1' then
+            elsif sig_result_valid = '1' and io_r.stats_on = '1' then
                 
                 v.slice := result_r.slice + 1;
 
@@ -539,9 +554,9 @@ mct_engine_top: entity bre.engine port map
     query_wr_en_i   => query_r.wr_en,
     query_ready_o   => sig_query_ready,
     --
-    mem_i           => nfa_r.mem_data,
-    mem_wren_i      => nfa_r.mem_wren,
-    mem_addr_i      => nfa_r.mem_addr,
+    mem_i           => io_r.mem_data,
+    mem_wren_i      => io_r.mem_wren,
+    mem_addr_i      => io_r.mem_addr,
     --
     result_ready_i  => result_r.ready,
     result_stats_o  => sig_result_stats,
@@ -564,5 +579,42 @@ port  map
     enable_i  => query_r.wr_en,
     counter_o => sig_query_id
 );
+
+----------------------------------------------------------------------------------------------------
+-- IN/OUT REGISTER WRAPPER (REDUCE ROUTING TIMES)                                                 --
+----------------------------------------------------------------------------------------------------
+
+ior_comb : process(inout_r, stats_on_i, nfa_r.mem_data, nfa_r.mem_wren, nfa_r.mem_addr)
+    variable v : inout_wrapper_array;
+begin
+    
+    v := inout_r;
+    
+    v(0) := v(1);
+
+    v(1).stats_on := stats_on_i;
+    v(1).mem_data := nfa_r.mem_data;
+    v(1).mem_wren := nfa_r.mem_wren;
+    v(1).mem_addr := nfa_r.mem_addr;
+
+    inout_rin <= v;
+
+end process;
+
+ior_seq : process(clk_i)
+begin
+    if rising_edge(clk_i) then
+        if rst_i = '0' then
+            -- default rst
+            inout_r(0).mem_wren <= (others => '0');
+            inout_r(1).mem_wren <= (others => '0');
+        else
+            inout_r <= inout_rin;
+        end if;
+    end if;
+end process;
+
+-- assign
+io_r <= inout_r(0);
 
 end architecture rtl;

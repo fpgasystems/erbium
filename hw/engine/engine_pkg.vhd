@@ -5,7 +5,7 @@ use ieee.std_logic_unsigned.all;
 package engine_pkg is
 
     -- MAIN PARAMETERS
-    constant CFG_ENGINE_DOPIO_CORES       : integer :=  1; -- Number of cores per engine (1 or 2)
+    constant CFG_ENGINE_DOPIO_CORES       : integer :=  2; -- Number of cores per engine (1 or 2)
     constant CFG_ENGINE_NCRITERIA         : integer := 22; -- Number of criteria
     constant CFG_CRITERION_VALUE_WIDTH    : integer := 13; -- Number of bits of each criterion value
     constant CFG_WEIGHT_WIDTH             : integer := 20; -- integer from 0 to 2^CFG_WEIGHT_WIDTH-1
@@ -13,7 +13,6 @@ package engine_pkg is
     constant CFG_FIRST_CRITERION_LOOKUP   : boolean := true; -- lookup table of first criterion
     --
     constant CFG_MEM_ADDR_WIDTH           : integer := 16;
-    constant CFG_MEM_RD_LATENCY           : integer := 2;
     --
     constant CFG_QUERY_BUFFER_DEPTH       : integer := CFG_ENGINE_NCRITERIA;
     --

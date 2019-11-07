@@ -27,6 +27,7 @@ entity core is
         G_MATCH_FUNCTION_B    : match_simp_function  := FNCTR_SIMP_NOP;
         G_MATCH_FUNCTION_PAIR : match_pair_function  := FNCTR_PAIR_NOP;
         G_MATCH_MODE          : match_mode_type      := MODE_FULL_ITERATION;
+        G_MEM_RD_LATENCY      : integer              := 2;
         G_WEIGHT              : std_logic_vector(CFG_WEIGHT_WIDTH - 1 downto 0) := (others=>'0');
         G_WILDCARD_ENABLED    : std_logic            := '1'
     );
@@ -54,6 +55,13 @@ entity core is
 end core;
 
 architecture behavioural of core is
+
+    type mem_delay_type is record
+        valid           : std_logic;
+        rden_dlay       : std_logic_vector(G_MEM_RD_LATENCY - 2 downto 0);
+        last_dlay       : std_logic_vector(G_MEM_RD_LATENCY - 2 downto 0);
+    end record;
+
     signal sig_exe_match_result   : std_logic;
     signal sig_exe_match_wildcard : std_logic;
     signal sig_exe_branch         : std_logic;
@@ -75,12 +83,12 @@ begin
     v := query_r;
 
     v.read_en := '0';
-    if query_empty_i = '0' then
-        if query_r.first = '1' or (fetch_r.buffer_rd_en = '1' and prev_data_i.query_id /= query_r.query.query_id) then
-            v.read_en := '1';
-            v.query   := query_i;
-            v.first   := '0';
-        end if;
+    if query_empty_i = '0' and 
+            (query_r.first = '1' or 
+                    (fetch_r.buffer_rd_en = '1' and prev_data_i.query_id /= query_r.query.query_id)) then
+        v.read_en := '1';
+        v.query   := query_i;
+        v.first   := '0';
     end if;
     
     query_rin <= v;
@@ -106,7 +114,8 @@ prev_read_o <= fetch_r.buffer_rd_en;
 mem_addr_o  <= fetch_r.mem_addr;
 mem_en_o    <= fetch_r.mem_rd_en;
 
-fetch_comb: process(fetch_r, prev_data_i, prev_empty_i, query_empty_i, mem_edge_i.last, mem_r.valid, sig_exe_branch, next_full_i, query_r.query.query_id)
+fetch_comb: process(fetch_r, prev_data_i, prev_empty_i, query_empty_i, mem_edge_i.last, mem_r.valid,
+    sig_exe_branch, next_full_i, query_r.query.query_id)
     variable v        : fetch_out_type;
     variable v_empty  : std_logic;
     variable v_branch : std_logic;
@@ -196,8 +205,8 @@ begin
     v_branch := (mem_edge_i.last and mem_r.valid) or sig_exe_branch;
 
     -- delay it
-    v.rden_dlay := fetch_r.mem_rd_en & mem_r.rden_dlay(CFG_MEM_RD_LATENCY - 2 downto 1);
-    v.last_dlay := v_branch & mem_r.last_dlay(CFG_MEM_RD_LATENCY - 2 downto 1);
+    v.rden_dlay := fetch_r.mem_rd_en & mem_r.rden_dlay(G_MEM_RD_LATENCY - 2 downto 1);
+    v.last_dlay := v_branch & mem_r.last_dlay(G_MEM_RD_LATENCY - 2 downto 1);
 
     if (v_branch or v_or(mem_r.last_dlay)) = '1' then
         v.valid := '0';

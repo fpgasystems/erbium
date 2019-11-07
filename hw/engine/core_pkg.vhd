@@ -69,12 +69,6 @@ package core_pkg is
         has_match       : std_logic;
     end record;
 
-    type mem_delay_type is record
-        valid           : std_logic;
-        rden_dlay       : std_logic_vector(CFG_MEM_RD_LATENCY - 2 downto 0);
-        last_dlay       : std_logic_vector(CFG_MEM_RD_LATENCY - 2 downto 0);
-    end record;
-
     type mem_out_type is record
         rd_addr         : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
         rd_en           : std_logic;
@@ -85,6 +79,7 @@ package core_pkg is
 
     type core_parameters_type is record
         G_RAM_DEPTH           : integer;
+        G_RAM_LATENCY         : integer;
         G_MATCH_STRCT         : match_structure_type;
         G_MATCH_FUNCTION_A    : match_simp_function;
         G_MATCH_FUNCTION_B    : match_simp_function;
@@ -159,6 +154,7 @@ package core_pkg is
             G_MATCH_FUNCTION_B    : match_simp_function  := FNCTR_SIMP_NOP;
             G_MATCH_FUNCTION_PAIR : match_pair_function  := FNCTR_PAIR_NOP;
             G_MATCH_MODE          : match_mode_type      := MODE_FULL_ITERATION;
+            G_MEM_RD_LATENCY      : integer              := 2;
             G_WEIGHT              : std_logic_vector(CFG_WEIGHT_WIDTH - 1 downto 0) := (others=>'0');
             G_WILDCARD_ENABLED    : std_logic            := '1'
         );

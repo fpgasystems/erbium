@@ -62,6 +62,7 @@ architecture rtl of ederah_wrapper is
     type query_reg_type is record
         flow_ctrl       : flow_ctrl_type;
         query_array     : query_in_array_type;
+        query_last      : std_logic;
         counter         : integer range 0 to CFG_ENGINE_NCRITERIA;
         ready           : std_logic;
         wr_en           : std_logic;
@@ -158,7 +159,6 @@ begin
                                 (idx * CFG_RAW_QUERY_WIDTH)
                             );
                         v.query_array(query_r.counter + idx).query_id := my_conv_integer(sig_query_id);
-                        v.query_array(query_r.counter + idx).last_query := rd_last_i;
                     end loop;
                 else
                     useful := remaining;
@@ -172,10 +172,11 @@ begin
                                 (idx * CFG_RAW_QUERY_WIDTH)
                             );
                         v.query_array(query_r.counter + idx).query_id := my_conv_integer(sig_query_id);
-                        v.query_array(query_r.counter + idx).last_query := rd_last_i;
                     end loop;
                 end if;
                 
+                v.query_last := rd_last_i;
+
                 v.counter := query_r.counter + useful;
                 if (v.counter = CFG_ENGINE_NCRITERIA) then
                     v.flow_ctrl := FLW_CTRL_WRITE;
@@ -212,6 +213,7 @@ begin
             query_r.flow_ctrl   <= FLW_CTRL_WAIT;
             query_r.ready       <= '0';
             query_r.wr_en       <= '0';
+            query_r.query_last  <= '1';
         else
             query_r <= query_rin;
         end if;
@@ -551,6 +553,7 @@ mct_engine_top: entity bre.engine port map
     rst_i           => nfa_r.engine_rst,
     --
     query_i         => query_r.query_array,
+    query_last_i    => query_r.query_last,
     query_wr_en_i   => query_r.wr_en,
     query_ready_o   => sig_query_ready,
     --

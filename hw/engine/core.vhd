@@ -255,7 +255,7 @@ port map
 );
 
 execute_comb : process(execute_r, sig_exe_match_result, fetch_r, mem_r.valid,
-    mem_edge_i, fetch_r.clock_cycles, query_r.read_en)
+    mem_edge_i, fetch_r.clock_cycles, fetch_r.buffer_rd_en, fetch_r.query_id)
     variable v : execute_out_type;
     variable v_wildcard : std_logic;
 begin
@@ -278,10 +278,11 @@ begin
         v.has_match := '1';
     end if;
 
-    if query_r.read_en = '1' then
+    if fetch_r.buffer_rd_en = '1' and fetch_r.query_id /= execute_r.writing_edge.query_id then
         -- trigger
         if v.has_match = '0' then
             v.inference_res := '1'; -- write a 'no match edge'
+            v.writing_edge  := execute_r.writing_edge;
         end if;
         v.has_match := '0';
     end if;

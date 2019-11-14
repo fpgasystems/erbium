@@ -35,6 +35,7 @@ entity core is
         clk_i           :  in std_logic;
         rst_i           :  in std_logic; -- low active
         idle_o          : out std_logic;
+        prev_idle_i     :  in std_logic;
         -- FIFO edge buffer from previous level
         prev_empty_i    :  in std_logic;
         prev_data_i     :  in edge_buffer_type;
@@ -113,9 +114,10 @@ end process;
 prev_read_o <= fetch_r.buffer_rd_en;
 mem_addr_o  <= fetch_r.mem_addr;
 mem_en_o    <= fetch_r.mem_rd_en;
+idle_o      <= fetch_r.idle;
 
 fetch_comb: process(fetch_r, prev_data_i, prev_empty_i, query_empty_i, mem_edge_i.last, mem_r.valid,
-    sig_exe_branch, next_full_i, query_r.query.query_id)
+    sig_exe_branch, next_full_i, query_r.query.query_id, prev_idle_i)
     variable v        : fetch_out_type;
     variable v_empty  : std_logic;
     variable v_branch : std_logic;
@@ -136,6 +138,7 @@ begin
 
             v.buffer_rd_en := '0';
             v.mem_rd_en    := '0';
+            v.idle := prev_idle_i;
 
             if v_empty = '0' and next_full_i = '0' then
                 v.buffer_rd_en := '1';
@@ -145,12 +148,15 @@ begin
                 v.weight       := prev_data_i.weight;
                 v.clock_cycles := prev_data_i.clock_cycles;
                 v.flow_ctrl    := FLW_CTRL_MEM;
+                v.idle         := '0';
             end if;
 
       when FLW_CTRL_MEM =>
 
+            v.idle := '0';
+
             if v_branch = '1' then
-                if (v_empty or next_full_i) = '0' then
+                if v_empty = '0' and next_full_i = '0' then
                     v.buffer_rd_en := '1';
                     v.mem_rd_en    := prev_data_i.has_match;
                     v.mem_addr     := prev_data_i.pointer;
@@ -171,6 +177,11 @@ begin
                     v.mem_addr     := increment(fetch_r.mem_addr);
                     v.clock_cycles := increment(fetch_r.clock_cycles);
                 end if;
+            end if;
+
+            if fetch_r.buffer_rd_en = '1' and fetch_r.mem_rd_en = '0' then
+                v.mem_rd_en := '0';
+                v.flow_ctrl := FLW_CTRL_BUFFER;
             end if;
 
     end case;
@@ -254,8 +265,7 @@ port map
     wildcard_o      => sig_exe_match_wildcard
 );
 
-execute_comb : process(execute_r, sig_exe_match_result, fetch_r, mem_r.valid,
-    mem_edge_i, fetch_r.clock_cycles, fetch_r.buffer_rd_en, fetch_r.query_id)
+execute_comb : process(execute_r, sig_exe_match_result, fetch_r, mem_r.valid, mem_edge_i)
     variable v : execute_out_type;
     variable v_wildcard : std_logic;
 begin
@@ -278,13 +288,27 @@ begin
         v.has_match := '1';
     end if;
 
-    if fetch_r.buffer_rd_en = '1' and fetch_r.query_id /= execute_r.writing_edge.query_id then
-        -- trigger
+    -- cases has_match = 0 and maybe writting no_match edges:
+    --   if fetch something but no mem_en (received a no_match)
+    --   if new query is fetched (normal case)
+    if (fetch_r.buffer_rd_en = '1' and fetch_r.mem_rd_en = '0') or
+       (not execute_r.empty and fetch_r.idle and not v.has_match) = '1' then
+        v.has_match := '0';
+        v.inference_res := '1'; -- write a 'no match edge'
+    elsif fetch_r.buffer_rd_en = '1' and fetch_r.query_id /= execute_r.writing_edge.query_id and execute_r.empty = '0' then
         if v.has_match = '0' then
             v.inference_res := '1'; -- write a 'no match edge'
             v.writing_edge  := execute_r.writing_edge;
+            v.writing_edge.pointer := (others => '0'); -- put here pointer to no match
         end if;
         v.has_match := '0';
+    end if;
+
+    -- EMPTY
+    if fetch_r.buffer_rd_en = '1' then
+        v.empty := not fetch_r.mem_rd_en;
+    elsif fetch_r.idle = '1' and execute_r.empty = '0' then
+        v.empty := '1';
     end if;
 
     v.writing_edge.has_match := v.has_match;
@@ -297,7 +321,8 @@ begin
     if rising_edge(clk_i) then
         if rst_i = '0' then
             execute_r.inference_res <= '0';
-            execute_r.has_match     <= '1';
+            execute_r.has_match     <= '0';
+            execute_r.empty         <= '1';
         else
             execute_r <= execute_rin;
         end if;
@@ -323,13 +348,6 @@ gen_mode_full_iteration : if G_MATCH_MODE = MODE_FULL_ITERATION generate
     sig_exe_branch <= '0';
 
 end generate;
-
-----------------------------------------------------------------------------------------------------
--- IDLE SIGNAL                                                                                    --
-----------------------------------------------------------------------------------------------------
-
-idle_o <= prev_empty_i and query_empty_i when (fetch_r.flow_ctrl = FLW_CTRL_BUFFER)
-          else '0';
 
 ----------------------------------------------------------------------------------------------------
 -- FAILURE CHECKS                                                                                 --

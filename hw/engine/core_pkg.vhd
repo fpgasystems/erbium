@@ -60,12 +60,14 @@ package core_pkg is
         query_id        : integer range 0 to 2**CFG_QUERY_ID_WIDTH - 1;
         weight          : std_logic_vector(CFG_WEIGHT_WIDTH - 1 downto 0);
         clock_cycles    : std_logic_vector(CFG_DBG_N_OF_CLK_CYCS_WIDTH - 1 downto 0);
+        idle            : std_logic;
     end record;
 
     type execute_out_type is record
         inference_res   : std_logic;
         writing_edge    : edge_buffer_type;
         has_match       : std_logic;
+        empty           : std_logic;
     end record;
 
     type mem_out_type is record
@@ -161,6 +163,7 @@ package core_pkg is
             clk_i           :  in std_logic;
             rst_i           :  in std_logic; -- low active
             idle_o          : out std_logic;
+            prev_idle_i     :  in std_logic;
             -- FIFO edge buffer from previous level
             prev_empty_i    :  in std_logic;
             prev_data_i     :  in edge_buffer_type;

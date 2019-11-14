@@ -34,85 +34,623 @@ end engine;
 architecture behavioural of engine is
     type CORE_PARAM_ARRAY is array (0 to CFG_ENGINE_NCRITERIA - 1) of core_parameters_type;
 
-    -- CORE PARAMETERS DESC
+--    -- CORE PARAMETERS DESC
+--    constant CORE_PARAM_0 : core_parameters_type := (
+--        G_RAM_DEPTH           => 4096,
+--        G_RAM_LATENCY         => 3,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(0, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '0'
+--    );
+--    constant CORE_PARAM_1 : core_parameters_type := (
+--        G_RAM_DEPTH           => 4096,
+--        G_RAM_LATENCY         => 3,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(0, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '0'
+--    );
+--    constant CORE_PARAM_2 : core_parameters_type := (
+--        G_RAM_DEPTH           => 8192,
+--        G_RAM_LATENCY         => 4,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(512, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_3 : core_parameters_type := (
+--        G_RAM_DEPTH           => 8192,
+--        G_RAM_LATENCY         => 4,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(524288, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_4 : core_parameters_type := (
+--        G_RAM_DEPTH           => 16384,
+--        G_RAM_LATENCY         => 6,
+--        G_MATCH_STRCT         => STRCT_PAIR,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND,
+--        G_MATCH_MODE          => MODE_FULL_ITERATION,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(256, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_5 : core_parameters_type := (
+--        G_RAM_DEPTH           => 32768,
+--        G_RAM_LATENCY         => 10,
+--        G_MATCH_STRCT         => STRCT_PAIR,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND,
+--        G_MATCH_MODE          => MODE_FULL_ITERATION,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(262144, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_6 : core_parameters_type := (
+--        G_RAM_DEPTH           => 16384,
+--        G_RAM_LATENCY         => 6,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(65536, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_7 : core_parameters_type := (
+--        G_RAM_DEPTH           => 16384,
+--        G_RAM_LATENCY         => 6,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(64, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_8 : core_parameters_type := (
+--        G_RAM_DEPTH           => 16384,
+--        G_RAM_LATENCY         => 6,
+--        G_MATCH_STRCT         => STRCT_PAIR,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND,
+--        G_MATCH_MODE          => MODE_FULL_ITERATION,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(1, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_9 : core_parameters_type := (
+--        G_RAM_DEPTH           => 32768,
+--        G_RAM_LATENCY         => 10,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(128, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_10 : core_parameters_type := (
+--        G_RAM_DEPTH           => 32768,
+--        G_RAM_LATENCY         => 10,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(131072, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_11 : core_parameters_type := (
+--        G_RAM_DEPTH           => 32768,
+--        G_RAM_LATENCY         => 10,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(16, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_12 : core_parameters_type := (
+--        G_RAM_DEPTH           => 16384,
+--        G_RAM_LATENCY         => 6,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(16384, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_13 : core_parameters_type := (
+--        G_RAM_DEPTH           => 8192,
+--        G_RAM_LATENCY         => 4,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(2, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_14 : core_parameters_type := (
+--        G_RAM_DEPTH           => 16384,
+--        G_RAM_LATENCY         => 6,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(4, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_15 : core_parameters_type := (
+--        G_RAM_DEPTH           => 16384,
+--        G_RAM_LATENCY         => 6,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(4096, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_16 : core_parameters_type := (
+--        G_RAM_DEPTH           => 8192,
+--        G_RAM_LATENCY         => 4,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(2048, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_17 : core_parameters_type := (
+--        G_RAM_DEPTH           => 4096,
+--        G_RAM_LATENCY         => 3,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(32768, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_18 : core_parameters_type := (
+--        G_RAM_DEPTH           => 4096,
+--        G_RAM_LATENCY         => 3,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(32, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_19 : core_parameters_type := (
+--        G_RAM_DEPTH           => 8192,
+--        G_RAM_LATENCY         => 4,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(0, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '0'
+--    );
+--    constant CORE_PARAM_20 : core_parameters_type := (
+--        G_RAM_DEPTH           => 1024,
+--        G_RAM_LATENCY         => 3,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(8192, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_21 : core_parameters_type := (
+--        G_RAM_DEPTH           => 512,
+--        G_RAM_LATENCY         => 3,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(8, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+
+
+
+
+
+
+--    -- CORE PARAMETERS PERF_D
+--    constant CORE_PARAM_0 : core_parameters_type := (
+--        G_RAM_DEPTH           => 4096,
+--        G_RAM_LATENCY         => 3,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(0, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '0'
+--    );
+--    constant CORE_PARAM_1 : core_parameters_type := (
+--        G_RAM_DEPTH           => 4096,
+--        G_RAM_LATENCY         => 3,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(0, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '0'
+--    );
+--    constant CORE_PARAM_2 : core_parameters_type := (
+--        G_RAM_DEPTH           => 16384,
+--        G_RAM_LATENCY         => 6,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(0, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '0'
+--    );
+--    constant CORE_PARAM_3 : core_parameters_type := (
+--        G_RAM_DEPTH           => 8192,
+--        G_RAM_LATENCY         => 4,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(512, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_4 : core_parameters_type := (
+--        G_RAM_DEPTH           => 16384,
+--        G_RAM_LATENCY         => 6,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(524288, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_5 : core_parameters_type := (
+--        G_RAM_DEPTH           => 16384,
+--        G_RAM_LATENCY         => 6,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(65536, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_6 : core_parameters_type := (
+--        G_RAM_DEPTH           => 16384,
+--        G_RAM_LATENCY         => 6,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(64, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_7 : core_parameters_type := (
+--        G_RAM_DEPTH           => 32768,
+--        G_RAM_LATENCY         => 10,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(128, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_8 : core_parameters_type := (
+--        G_RAM_DEPTH           => 65536,
+--        G_RAM_LATENCY         => 18,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(131072, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_9 : core_parameters_type := (
+--        G_RAM_DEPTH           => 32768,
+--        G_RAM_LATENCY         => 10,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(16, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_10 : core_parameters_type := (
+--        G_RAM_DEPTH           => 16384,
+--        G_RAM_LATENCY         => 6,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(16384, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_11 : core_parameters_type := (
+--        G_RAM_DEPTH           => 16384,
+--        G_RAM_LATENCY         => 6,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(2, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_12 : core_parameters_type := (
+--        G_RAM_DEPTH           => 16384,
+--        G_RAM_LATENCY         => 6,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(4, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_13 : core_parameters_type := (
+--        G_RAM_DEPTH           => 16384,
+--        G_RAM_LATENCY         => 6,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(4096, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_14 : core_parameters_type := (
+--        G_RAM_DEPTH           => 16384,
+--        G_RAM_LATENCY         => 6,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(2048, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_15 : core_parameters_type := (
+--        G_RAM_DEPTH           => 16384,
+--        G_RAM_LATENCY         => 6,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(32768, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_16 : core_parameters_type := (
+--        G_RAM_DEPTH           => 16384,
+--        G_RAM_LATENCY         => 6,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(32, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_17 : core_parameters_type := (
+--        G_RAM_DEPTH           => 16384,
+--        G_RAM_LATENCY         => 6,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(8192, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_18 : core_parameters_type := (
+--        G_RAM_DEPTH           => 16384,
+--        G_RAM_LATENCY         => 6,
+--        G_MATCH_STRCT         => STRCT_SIMPLE,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+--        G_MATCH_MODE          => MODE_STRICT_MATCH,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(8, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_19 : core_parameters_type := (
+--        G_RAM_DEPTH           => 16384,
+--        G_RAM_LATENCY         => 6,
+--        G_MATCH_STRCT         => STRCT_PAIR,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND,
+--        G_MATCH_MODE          => MODE_FULL_ITERATION,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(1, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_20 : core_parameters_type := (
+--        G_RAM_DEPTH           => 16384,
+--        G_RAM_LATENCY         => 6,
+--        G_MATCH_STRCT         => STRCT_PAIR,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND,
+--        G_MATCH_MODE          => MODE_FULL_ITERATION,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(262144, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+--    constant CORE_PARAM_21 : core_parameters_type := (
+--        G_RAM_DEPTH           => 16384,
+--        G_RAM_LATENCY         => 6,
+--        G_MATCH_STRCT         => STRCT_PAIR,
+--        G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
+--        G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
+--        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND,
+--        G_MATCH_MODE          => MODE_FULL_ITERATION,
+--        G_WEIGHT              => std_logic_vector(to_unsigned(256, CFG_WEIGHT_WIDTH)),
+--        G_WILDCARD_ENABLED    => '1'
+--    );
+
+
+    -- CORE PARAMETERS ASC
     constant CORE_PARAM_0 : core_parameters_type := (
-        G_RAM_DEPTH           => 4096,
+        G_RAM_DEPTH           => 4,
         G_RAM_LATENCY         => 3,
         G_MATCH_STRCT         => STRCT_SIMPLE,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => std_logic_vector(to_unsigned(0, CFG_WEIGHT_WIDTH)),
-        G_WILDCARD_ENABLED    => '0'
-    );
-    constant CORE_PARAM_1 : core_parameters_type := (
-        G_RAM_DEPTH           => 4096,
-        G_RAM_LATENCY         => 3,
-        G_MATCH_STRCT         => STRCT_SIMPLE,
-        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
-        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
-        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => std_logic_vector(to_unsigned(0, CFG_WEIGHT_WIDTH)),
-        G_WILDCARD_ENABLED    => '0'
-    );
-    constant CORE_PARAM_2 : core_parameters_type := (
-        G_RAM_DEPTH           => 8192,
-        G_RAM_LATENCY         => 4,
-        G_MATCH_STRCT         => STRCT_SIMPLE,
-        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
-        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
-        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => std_logic_vector(to_unsigned(512, CFG_WEIGHT_WIDTH)),
+        G_WEIGHT              => std_logic_vector(to_unsigned(8192, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
-    constant CORE_PARAM_3 : core_parameters_type := (
-        G_RAM_DEPTH           => 8192,
-        G_RAM_LATENCY         => 4,
+    constant CORE_PARAM_1 : core_parameters_type := (
+        G_RAM_DEPTH           => 16,
+        G_RAM_LATENCY         => 3,
         G_MATCH_STRCT         => STRCT_SIMPLE,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => std_logic_vector(to_unsigned(524288, CFG_WEIGHT_WIDTH)),
+        G_WEIGHT              => std_logic_vector(to_unsigned(8, CFG_WEIGHT_WIDTH)),
+        G_WILDCARD_ENABLED    => '1'
+    );
+    constant CORE_PARAM_2 : core_parameters_type := (
+        G_RAM_DEPTH           => 32,
+        G_RAM_LATENCY         => 3,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
+        G_WEIGHT              => std_logic_vector(to_unsigned(0, CFG_WEIGHT_WIDTH)),
+        G_WILDCARD_ENABLED    => '0'
+    );
+    constant CORE_PARAM_3 : core_parameters_type := (
+        G_RAM_DEPTH           => 32,
+        G_RAM_LATENCY         => 3,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
+        G_WEIGHT              => std_logic_vector(to_unsigned(32768, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_4 : core_parameters_type := (
-        G_RAM_DEPTH           => 16384,
-        G_RAM_LATENCY         => 6,
-        G_MATCH_STRCT         => STRCT_PAIR,
-        G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
-        G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
-        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND,
-        G_MATCH_MODE          => MODE_FULL_ITERATION,
-        G_WEIGHT              => std_logic_vector(to_unsigned(256, CFG_WEIGHT_WIDTH)),
+        G_RAM_DEPTH           => 64,
+        G_RAM_LATENCY         => 3,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
+        G_WEIGHT              => std_logic_vector(to_unsigned(32, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_5 : core_parameters_type := (
-        G_RAM_DEPTH           => 32768,
-        G_RAM_LATENCY         => 10,
-        G_MATCH_STRCT         => STRCT_PAIR,
-        G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
-        G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
-        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND,
-        G_MATCH_MODE          => MODE_FULL_ITERATION,
-        G_WEIGHT              => std_logic_vector(to_unsigned(262144, CFG_WEIGHT_WIDTH)),
+        G_RAM_DEPTH           => 128,
+        G_RAM_LATENCY         => 3,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
+        G_WEIGHT              => std_logic_vector(to_unsigned(2048, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_6 : core_parameters_type := (
-        G_RAM_DEPTH           => 16384,
-        G_RAM_LATENCY         => 6,
+        G_RAM_DEPTH           => 512,
+        G_RAM_LATENCY         => 3,
         G_MATCH_STRCT         => STRCT_SIMPLE,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => std_logic_vector(to_unsigned(65536, CFG_WEIGHT_WIDTH)),
+        G_WEIGHT              => std_logic_vector(to_unsigned(4096, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_7 : core_parameters_type := (
+        G_RAM_DEPTH           => 2048,
+        G_RAM_LATENCY         => 3,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
+        G_WEIGHT              => std_logic_vector(to_unsigned(4, CFG_WEIGHT_WIDTH)),
+        G_WILDCARD_ENABLED    => '1'
+    );
+    constant CORE_PARAM_8 : core_parameters_type := (
+        G_RAM_DEPTH           => 2048,
+        G_RAM_LATENCY         => 3,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
+        G_WEIGHT              => std_logic_vector(to_unsigned(2, CFG_WEIGHT_WIDTH)),
+        G_WILDCARD_ENABLED    => '1'
+    );
+    constant CORE_PARAM_9 : core_parameters_type := (
+        G_RAM_DEPTH           => 2048,
+        G_RAM_LATENCY         => 3,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
+        G_WEIGHT              => std_logic_vector(to_unsigned(16384, CFG_WEIGHT_WIDTH)),
+        G_WILDCARD_ENABLED    => '1'
+    );
+    constant CORE_PARAM_10 : core_parameters_type := (
+        G_RAM_DEPTH           => 4096,
+        G_RAM_LATENCY         => 3,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
+        G_WEIGHT              => std_logic_vector(to_unsigned(16, CFG_WEIGHT_WIDTH)),
+        G_WILDCARD_ENABLED    => '1'
+    );
+    constant CORE_PARAM_11 : core_parameters_type := (
         G_RAM_DEPTH           => 16384,
         G_RAM_LATENCY         => 6,
         G_MATCH_STRCT         => STRCT_SIMPLE,
@@ -120,21 +658,10 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => std_logic_vector(to_unsigned(64, CFG_WEIGHT_WIDTH)),
+        G_WEIGHT              => std_logic_vector(to_unsigned(131072, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
-    constant CORE_PARAM_8 : core_parameters_type := (
-        G_RAM_DEPTH           => 16384,
-        G_RAM_LATENCY         => 6,
-        G_MATCH_STRCT         => STRCT_PAIR,
-        G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
-        G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
-        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND,
-        G_MATCH_MODE          => MODE_FULL_ITERATION,
-        G_WEIGHT              => std_logic_vector(to_unsigned(1, CFG_WEIGHT_WIDTH)),
-        G_WILDCARD_ENABLED    => '1'
-    );
-    constant CORE_PARAM_9 : core_parameters_type := (
+    constant CORE_PARAM_12 : core_parameters_type := (
         G_RAM_DEPTH           => 32768,
         G_RAM_LATENCY         => 10,
         G_MATCH_STRCT         => STRCT_SIMPLE,
@@ -145,48 +672,15 @@ architecture behavioural of engine is
         G_WEIGHT              => std_logic_vector(to_unsigned(128, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
-    constant CORE_PARAM_10 : core_parameters_type := (
-        G_RAM_DEPTH           => 32768,
-        G_RAM_LATENCY         => 10,
-        G_MATCH_STRCT         => STRCT_SIMPLE,
-        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
-        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
-        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => std_logic_vector(to_unsigned(131072, CFG_WEIGHT_WIDTH)),
-        G_WILDCARD_ENABLED    => '1'
-    );
-    constant CORE_PARAM_11 : core_parameters_type := (
-        G_RAM_DEPTH           => 32768,
-        G_RAM_LATENCY         => 10,
-        G_MATCH_STRCT         => STRCT_SIMPLE,
-        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
-        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
-        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => std_logic_vector(to_unsigned(16, CFG_WEIGHT_WIDTH)),
-        G_WILDCARD_ENABLED    => '1'
-    );
-    constant CORE_PARAM_12 : core_parameters_type := (
-        G_RAM_DEPTH           => 16384,
-        G_RAM_LATENCY         => 6,
-        G_MATCH_STRCT         => STRCT_SIMPLE,
-        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
-        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
-        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => std_logic_vector(to_unsigned(16384, CFG_WEIGHT_WIDTH)),
-        G_WILDCARD_ENABLED    => '1'
-    );
     constant CORE_PARAM_13 : core_parameters_type := (
-        G_RAM_DEPTH           => 8192,
-        G_RAM_LATENCY         => 4,
-        G_MATCH_STRCT         => STRCT_SIMPLE,
-        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
-        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
-        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => std_logic_vector(to_unsigned(2, CFG_WEIGHT_WIDTH)),
+        G_RAM_DEPTH           => 32768,
+        G_RAM_LATENCY         => 10,
+        G_MATCH_STRCT         => STRCT_PAIR,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND,
+        G_MATCH_MODE          => MODE_FULL_ITERATION,
+        G_WEIGHT              => std_logic_vector(to_unsigned(1, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_14 : core_parameters_type := (
@@ -197,10 +691,54 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => std_logic_vector(to_unsigned(4, CFG_WEIGHT_WIDTH)),
+        G_WEIGHT              => std_logic_vector(to_unsigned(64, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
     constant CORE_PARAM_15 : core_parameters_type := (
+        G_RAM_DEPTH           => 32768,
+        G_RAM_LATENCY         => 10,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
+        G_WEIGHT              => std_logic_vector(to_unsigned(65536, CFG_WEIGHT_WIDTH)),
+        G_WILDCARD_ENABLED    => '1'
+    );
+    constant CORE_PARAM_16 : core_parameters_type := (
+        G_RAM_DEPTH           => 32768,
+        G_RAM_LATENCY         => 10,
+        G_MATCH_STRCT         => STRCT_PAIR,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND,
+        G_MATCH_MODE          => MODE_FULL_ITERATION,
+        G_WEIGHT              => std_logic_vector(to_unsigned(262144, CFG_WEIGHT_WIDTH)),
+        G_WILDCARD_ENABLED    => '1'
+    );
+    constant CORE_PARAM_17 : core_parameters_type := (
+        G_RAM_DEPTH           => 32768,
+        G_RAM_LATENCY         => 10,
+        G_MATCH_STRCT         => STRCT_PAIR,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_GEQ,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_LEQ,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_AND,
+        G_MATCH_MODE          => MODE_FULL_ITERATION,
+        G_WEIGHT              => std_logic_vector(to_unsigned(256, CFG_WEIGHT_WIDTH)),
+        G_WILDCARD_ENABLED    => '1'
+    );
+    constant CORE_PARAM_18 : core_parameters_type := (
+        G_RAM_DEPTH           => 32768,
+        G_RAM_LATENCY         => 10,
+        G_MATCH_STRCT         => STRCT_SIMPLE,
+        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
+        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
+        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
+        G_MATCH_MODE          => MODE_STRICT_MATCH,
+        G_WEIGHT              => std_logic_vector(to_unsigned(524288, CFG_WEIGHT_WIDTH)),
+        G_WILDCARD_ENABLED    => '1'
+    );
+    constant CORE_PARAM_19 : core_parameters_type := (
         G_RAM_DEPTH           => 16384,
         G_RAM_LATENCY         => 6,
         G_MATCH_STRCT         => STRCT_SIMPLE,
@@ -208,45 +746,12 @@ architecture behavioural of engine is
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => std_logic_vector(to_unsigned(4096, CFG_WEIGHT_WIDTH)),
+        G_WEIGHT              => std_logic_vector(to_unsigned(512, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '1'
     );
-    constant CORE_PARAM_16 : core_parameters_type := (
-        G_RAM_DEPTH           => 8192,
-        G_RAM_LATENCY         => 4,
-        G_MATCH_STRCT         => STRCT_SIMPLE,
-        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
-        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
-        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => std_logic_vector(to_unsigned(2048, CFG_WEIGHT_WIDTH)),
-        G_WILDCARD_ENABLED    => '1'
-    );
-    constant CORE_PARAM_17 : core_parameters_type := (
-        G_RAM_DEPTH           => 4096,
-        G_RAM_LATENCY         => 3,
-        G_MATCH_STRCT         => STRCT_SIMPLE,
-        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
-        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
-        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => std_logic_vector(to_unsigned(32768, CFG_WEIGHT_WIDTH)),
-        G_WILDCARD_ENABLED    => '1'
-    );
-    constant CORE_PARAM_18 : core_parameters_type := (
-        G_RAM_DEPTH           => 4096,
-        G_RAM_LATENCY         => 3,
-        G_MATCH_STRCT         => STRCT_SIMPLE,
-        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
-        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
-        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => std_logic_vector(to_unsigned(32, CFG_WEIGHT_WIDTH)),
-        G_WILDCARD_ENABLED    => '1'
-    );
-    constant CORE_PARAM_19 : core_parameters_type := (
-        G_RAM_DEPTH           => 8192,
-        G_RAM_LATENCY         => 4,
+    constant CORE_PARAM_20 : core_parameters_type := (
+        G_RAM_DEPTH           => 65536,
+        G_RAM_LATENCY         => 18,
         G_MATCH_STRCT         => STRCT_SIMPLE,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
@@ -255,27 +760,16 @@ architecture behavioural of engine is
         G_WEIGHT              => std_logic_vector(to_unsigned(0, CFG_WEIGHT_WIDTH)),
         G_WILDCARD_ENABLED    => '0'
     );
-    constant CORE_PARAM_20 : core_parameters_type := (
-        G_RAM_DEPTH           => 1024,
-        G_RAM_LATENCY         => 3,
-        G_MATCH_STRCT         => STRCT_SIMPLE,
-        G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
-        G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
-        G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
-        G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => std_logic_vector(to_unsigned(8192, CFG_WEIGHT_WIDTH)),
-        G_WILDCARD_ENABLED    => '1'
-    );
     constant CORE_PARAM_21 : core_parameters_type := (
-        G_RAM_DEPTH           => 512,
-        G_RAM_LATENCY         => 3,
+        G_RAM_DEPTH           => 16384,
+        G_RAM_LATENCY         => 6,
         G_MATCH_STRCT         => STRCT_SIMPLE,
         G_MATCH_FUNCTION_A    => FNCTR_SIMP_EQU,
         G_MATCH_FUNCTION_B    => FNCTR_SIMP_NOP,
         G_MATCH_FUNCTION_PAIR => FNCTR_PAIR_NOP,
         G_MATCH_MODE          => MODE_STRICT_MATCH,
-        G_WEIGHT              => std_logic_vector(to_unsigned(8, CFG_WEIGHT_WIDTH)),
-        G_WILDCARD_ENABLED    => '1'
+        G_WEIGHT              => std_logic_vector(to_unsigned(0, CFG_WEIGHT_WIDTH)),
+        G_WILDCARD_ENABLED    => '0'
     );
     constant CFG_CORE_PARAM_ARRAY : CORE_PARAM_ARRAY := (
         CORE_PARAM_0,  CORE_PARAM_1,  CORE_PARAM_2,  CORE_PARAM_3,  CORE_PARAM_4,  CORE_PARAM_5, 
@@ -306,6 +800,7 @@ architecture behavioural of engine is
     type result_stats_dopio is array (CFG_ENGINE_DOPIO_CORES - 1 downto 0) of result_stats_type;
     --
     signal pe_idle         : ncrieria_dopio;
+    signal prev_idle       : ncrieria_dopio;
     signal prev_empty      : ncrieria_dopio_p1;
     signal prev_read       : ncrieria_dopio_p1;
     signal prev_data       : edge_buffer_dopiop1;
@@ -396,6 +891,7 @@ gen_dopio: for D in 0 to CFG_ENGINE_DOPIO_CORES - 1 generate
         rst_i           => rst_i,
         clk_i           => clk_i,
         idle_o          => pe_idle(D)(I),
+        prev_idle_i     => prev_idle(D)(I),
         -- FIFO buffer from previous level
         prev_empty_i    => prev_empty(D)(I),
         prev_data_i     => prev_data(D)(I),
@@ -456,6 +952,8 @@ gen_dopio: for D in 0 to CFG_ENGINE_DOPIO_CORES - 1 generate
         result_stats_o  => resred_stats(D),
         result_valid_o  => resred_valid(D)
     );
+
+    prev_idle(D) <= query_last_i & (pe_idle(D)(0 to CFG_ENGINE_NCRITERIA - 2) and not next_write(D)(0 to CFG_ENGINE_NCRITERIA - 2));
 
     sig_cores_idle(D) <= v_and(pe_idle(D)) and not v_or(next_write(D)) and query_last_i;
 

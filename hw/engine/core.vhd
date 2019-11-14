@@ -295,8 +295,8 @@ begin
        (not execute_r.empty and fetch_r.idle and not v.has_match) = '1' then
         v.has_match := '0';
         v.inference_res := '1'; -- write a 'no match edge'
-    elsif fetch_r.buffer_rd_en = '1' and fetch_r.query_id /= execute_r.writing_edge.query_id and execute_r.empty = '0' then
-        if v.has_match = '0' then
+    elsif fetch_r.buffer_rd_en = '1' and fetch_r.query_id /= execute_r.writing_edge.query_id then
+        if v.has_match = '0' and execute_r.empty = '0' then
             v.inference_res := '1'; -- write a 'no match edge'
             v.writing_edge  := execute_r.writing_edge;
             v.writing_edge.pointer := (others => '0'); -- put here pointer to no match

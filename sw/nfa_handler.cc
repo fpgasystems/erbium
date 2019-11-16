@@ -520,6 +520,16 @@ std::fstream NFAHandler::dump_workload(const std::string& filename, const rulePa
     const criterion_s* aux_criterion;
     const criterionDefinition_s* aux_definition;
 
+    // export csv header
+    filecsv << "ID,WEIGHT";
+    for (auto& aux : m_dic->m_sorting_map)
+    {
+        filecsv << ",";
+        filecsv << std::next(rulepack.m_ruleType.m_criterionDefinition.begin(), aux)->m_code;
+    }
+    filecsv << ",CONTENT" << std::endl;
+
+
     // shuffle rules so benchmark has no similar consecutive queries
     std::vector<rule_s> the_rules(rulepack.m_rules.begin(), rulepack.m_rules.end());
     std::shuffle(the_rules.begin(), the_rules.end(), std::default_random_engine(0));
@@ -686,10 +696,11 @@ void NFAHandler::dump_core_parameters(const std::string& filename, const rulePac
                 func_pair  = "FNCTR_PAIR_NOP";
                 match_mode = "MODE_FULL_ITERATION";
         }
-
+        uint ram_depth = 1 << ((uint)ceil(log2(edges_per_level[the_level])));
         // std::cout << "edges_per_level[" << the_level << "] = " << edges_per_level[the_level] << std::endl;
         sprintf(buffer, "    constant CORE_PARAM_%u : core_parameters_type := (\n"
                         "        G_RAM_DEPTH           => %u,\n"
+                        "        G_RAM_LATENCY         => %u,\n"
                         "        G_MATCH_STRCT         => %s,\n"
                         "        G_MATCH_FUNCTION_A    => %s,\n"
                         "        G_MATCH_FUNCTION_B    => %s,\n"
@@ -699,7 +710,8 @@ void NFAHandler::dump_core_parameters(const std::string& filename, const rulePac
                         "        G_WILDCARD_ENABLED    => '%u'\n"
                         "    );\n",
             the_level,
-            1 << ((uint)ceil(log2(edges_per_level[the_level]))),
+            ram_depth,
+            std::max((uint)3, ram_depth / 4096 + 2),
             (criterion_def->m_isPair) ? "STRCT_PAIR" : "STRCT_SIMPLE",
             func_a.c_str(),
             func_b.c_str(),

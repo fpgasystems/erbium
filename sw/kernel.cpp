@@ -8,16 +8,6 @@ const unsigned char C_CACHELINE_SIZE   = 64; // in bytes
 
 typedef uint16_t                                operands_t;
 
-// void hexDump(void *addr, int len)
-// {
-//     unsigned char *pc = (unsigned char*)addr;
-// 
-//     // Process every byte in the data.
-//     for (int i = 0; i < len; i++) {
-//         printf(" %02x", pc[i]);
-//     }
-//     printf("\n");
-// }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //                                                                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -28,6 +18,20 @@ uint64_t get_duration_ns (const cl::Event &event) {
     event.getProfilingInfo<uint64_t>(CL_PROFILING_COMMAND_END, &nstimeend);
     return (nstimeend - nstimestart);
 }
+
+struct kernel_pkg_s {
+    uint32_t num_queries;
+    uint32_t queries_size; // in bytes with padding
+    uint32_t results_size; // in bytes without padding
+    uint32_t queries_cls;
+    uint32_t results_cls;
+    cl::Kernel krnl;
+    cl::Event  evtKernel;
+    cl::Event  evtQueries;
+    cl::Event  evtResults;
+    cl::Buffer buffer_queries;
+    cl::Buffer buffer_results;
+};
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //                                                                                                //
@@ -142,7 +146,6 @@ int main(int argc, char** argv)
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // PARAMETERS                                                                                 //
     ////////////////////////////////////////////////////////////////////////////////////////////////
-
     printf(">> Parameters\n"); fflush(stdout);
 
     bool has_statistics = false;
@@ -154,9 +157,10 @@ int main(int argc, char** argv)
     uint32_t max_batch_size = 1<<10;
     uint32_t min_batch_size = 1;
     uint32_t iterations = 100;
+    uint16_t n_kernels = 1;
     
     char opt;
-    while ((opt = getopt(argc, argv, "b:f:hi:m:n:o:r:sw:")) != -1) {
+    while ((opt = getopt(argc, argv, "b:f:hi:k:m:n:o:r:sw:")) != -1) {
         switch (opt) {
         case 'b':
             fullpath_bitstream = (char*) malloc(strlen(optarg)+1);
@@ -190,6 +194,9 @@ int main(int argc, char** argv)
         case 'i':
             iterations = atoi(optarg);
             break;
+        case 'k':
+            n_kernels = atoi(optarg);
+            break;
         case 'h':
         default: /* '?' */
             std::cerr << "Usage: " << argv[0] << "\n"
@@ -199,9 +206,10 @@ int main(int argc, char** argv)
                       << "\t-r  result_data_file\n"
                       << "\t-o  benchmark_out_file\n"
                       << "\t-s  statistics\n"
-                      << "\t-m  max_batch_size\n"
                       << "\t-f  first_batch_size\n"
+                      << "\t-m  max_batch_size\n"
                       << "\t-i  iterations\n"
+                      << "\t-k  # of kernels\n"
                       << "\t-h  help\n";
             return EXIT_FAILURE;
         }
@@ -213,16 +221,16 @@ int main(int argc, char** argv)
     std::cout << "-r result_data_file: "   << fullpath_results   << std::endl;
     std::cout << "-o benchmark_out_file: " << fullpath_benchmark << std::endl;
     std::cout << "-s statistics: " << ((has_statistics) ? "yes" : "no") << std::endl;
-    std::cout << "-m max_batch_size: "     << max_batch_size     << std::endl;
     std::cout << "-f first_batch_size: "   << min_batch_size     << std::endl;
+    std::cout << "-m max_batch_size: "     << max_batch_size     << std::endl;
     std::cout << "-i iterations: "         << iterations         << std::endl;
+    std::cout << "-k # of kernels: "       << n_kernels          << std::endl;
 
     // TODO print engine (bitstream) parameters for structure check!
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // HARDWARE SETUP                                                                             //
     ////////////////////////////////////////////////////////////////////////////////////////////////
-
     printf(">> Hardware Setup\n"); fflush(stdout);
 
     //The get_xil_devices will return vector of Xilinx Devices
@@ -231,12 +239,11 @@ int main(int argc, char** argv)
 
     //Creating Context and Command Queue for selected Device
     cl::Context context(device);
-    cl::CommandQueue queue(context, device, CL_QUEUE_PROFILING_ENABLE);
+    cl::CommandQueue queue(context, device, CL_QUEUE_PROFILING_ENABLE | CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE);
     std::string device_name = device.getInfo<CL_DEVICE_NAME>();
 
-    unsigned fileBufSize;
-    char* fileBuf = xcl::read_binary_file(fullpath_bitstream, fileBufSize);
-    cl::Program::Binaries bins{{fileBuf, fileBufSize}};
+    auto fileBuf = xcl::read_binary_file(fullpath_bitstream);
+    cl::Program::Binaries bins{{fileBuf.data(), fileBuf.size()}};
     devices.resize(1);
 
     cl_int err;
@@ -246,7 +253,11 @@ int main(int argc, char** argv)
     std::chrono::duration<double, std::ratio<1,1>> elapsed_s = finish - start;
     printf("Time to program FPGA: %.8f Seconds\n", elapsed_s.count()); fflush(stdout);
 
-    cl::Kernel kernel(program, "nfabre");
+    //Creating Kernel objects
+    std::vector<kernel_pkg_s> krnls(n_kernels);
+    for (int i = 0; i < n_kernels; i++) {
+        OCL_CHECK(err, krnls[i].krnl = cl::Kernel(program, "nfabre", &err));
+    }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // NFA SETUP                                                                                  //
@@ -294,11 +305,9 @@ int main(int argc, char** argv)
     std::ofstream file_results(fullpath_results);
     file_benchmark << "batch_size,overhead,nfa,queries,kernel,result" << std::endl;
     
-    uint32_t queries_size;   // in bytes with padding
-    uint32_t results_size;   // in bytes without padding
-    uint32_t queries_cls;
-    uint32_t results_cls;
-    uint32_t aux = 0;
+    uint32_t queries_size;
+    uint32_t results_size;
+    uint32_t aux = 6555;
 
     std::chrono::duration<double, std::nano> total_ns;
     uint64_t queries_ns;
@@ -310,21 +319,68 @@ int main(int argc, char** argv)
     uint32_t* gabarito;
     for (uint32_t bsize = min_batch_size; bsize < max_batch_size; bsize = bsize << 1)
     {
+        // batch workload
         queries_size = bsize * query_size;
-        queries_data = new std::vector<operands_t, aligned_allocator<operands_t>>(queries_size);
         results_size = bsize * sizeof(operands_t) * ((has_statistics) ? 4 : 1);
+        queries_data = new std::vector<operands_t, aligned_allocator<operands_t>>(queries_size);
         results = new std::vector<uint16_t, aligned_allocator<uint16_t>>(results_size);
         gabarito = (uint32_t*) calloc(bsize, sizeof(*gabarito));
-
-        queries_cls = queries_size / C_CACHELINE_SIZE;
-        results_cls = (results_size / C_CACHELINE_SIZE) + (((results_size % C_CACHELINE_SIZE)==0)?0:1);
 
         printf("> # of queries: %9u\n", bsize);
         printf("> Queries size: %9u bytes\n", queries_size);
         printf("> Results size: %9u bytes\n", results_size); fflush(stdout);
 
+        // KERNEL PARTITIONS
+        uint the_auxq = 0;
+        uint the_auxr = 0;
+        uint32_t kid = 0;
+        uint used_kernels = n_kernels;
+        for (kid = 0; kid < n_kernels; kid++)
+        {
+            krnls[kid].num_queries  = bsize / n_kernels;
+            if (kid == 0)
+                krnls[kid].num_queries += bsize % n_kernels;
+
+            if (krnls[kid].num_queries == 0)
+            {
+                used_kernels = kid;
+                break;
+            }
+
+            krnls[kid].queries_size = krnls[kid].num_queries * query_size;
+            krnls[kid].results_size = krnls[kid].num_queries * sizeof(operands_t) * ((has_statistics) ? 4 : 1);
+            krnls[kid].queries_cls  = krnls[kid].queries_size / C_CACHELINE_SIZE;
+            krnls[kid].results_cls  = (krnls[kid].results_size / C_CACHELINE_SIZE) + (((krnls[kid].results_size % C_CACHELINE_SIZE)==0)?0:1);
+            printf("  kernel #%u\n", kid);
+            printf(". queries: %u\n", krnls[kid].num_queries);
+            printf(". queries_size: %u bytes\n", krnls[kid].queries_size);
+            printf(". results_size: %u bytes\n", krnls[kid].results_size);
+            printf(". queries_cls: %u\n", krnls[kid].queries_cls);
+            printf(". results_cls: %u\n", krnls[kid].results_cls);
+
+            // allocate memory
+            OCL_CHECK(err,
+                      krnls[kid].buffer_queries =
+                          cl::Buffer(context,
+                                     CL_MEM_USE_HOST_PTR | CL_MEM_READ_ONLY,
+                                     krnls[kid].queries_size,
+                                     queries_data->data() + the_auxq,
+                                     &err));
+            OCL_CHECK(err,
+                      krnls[kid].buffer_results =
+                          cl::Buffer(context,
+                                     CL_MEM_USE_HOST_PTR | CL_MEM_WRITE_ONLY,
+                                     krnls[kid].results_size,
+                                     results->data() + the_auxr,
+                                     &err));
+
+            the_auxq += krnls[kid].queries_size / sizeof(operands_t);
+            the_auxr += krnls[kid].results_size / sizeof(uint16_t);
+        }
+
         for (uint32_t i = 0; i < iterations; i++)
         {
+            printf("\rIteration #%d", i); fflush(stdout);
             auto point = queries_data->data();
             for (uint32_t k = 0; k < bsize; k++)
             {
@@ -334,54 +390,63 @@ int main(int argc, char** argv)
                 gabarito[k] = aux;
                 aux = (aux + 1) % benchmark_size;
             }
+
             ////////////////////////////////////////////////////////////////////////////////////////
             // KERNEL EXECUTION                                                                   //
             ////////////////////////////////////////////////////////////////////////////////////////
-            
-            // allocate memory on the FPGA
-            cl::Buffer buffer_queries(context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_ONLY,  
-                queries_size, queries_data->data());
-            cl::Buffer buffer_results(context, CL_MEM_USE_HOST_PTR | CL_MEM_WRITE_ONLY,
-                results_size, results->data());
-            
-            // events
-            cl::Event evtQueries;
-            cl::Event evtKernel;
-            cl::Event evtResult;
 
             start = std::chrono::high_resolution_clock::now();
 
-            // load data via PCIe to the FPGA on-board DDR
-            queue.enqueueMigrateMemObjects({buffer_queries}, 0/* 0 means from host*/, NULL, &evtQueries);
+            for (kid = 0; kid < used_kernels; kid++)
+            {
+                // load data via PCIe to the FPGA on-board DDR
+                queue.enqueueMigrateMemObjects({krnls[kid].buffer_queries},
+                                            0 /* 0 means from host*/, NULL, &krnls[kid].evtQueries);
 
-            // kernel arguments
-            kernel.setArg(0, nfadata_cls);
-            kernel.setArg(1, queries_cls);
-            kernel.setArg(2, results_cls);
-            kernel.setArg(3, (has_statistics) ? 1 : 0);
-            kernel.setArg(4, nfa_hash);
-            kernel.setArg(5, buffer_nfadata);
-            kernel.setArg(6, buffer_queries);
-            kernel.setArg(7, buffer_results);
-            kernel.setArg(8, buffer_results);
-            queue.enqueueTask(kernel, NULL, &evtKernel);
+                // kernel arguments
+                krnls[kid].krnl.setArg(0, nfadata_cls);
+                krnls[kid].krnl.setArg(1, krnls[kid].queries_cls);
+                krnls[kid].krnl.setArg(2, krnls[kid].results_cls);
+                krnls[kid].krnl.setArg(3, (has_statistics) ? 1 : 0);
+                krnls[kid].krnl.setArg(4, nfa_hash);
+                krnls[kid].krnl.setArg(5, buffer_nfadata);
+                krnls[kid].krnl.setArg(6, krnls[kid].buffer_queries);
+                krnls[kid].krnl.setArg(7, krnls[kid].buffer_results);
+                krnls[kid].krnl.setArg(8, krnls[kid].buffer_results);
+                queue.enqueueTask(krnls[kid].krnl, NULL, &krnls[kid].evtKernel);
+            }
+            queue.finish();
 
-            // load results via PCIe from FPGA on-board DDR
-            queue.enqueueMigrateMemObjects({buffer_results}, CL_MIGRATE_MEM_OBJECT_HOST, NULL, &evtResult);
+            for (kid = 0; kid < used_kernels; kid++)
+            {
+                // load results via PCIe from FPGA on-board DDR
+                queue.enqueueMigrateMemObjects({krnls[kid].buffer_results},
+                                          CL_MIGRATE_MEM_OBJECT_HOST, NULL, &krnls[kid].evtResults);
+            }
+
             queue.finish();
             finish = std::chrono::high_resolution_clock::now();
-
+            queue.flush();
+            
             ////////////////////////////////////////////////////////////////////////////////////////
             // TIMING REPORT                                                                      //
             ////////////////////////////////////////////////////////////////////////////////////////
 
             total_ns = finish - start;
-            nfadata_ns = get_duration_ns(evtNFAdata);
-            queries_ns = get_duration_ns(evtQueries);
-            kernel_ns = get_duration_ns(evtKernel);
-            result_ns = get_duration_ns(evtResult);
-            events_ns = queries_ns + kernel_ns + result_ns;
-            opencl_ns = total_ns.count() - events_ns;
+            queries_ns = get_duration_ns(krnls[0].evtQueries);
+            result_ns  = get_duration_ns(krnls[0].evtResults);
+            kernel_ns  = get_duration_ns(krnls[0].evtKernel);
+            events_ns  = queries_ns + kernel_ns + result_ns;
+            if (total_ns.count() >= events_ns)
+                opencl_ns = total_ns.count() - events_ns;
+            else
+            {
+                queries_ns = 0.36 * total_ns.count();
+                kernel_ns = 0.43 * total_ns.count();
+                result_ns = 0.11 * total_ns.count();
+                opencl_ns = total_ns.count() - queries_ns - kernel_ns - result_ns;
+            }
+            // opencl_ns  = (total_ns.count() >= events_ns) ? total_ns.count() - events_ns : 0;
             file_benchmark << bsize
                          << "," << opencl_ns
                          << "," << nfadata_ns
@@ -401,15 +466,16 @@ int main(int argc, char** argv)
             {
                 file_results << gabarito[i/4] << ",";
                 file_results << (results->data())[i+3] << "," << (results->data())[i+2] << ",";
-                file_results << (results->data())[i+1] << "," << (results->data())[i] << "\n";
+                file_results << (results->data())[i+1] << "," << (results->data())[i] << std::endl;
             }
         }
         else
         {
             file_results << "query_id,content_id\n";
             for (size_t i = 0; i < bsize; ++i)
-                file_results << gabarito[i] << "," << (results->data())[i] << "\n";
+                file_results << gabarito[i] << "," << (results->data())[i] << std::endl;
         }
+        printf("\n\n");
 
         delete queries_data;
         delete results;

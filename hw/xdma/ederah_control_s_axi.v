@@ -4,7 +4,7 @@
 // default_nettype of none prevents implicit wire declaration.
 `default_nettype none
 `timescale 1ns/1ps
-module ederah_kernel_control_s_axi #(
+module ederah_control_s_axi #(
   parameter integer C_ADDR_WIDTH = 12,
   parameter integer C_DATA_WIDTH = 32
 )
@@ -531,8 +531,6 @@ always @(posedge aclk) begin
   end
 end
 
-
 endmodule
 
 `default_nettype wire
-

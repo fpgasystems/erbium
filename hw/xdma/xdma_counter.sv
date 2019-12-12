@@ -4,7 +4,7 @@
 // default_nettype of none prevents implicit wire declaration.
 `default_nettype none
 
-module ederah_kernel_counter #(
+module xdma_counter #(
   parameter integer C_WIDTH  = 4,
   parameter [C_WIDTH-1:0] C_INIT = {C_WIDTH{1'b0}}
 )
@@ -80,6 +80,6 @@ always @(posedge clk) begin
 end
 
 
-endmodule : ederah_kernel_counter
+endmodule : xdma_counter
 `default_nettype wire
 

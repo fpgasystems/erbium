@@ -236,7 +236,7 @@ assign nfa_read_done   = nfa_rd_tvalid && nfa_rd_tready && (nfa_num_cls_received
 assign query_read_done = query_rd_tvalid && query_rd_tready  && (query_num_cls_received  == query_xfer_size_in_bytes_dlay);
 
 // AXI4 Read Master, output format is an AXI4-Stream master, one stream per thread.
-ederah_kernel_axi_read_master #(
+xdma_axi_read_master #(
   .C_M_AXI_ADDR_WIDTH  ( C_M_AXI_ADDR_WIDTH    ) ,
   .C_M_AXI_DATA_WIDTH  ( C_M_AXI_DATA_WIDTH    ) ,
   .C_XFER_SIZE_WIDTH   ( 32                    ) ,
@@ -266,7 +266,7 @@ nfa_axi_read_master (
   .m_axis_tdata            ( nfa_rd_tdata           )
 );
 
-ederah_kernel_axi_read_master #(
+xdma_axi_read_master #(
   .C_M_AXI_ADDR_WIDTH  ( C_M_AXI_ADDR_WIDTH    ) ,
   .C_M_AXI_DATA_WIDTH  ( C_M_AXI_DATA_WIDTH    ) ,
   .C_XFER_SIZE_WIDTH   ( 32                    ) ,

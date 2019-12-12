@@ -1,6 +1,6 @@
 // default_nettype of none prevents implicit wire declaration.
 `default_nettype none
-module ederah #(
+module ederah_kernel #(
   parameter integer C_M00_AXI_ADDR_WIDTH = 64 ,
   parameter integer C_M00_AXI_DATA_WIDTH = 512
 )
@@ -182,7 +182,7 @@ inst_wrapper (
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // AXI4 Write Master
-ederah_kernel_axi_write_master #(
+xdma_axi_write_master #(
   .C_M_AXI_ADDR_WIDTH      ( C_M00_AXI_ADDR_WIDTH    ),
   .C_M_AXI_DATA_WIDTH      ( C_M00_AXI_DATA_WIDTH    ),
   .C_XFER_SIZE_WIDTH       (                   32    ),
@@ -214,5 +214,5 @@ inst_axi_write_master (
   .s_axis_tdata            ( wr_tdata                )
 );
 
-endmodule : ederah
+endmodule : ederah_kernel
 `default_nettype wire

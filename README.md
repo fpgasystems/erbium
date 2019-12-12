@@ -1,3 +1,22 @@
+NFA-BRE Repository
+===========================
+
+# Compatibility #
+- XRT 2.2.0, build hash: aa4ad2910ca3b1cf3ffaed45a077208054da39f3 (Git branch: https://github.com/Xilinx/XRT/tree/2019.1)
+- SDx 2019.1
+- Ubuntu 18.04.3
+
+Board | Platform | Software Version
+------|----------|-----------------
+Xilinx Alveo U250|xilinx-u250-xdma-201830.2-2580015_18.04.deb|SDx 2019.1
+AWS VU9P|xilinx_aws-vu9p-f1-04261818_dynamic_5_0|SDx 2019.1
+
+# Compilation for Xilinx #
+
+```
+    cd xilinx_work
+    make all TARGET=<sw_emu|hw_emu|hw> DEVICE=<FPGA Platform>
+```
 
 # Run in F1 #
 

@@ -49,7 +49,7 @@
 // default_nettype of none prevents implicit wire declaration.
 `default_nettype none
 
-module ederah_kernel_axi_read_master #(
+module xdma_axi_read_master #(
   // Set to the address width of the interface
   parameter integer C_M_AXI_ADDR_WIDTH  = 64,
 
@@ -250,7 +250,7 @@ always @(posedge aclk) begin
 end
 
 // Counts down the number of transactions to send.
-ederah_kernel_counter #(
+xdma_counter #(
   .C_WIDTH ( LP_TRANSACTION_CNTR_WIDTH         ) ,
   .C_INIT  ( {LP_TRANSACTION_CNTR_WIDTH{1'b0}} )
 )
@@ -269,7 +269,7 @@ inst_ar_transaction_cntr (
 assign ar_done = ar_final_transaction && arxfer;
 
 
-ederah_kernel_counter #(
+xdma_counter #(
   .C_WIDTH ( LP_OUTSTANDING_CNTR_WIDTH ) ,
   .C_INIT  ( 0                         )
 )
@@ -343,7 +343,7 @@ if (C_INCLUDE_DATA_FIFO == 1) begin : gen_fifo
     .dbiterr       (                             )
   ) ;
 
-  ederah_kernel_counter #(
+  xdma_counter #(
     .C_WIDTH ( LP_OUTSTANDING_CNTR_WIDTH                       ) ,
     .C_INIT  ( C_MAX_OUTSTANDING[0+:LP_OUTSTANDING_CNTR_WIDTH] )
   )
@@ -386,7 +386,7 @@ else begin : gen_no_fifo
   // Keeps track of the number of outstanding transactions. Stalls
   // when the value is reached so that the FIFO won't overflow.
   // If no FIFO present, then just limit at max outstanding transactions.
-  ederah_kernel_counter #(
+  xdma_counter #(
     .C_WIDTH ( LP_OUTSTANDING_CNTR_WIDTH                       ) ,
     .C_INIT  ( C_MAX_OUTSTANDING[0+:LP_OUTSTANDING_CNTR_WIDTH] )
   )
@@ -420,7 +420,7 @@ always_comb begin
   decr_r_transaction_cntr = rxfer & m_axi_rlast;
 end
 
-ederah_kernel_counter #(
+xdma_counter #(
   .C_WIDTH ( LP_TRANSACTION_CNTR_WIDTH         ) ,
   .C_INIT  ( {LP_TRANSACTION_CNTR_WIDTH{1'b0}} )
 )
@@ -436,7 +436,7 @@ inst_r_transaction_cntr (
   .is_zero    ( r_final_transaction           )
 );
 
-endmodule : ederah_kernel_axi_read_master
+endmodule : xdma_axi_read_master
 
 `default_nettype wire
 

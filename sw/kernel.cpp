@@ -256,7 +256,7 @@ int main(int argc, char** argv)
     //Creating Kernel objects
     std::vector<kernel_pkg_s> krnls(n_kernels);
     for (int i = 0; i < n_kernels; i++) {
-        OCL_CHECK(err, krnls[i].krnl = cl::Kernel(program, "nfabre", &err));
+        OCL_CHECK(err, krnls[i].krnl = cl::Kernel(program, "ederah", &err));
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////

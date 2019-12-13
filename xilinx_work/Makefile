@@ -2,7 +2,7 @@
 
 help::
 	$(ECHO) "Makefile Usage:"
-	$(ECHO) "  make all TARGET=<sw_emu/hw_emu/hw> DEVICE=<FPGA platform>"
+	$(ECHO) "  make all TARGET=<hw_emu/hw> DEVICE=<FPGA platform>"
 	$(ECHO) "      Command to generate the design for specified Target and Device."
 	$(ECHO) ""
 	$(ECHO) "  make clean "
@@ -11,14 +11,11 @@ help::
 	$(ECHO) "  make cleanall"
 	$(ECHO) "      Command to remove all the generated files."
 	$(ECHO) ""
-	$(ECHO) "  make check TARGET=<sw_emu/hw_emu/hw> DEVICE=<FPGA platform>"
+	$(ECHO) "  make check TARGET=<hw_emu/hw> DEVICE=<FPGA platform>"
 	$(ECHO) "      Command to run application in emulation."
 	$(ECHO) ""
-	$(ECHO) "  make build TARGET=<sw_emu/hw_emu/hw> DEVICE=<FPGA platform>"
+	$(ECHO) "  make build TARGET=<hw_emu/hw> DEVICE=<FPGA platform>"
 	$(ECHO) "      Command to build xclbin application."
-	$(ECHO) ""
-	$(ECHO) "  make run_nimbix DEVICE=<FPGA platform>"
-	$(ECHO) "      Command to run application on Nimbix Cloud."
 	$(ECHO) ""
 	$(ECHO) "  make aws_build DEVICE=<FPGA platform>"
 	$(ECHO) "      Command to build AWS xclbin application on AWS Cloud."
@@ -69,7 +66,7 @@ endif
 CLFLAGS += -t $(TARGET) --platform $(DEVICE) --save-temps $(CLDEBUG)
 
 
-EXECUTABLE = host
+EXECUTABLE = ederah.exe
 CMD_ARGS = $(XCLBIN)/ederah.$(TARGET).$(DSA).xclbin
 
 EMCONFIG_DIR = $(XCLBIN)/$(DSA)
@@ -78,6 +75,28 @@ BINARY_CONTAINERS += $(XCLBIN)/ederah.$(TARGET).$(DSA).xclbin
 BINARY_CONTAINER_ederah_OBJS += $(XCLBIN)/ederah.$(TARGET).$(DSA).xo
 
 CP = cp -rf
+
+ifeq ($(DEVICE),xilinx_u250_xdma_201830_2)
+	FRIENDLY_DEVICE ?= U250
+else ifeq ($(DEVICE),$(AWS_PLATFORM))
+	FRIENDLY_DEVICE ?= AWS
+else
+	FRIENDLY_DEVICE ?= NKD # NOT A KNOWN DEVICE
+endif
+
+# Execution
+KERNEL_CONFIG_TAG := 1K2C
+DATA_INPUT_PATH := ../sw/build-mct_PfD
+DATA_OUTPUT_PATH := ~/Documents/workspace
+FIRST_BATCH_SIZE := 1
+MAX_BATCH_SIZE := 1000000
+ITERATIONS := 1000
+KERNELS_TO_RUN := 1
+#
+NFA_DATA_FILE := $(DATA_INPUT_PATH)/mem_edges.bin
+WORKLOAD_FILE := $(DATA_INPUT_PATH)/benchmark.bin
+RESULT_FILE := $(DATA_OUTPUT_PATH)/res_$(FRIENDLY_DEVICE)_PfD_$(KERNEL_CONFIG_TAG).csv
+BENCHMARK_FILE := $(DATA_OUTPUT_PATH)/ben_$(FRIENDLY_DEVICE)_PfD_$(KERNEL_CONFIG_TAG).csv
 
 .PHONY: all clean cleanall docs emconfig
 all: check-devices $(EXECUTABLE) $(BINARY_CONTAINERS) emconfig
@@ -88,8 +107,11 @@ exe: $(EXECUTABLE)
 .PHONY: build
 build: $(BINARY_CONTAINERS)
 
+.PHONY: run_aws
+run_aws: cp $(EXECUTABLE) ../../ederah/
+
 # Building kernel
-$(XCLBIN)/ederah.$(TARGET).$(DSA).xo: ../hw/$(XL_SHELL)/kernel.xml ../hw/$(XL_SHELL)/package_kernel.tcl gen_xo.tcl ../hw/tools/*.vhd ../hw/engine/*.vhd ../hw/$(XL_SHELL)/*.sv ../hw/$(XL_SHELL)/*.v ../hw/$(XL_SHELL)/*.vhd
+$(XCLBIN)/ederah.$(TARGET).$(DSA).xo: ../hw/$(XL_SHELL)/kernel.xml package_kernel.tcl gen_xo.tcl ../hw/tools/*.vhd ../hw/engine/*.vhd ../hw/$(XL_SHELL)/*.sv ../hw/$(XL_SHELL)/*.v ../hw/$(XL_SHELL)/*.vhd
 	mkdir -p $(XCLBIN)
 	$(VIVADO) -mode batch -source gen_xo.tcl -tclargs $(XCLBIN)/ederah.$(TARGET).$(DSA).xo ederah $(TARGET) $(DSA) $(XL_SHELL)
 
@@ -105,14 +127,13 @@ $(EXECUTABLE): check-xrt $(HOST_SRCS) $(HOST_HDRS)
 emconfig:$(EMCONFIG_DIR)/emconfig.json
 $(EMCONFIG_DIR)/emconfig.json:
 	emconfigutil --platform $(DEVICE) --od $(EMCONFIG_DIR)
-	export XCL_EMULATION_MODE=hw_emu
 
 check: all
-ifeq ($(TARGET),$(filter $(TARGET),sw_emu hw_emu))
+ifeq ($(TARGET),$(filter $(TARGET),hw_emu))
 	$(CP) $(EMCONFIG_DIR)/emconfig.json .
-	XCL_EMULATION_MODE=$(TARGET) ./$(EXECUTABLE) $(XCLBIN)/ederah.$(TARGET).$(DSA).xclbin
+	XCL_EMULATION_MODE=$(TARGET) ./$(EXECUTABLE) -b $(XCLBIN)/ederah.$(TARGET).$(DSA).xclbin -n $(NFA_DATA_FILE) -w $(WORKLOAD_FILE) -r $(RESULT_FILE) -o $(BENCHMARK_FILE) -f $(FIRST_BATCH_SIZE) -m $(MAX_BATCH_SIZE) -i $(ITERATIONS) -k $(KERNELS_TO_RUN)
 else
-	 ./$(EXECUTABLE) $(XCLBIN)/ederah.$(TARGET).$(DSA).xclbin
+	 ./$(EXECUTABLE) -b $(XCLBIN)/ederah.$(TARGET).$(DSA).xclbin -n $(NFA_DATA_FILE) -w $(WORKLOAD_FILE) -r $(RESULT_FILE) -o $(BENCHMARK_FILE) -f $(FIRST_BATCH_SIZE) -m $(MAX_BATCH_SIZE) -i $(ITERATIONS) -k $(KERNELS_TO_RUN)
 endif
 ifneq ($(TARGET),$(findstring $(TARGET), hw hw_emu))
 $(warning WARNING:Application supports only hw hw_emu TARGET. Please use the target for running the application)
@@ -121,8 +142,12 @@ endif
 	sdx_analyze profile -i profile_summary.csv -f html
 
 
-aws_build: check-aws_repo $(BINARY_CONTAINERS)
-	$(COMMON_REPO)/utility/aws/run_aws.py $(BINARY_CONTAINERS)
+aws_build: check-aws_repo #$(BINARY_CONTAINERS)
+	mkdir -p _aws
+	(cd _aws && ../$(COMMON_REPO)/utility/aws/run_aws.py ../$(BINARY_CONTAINERS))
+	-$(RMDIR) _aws/to_aws
+	wait_for_afi.py --afi $(call GetFromJson,$(shell find _aws/ -name '*_afi_id.txt' | tail -1),FpgaImageId) --notify --email maschif@ethz.ch
+	
 
 # Cleaning stuff
 clean:
@@ -132,5 +157,5 @@ clean:
 
 cleanall: clean
 	-$(RMDIR) $(XCLBIN)
-	-$(RMDIR) _x
+	-$(RMDIR) _x _aws
 	-$(RMDIR) ./tmp_kernel_pack* ./packaged_kernel* 

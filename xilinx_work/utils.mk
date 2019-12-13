@@ -42,6 +42,10 @@ endif
 #   $(1) - full name of device
 device2dsa = $(strip $(patsubst %.xpfm, % , $(shell basename $(DEVICE))))
 
+define GetFromJson
+$(shell cat ${1} | grep ${2} | awk -F: '{ print $$2 }' | sed 's/[",]//g')
+endef
+
 # Cleaning stuff
 RM = rm -f
 RMDIR = rm -rf

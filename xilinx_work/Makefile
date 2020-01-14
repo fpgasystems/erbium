@@ -2,7 +2,7 @@
 
 help::
 	$(ECHO) "Makefile Usage:"
-	$(ECHO) "  make all TARGET=<hw_emu/hw> DEVICE=<FPGA platform>"
+	$(ECHO) "  make all TARGET=<hw_emu/hw> DEVICE=<FPGA platform> XL_SHELL=<xdma/qdma>" 
 	$(ECHO) "      Command to generate the design for specified Target and Device."
 	$(ECHO) ""
 	$(ECHO) "  make clean "
@@ -11,10 +11,10 @@ help::
 	$(ECHO) "  make cleanall"
 	$(ECHO) "      Command to remove all the generated files."
 	$(ECHO) ""
-	$(ECHO) "  make check TARGET=<hw_emu/hw> DEVICE=<FPGA platform>"
+	$(ECHO) "  make check TARGET=<hw_emu/hw> DEVICE=<FPGA platform> XL_SHELL=<xdma/qdma>"
 	$(ECHO) "      Command to run application in emulation."
 	$(ECHO) ""
-	$(ECHO) "  make build TARGET=<hw_emu/hw> DEVICE=<FPGA platform>"
+	$(ECHO) "  make build TARGET=<hw_emu/hw> DEVICE=<FPGA platform> XL_SHELL=<xdma/qdma>"
 	$(ECHO) "      Command to build xclbin application."
 	$(ECHO) ""
 	$(ECHO) "  make aws_build DEVICE=<FPGA platform>"
@@ -22,66 +22,73 @@ help::
 	$(ECHO) ""
 
 # Points to SDAccel_Examples Directory
-COMMON_REPO = ../../SDAccel_Examples/
+COMMON_REPO = ../../Vitis_Accel_Examples/
+PWD = $(shell readlink -f .)
 ABS_COMMON_REPO = $(shell readlink -f $(COMMON_REPO))
 
-TARGETS := hw
-TARGET := $(TARGETS)
-DEVICE := $(DEVICES)
-XCLBIN := ./xclbin
-XL_SHELL ?= xdma
+TARGET := hw
+HOST_ARCH := x86
+SYSROOT := 
+DEVICE = xilinx_u250_xdma_201830_2
 
 include ./utils.mk
 
-DSA := $(call device2dsa, $(DEVICE))
-BUILD_DIR := ./_x.$(TARGET).$(DSA)
+XL_SHELLS := xdma
+XL_SHELL := $(XL_SHELLS)
 
-BUILD_DIR_ederah = $(BUILD_DIR)/ederah
+HOST_ARCH := x86
+SYSROOT := 
 
-CXX := $(XILINX_SDX)/bin/xcpp
-XOCC := $(XILINX_SDX)/bin/xocc
+XSA := $(call device2xsa, $(DEVICE))
+TEMP_DIR := ./_x.$(TARGET).$(XSA)
+BUILD_DIR := ./build_dir.$(TARGET).$(XSA)
+
+VPP := v++
 VIVADO := $(XILINX_VIVADO)/bin/vivado
 
 #Include Libraries
-include $(ABS_COMMON_REPO)/libs/opencl/opencl.mk
-include $(ABS_COMMON_REPO)/libs/xcl2/xcl2.mk
+include $(ABS_COMMON_REPO)/common/includes/opencl/opencl.mk
+include $(ABS_COMMON_REPO)/common/includes/xcl2/xcl2.mk
 CXXFLAGS += $(xcl2_CXXFLAGS)
 LDFLAGS += $(xcl2_LDFLAGS)
 HOST_SRCS += $(xcl2_SRCS)
 
-CXXFLAGS += $(opencl_CXXFLAGS) -Wall -O0 -g -std=c++14
+CXXFLAGS += $(opencl_CXXFLAGS) -Wall -O0 -g -std=c++11
 LDFLAGS += $(opencl_LDFLAGS)
 
 HOST_SRCS += ../sw/kernel.cpp
-
 # Host compiler global settings
 CXXFLAGS += -fmessage-length=0
-LDFLAGS += -lrt -lstdc++
+LDFLAGS += -lrt -lstdc++ 
 
-ifeq ($(TARGET),hw_emu)
-	CLDEBUG ?= -g
+ifneq ($(HOST_ARCH), x86)
+	LDFLAGS += --sysroot=$(SYSROOT)
 endif
 
 # Kernel compiler global settings
-CLFLAGS += -t $(TARGET) --platform $(DEVICE) --save-temps $(CLDEBUG)
+CLFLAGS += -t $(TARGET) --platform $(DEVICE) --save-temps 
+ifneq ($(TARGET), hw)
+	CLFLAGS += -g
+endif
 
+EXECUTABLE = host
+CMD_ARGS = $(BUILD_DIR)/ederah.xclbin
+EMCONFIG_DIR = $(TEMP_DIR)
+EMU_DIR = $(TEMP_DIR)/data/emulation
 
-EXECUTABLE = ederah.exe
-CMD_ARGS = $(XCLBIN)/ederah.$(TARGET).$(DSA).xclbin
-
-EMCONFIG_DIR = $(XCLBIN)/$(DSA)
-
-BINARY_CONTAINERS += $(XCLBIN)/ederah.$(TARGET).$(DSA).xclbin
-BINARY_CONTAINER_ederah_OBJS += $(XCLBIN)/ederah.$(TARGET).$(DSA).xo
+BINARY_CONTAINERS += $(BUILD_DIR)/ederah.xclbin
+BINARY_CONTAINER_ederah_OBJS += $(TEMP_DIR)/ederah.xo
 
 CP = cp -rf
 
 ifeq ($(DEVICE),xilinx_u250_xdma_201830_2)
-	FRIENDLY_DEVICE ?= U250
+	FRIENDLY_DEVICE ?= U250x
+else ifeq ($(DEVICE),xilinx_u250_qdma_201910_1)
+	FRIENDLY_DEVICE ?= U250q
 else ifeq ($(DEVICE),$(AWS_PLATFORM))
 	FRIENDLY_DEVICE ?= AWS
 else
-	FRIENDLY_DEVICE ?= NKD # NOT A KNOWN DEVICE
+	FRIENDLY_DEVICE ?= NKD# NOT A KNOWN DEVICE
 endif
 
 # Execution
@@ -110,15 +117,16 @@ build: $(BINARY_CONTAINERS)
 .PHONY: run_aws
 run_aws: cp $(EXECUTABLE) ../../ederah/
 
-# Building kernel
-$(XCLBIN)/ederah.$(TARGET).$(DSA).xo: ../hw/$(XL_SHELL)/kernel.xml package_kernel.tcl gen_xo.tcl ../hw/tools/*.vhd ../hw/engine/*.vhd ../hw/$(XL_SHELL)/*.sv ../hw/$(XL_SHELL)/*.v ../hw/$(XL_SHELL)/*.vhd
-	mkdir -p $(XCLBIN)
-	$(VIVADO) -mode batch -source gen_xo.tcl -tclargs $(XCLBIN)/ederah.$(TARGET).$(DSA).xo ederah $(TARGET) $(DSA) $(XL_SHELL)
 
-# Building bistream
-$(XCLBIN)/ederah.$(TARGET).$(DSA).xclbin: $(BINARY_CONTAINER_ederah_OBJS)
-	mkdir -p $(XCLBIN)
-	$(XOCC) $(CLFLAGS) $(LDCLFLAGS) -lo $(XCLBIN)/ederah.$(TARGET).$(DSA).xclbin $(XCLBIN)/ederah.$(TARGET).$(DSA).xo
+# Building bitsream
+$(BUILD_DIR)/ederah.xclbin: $(BINARY_CONTAINER_ederah_OBJS)
+	mkdir -p $(BUILD_DIR)
+	$(VPP) $(CLFLAGS) --temp_dir $(BUILD_DIR) -l $(LDCLFLAGS) -o'$@' $(+)
+
+# Building kernel
+$(TEMP_DIR)/ederah.xo: ../hw/$(XL_SHELL)/kernel.xml ../hw/$(XL_SHELL)/package_kernel.tcl gen_xo.tcl ../hw/tools/*.vhd ../hw/engine/*.vhd ../hw/$(XL_SHELL)/*.sv ../hw/$(XL_SHELL)/*.v ../hw/$(XL_SHELL)/*.vhd
+	mkdir -p $(TEMP_DIR)
+	$(VIVADO) -mode batch -source gen_xo.tcl -tclargs $(TEMP_DIR)/ederah.xo ederah $(TARGET) $(XSA) $(XL_SHELL)
 
 # Building Host
 $(EXECUTABLE): check-xrt $(HOST_SRCS) $(HOST_HDRS)
@@ -129,18 +137,23 @@ $(EMCONFIG_DIR)/emconfig.json:
 	emconfigutil --platform $(DEVICE) --od $(EMCONFIG_DIR)
 
 check: all
-ifeq ($(TARGET),$(filter $(TARGET),hw_emu))
+ifeq ($(TARGET),$(filter $(TARGET),sw_emu hw_emu))
+ifeq ($(HOST_ARCH), x86)
 	$(CP) $(EMCONFIG_DIR)/emconfig.json .
-	XCL_EMULATION_MODE=$(TARGET) ./$(EXECUTABLE) -b $(XCLBIN)/ederah.$(TARGET).$(DSA).xclbin -n $(NFA_DATA_FILE) -w $(WORKLOAD_FILE) -r $(RESULT_FILE) -o $(BENCHMARK_FILE) -f $(FIRST_BATCH_SIZE) -m $(MAX_BATCH_SIZE) -i $(ITERATIONS) -k $(KERNELS_TO_RUN)
+	XCL_EMULATION_MODE=$(TARGET) ./$(EXECUTABLE) -b $(BUILD_DIR)/ederah.xclbin -n $(NFA_DATA_FILE) -w $(WORKLOAD_FILE) -r $(RESULT_FILE) -o $(BENCHMARK_FILE) -f $(FIRST_BATCH_SIZE) -m $(MAX_BATCH_SIZE) -i $(ITERATIONS) -k $(KERNELS_TO_RUN)
+endif
 else
-	 ./$(EXECUTABLE) -b $(XCLBIN)/ederah.$(TARGET).$(DSA).xclbin -n $(NFA_DATA_FILE) -w $(WORKLOAD_FILE) -r $(RESULT_FILE) -o $(BENCHMARK_FILE) -f $(FIRST_BATCH_SIZE) -m $(MAX_BATCH_SIZE) -i $(ITERATIONS) -k $(KERNELS_TO_RUN)
+ifeq ($(HOST_ARCH), x86)
+	./$(EXECUTABLE) -b $(BUILD_DIR)/ederah.xclbin -n $(NFA_DATA_FILE) -w $(WORKLOAD_FILE) -r $(RESULT_FILE) -o $(BENCHMARK_FILE) -f $(FIRST_BATCH_SIZE) -m $(MAX_BATCH_SIZE) -i $(ITERATIONS) -k $(KERNELS_TO_RUN)
+endif
 endif
 ifneq ($(TARGET),$(findstring $(TARGET), hw hw_emu))
 $(warning WARNING:Application supports only hw hw_emu TARGET. Please use the target for running the application)
 endif
 
-	sdx_analyze profile -i profile_summary.csv -f html
-
+ifeq ($(HOST_ARCH), x86)
+	perf_analyze profile -i profile_summary.csv -f html
+endif
 
 aws_build: check-aws_repo #$(BINARY_CONTAINERS)
 	mkdir -p _aws
@@ -153,9 +166,9 @@ aws_build: check-aws_repo #$(BINARY_CONTAINERS)
 clean:
 	-$(RMDIR) $(EXECUTABLE) $(XCLBIN)/{*sw_emu*,*hw_emu*} 
 	-$(RMDIR) profile_* TempConfig system_estimate.xtxt *.rpt *.csv 
-	-$(RMDIR) src/*.ll _xocc_* .Xil emconfig.json dltmp* xmltmp* *.log *.jou *.wcfg *.wdb
+	-$(RMDIR) src/*.ll *v++* .Xil emconfig.json dltmp* xmltmp* *.log *.jou *.wcfg *.wdb
 
 cleanall: clean
-	-$(RMDIR) $(XCLBIN)
-	-$(RMDIR) _x _aws
+	-$(RMDIR) build_dir*
+	-$(RMDIR) _x.* *xclbin.run_summary qemu-memory-_* emulation/ _vimage/ pl* start_simulation.sh *.xclbin
 	-$(RMDIR) ./tmp_kernel_pack* ./packaged_kernel* 

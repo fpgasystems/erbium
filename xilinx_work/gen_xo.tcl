@@ -12,7 +12,7 @@ set shell     [lindex $::argv 4]
 
 set suffix "${krnl_name}_${target}_${device}"
 
-source -notrace package_kernel.tcl
+source -notrace ../hw/${shell}/package_kernel.tcl
 
 if {[file exists "${xoname}"]} {
     file delete -force "${xoname}"

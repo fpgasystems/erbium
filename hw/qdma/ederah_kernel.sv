@@ -62,12 +62,6 @@ reg  [1:0]                           nxt_reader_state;
 
 reg  [64-1:0]                        nfa_hash_r;
 wire                                 nfa_reload;
-
-wire                                 nfa_start;
-wire                                 nfa_read_done;
-
-wire                                 query_start;
-wire                                 query_read_done;
 //
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -120,9 +114,9 @@ end
 always@(*) begin
     case (reader_state)
       IDLE           : nxt_reader_state = (ap_start_pulse) ? ((nfa_reload) ? READ_NFA : WAIT_ALL_EDGES) : IDLE;
-      READ_NFA       : nxt_reader_state = (inputs_stream_tlast) ? WAIT_ALL_EDGES : READ_NFA;
+      READ_NFA       : nxt_reader_state = (inputs_stream_tlast & inputs_stream_tready & inputs_stream_tvalid) ? WAIT_ALL_EDGES : READ_NFA;
       WAIT_ALL_EDGES : nxt_reader_state = READ_QUERY;
-      READ_QUERY     : nxt_reader_state = (inputs_stream_tlast) ? IDLE           : READ_QUERY;
+      READ_QUERY     : nxt_reader_state = (inputs_stream_tlast & inputs_stream_tready & inputs_stream_tvalid) ? IDLE           : READ_QUERY;
       default        : nxt_reader_state = IDLE;
     endcase
 end
@@ -151,8 +145,8 @@ ederah_wrapper #(
   .G_DATA_BUS_WIDTH         ( C_RESULTS_STREAM_TDATA_WIDTH )
 )
 inst_wrapper (
-  .clk_i                    ( kernel_clk            ),
-  .rst_i                    ( kernel_rst_n          ),
+  .clk_i                    ( data_clk              ), // kernel_clk
+  .rst_i                    ( data_rst_n            ), // kernel_rst_n
   .stats_on_i               ( 1'b0                  ),
   // input
   .rd_data_i                ( inputs_stream_tdata   ),
@@ -167,7 +161,8 @@ inst_wrapper (
   .wr_ready_i               ( results_stream_tready )
 );
 
-// results_stream_tkeep
+assign results_stream_tkeep = {C_INPUTS_STREAM_TDATA_WIDTH/8-1{1'b1}};
+
 // inputs_stream_tkeep
 
 endmodule : ederah_kernel

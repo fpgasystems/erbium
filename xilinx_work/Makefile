@@ -2,7 +2,7 @@
 
 help::
 	$(ECHO) "Makefile Usage:"
-	$(ECHO) "  make all TARGET=<hw_emu/hw> DEVICE=<FPGA platform> XL_SHELL=<xdma/qdma>" 
+	$(ECHO) "  make all TARGET=<hw_emu/hw> DEVICE=<FPGA platform> KERNELS=1"
 	$(ECHO) "      Command to generate the design for specified Target and Device."
 	$(ECHO) ""
 	$(ECHO) "  make clean "
@@ -11,13 +11,13 @@ help::
 	$(ECHO) "  make cleanall"
 	$(ECHO) "      Command to remove all the generated files."
 	$(ECHO) ""
-	$(ECHO) "  make check TARGET=<hw_emu/hw> DEVICE=<FPGA platform> XL_SHELL=<xdma/qdma>"
+	$(ECHO) "  make check TARGET=<hw_emu/hw> DEVICE=<FPGA platform> KERNELS=1"
 	$(ECHO) "      Command to run application in emulation."
 	$(ECHO) ""
-	$(ECHO) "  make build TARGET=<hw_emu/hw> DEVICE=<FPGA platform> XL_SHELL=<xdma/qdma>"
+	$(ECHO) "  make build TARGET=<hw_emu/hw> DEVICE=<FPGA platform> KERNELS=1"
 	$(ECHO) "      Command to build xclbin application."
 	$(ECHO) ""
-	$(ECHO) "  make aws_build DEVICE=<FPGA platform>"
+	$(ECHO) "  make aws_build DEVICE=<FPGA platform> KERNELS=1"
 	$(ECHO) "      Command to build AWS xclbin application on AWS Cloud."
 	$(ECHO) ""
 
@@ -30,11 +30,17 @@ TARGET := hw
 HOST_ARCH := x86
 SYSROOT := 
 DEVICE = xilinx_u250_xdma_201830_2
+KERNELS = 1
 
 include ./utils.mk
 
-XL_SHELLS := xdma
-XL_SHELL := $(XL_SHELLS)
+ifeq ($(findstring xdma, $(DEVICE)), xdma)
+	XL_SHELL := xdma
+else ifeq ($(findstring qdma, $(DEVICE)), qdma)
+	XL_SHELL := qdma
+else
+	$(error This kernel is not supported by $(DEVICE))
+endif
 
 HOST_ARCH := x86
 SYSROOT := 
@@ -56,7 +62,11 @@ HOST_SRCS += $(xcl2_SRCS)
 CXXFLAGS += $(opencl_CXXFLAGS) -Wall -O0 -g -std=c++11
 LDFLAGS += $(opencl_LDFLAGS)
 
-HOST_SRCS += ../sw/kernel.cpp
+ifneq ($(XL_SHELL), xdma)
+	HOST_SRCS += ../sw/kernel_qdma.cpp
+else
+	HOST_SRCS += ../sw/kernel.cpp
+endif
 # Host compiler global settings
 CXXFLAGS += -fmessage-length=0
 LDFLAGS += -lrt -lstdc++ 
@@ -82,9 +92,11 @@ BINARY_CONTAINER_ederah_OBJS += $(TEMP_DIR)/ederah.xo
 CP = cp -rf
 
 ifeq ($(DEVICE),xilinx_u250_xdma_201830_2)
-	FRIENDLY_DEVICE ?= U250x
-else ifeq ($(DEVICE),xilinx_u250_qdma_201910_1)
-	FRIENDLY_DEVICE ?= U250q
+	FRIENDLY_DEVICE ?= x250
+else ifeq ($(DEVICE),xilinx_u250_qdma_201920_1)
+	FRIENDLY_DEVICE ?= q250
+else ifeq ($(DEVICE),xilinx_u280_xdma_201920_1) 
+	FRIENDLY_DEVICE ?= x280
 else ifeq ($(DEVICE),$(AWS_PLATFORM))
 	FRIENDLY_DEVICE ?= AWS
 else
@@ -92,18 +104,22 @@ else
 endif
 
 # Execution
-KERNEL_CONFIG_TAG := 1K2C
-DATA_INPUT_PATH := ../sw/build-mct_pfD
+KERNEL_CONFIG_TAG := $(KERNELS)K1E
+DATA_INPUT_PATH := $(if ($(TARGET), hw),../sw/build-zrh,../sw/build-mct_pfD)
 DATA_OUTPUT_PATH := ~/Documents/workspace
 FIRST_BATCH_SIZE := 1
 MAX_BATCH_SIZE := 1000000
-ITERATIONS := 1000
+ITERATIONS := 10
 KERNELS_TO_RUN := 1
 #
 NFA_DATA_FILE := $(DATA_INPUT_PATH)/mem_edges.bin
 WORKLOAD_FILE := $(DATA_INPUT_PATH)/benchmark.bin
 RESULT_FILE := $(DATA_OUTPUT_PATH)/res_$(FRIENDLY_DEVICE)_pfD_$(KERNEL_CONFIG_TAG).csv
 BENCHMARK_FILE := $(DATA_OUTPUT_PATH)/ben_$(FRIENDLY_DEVICE)_pfD_$(KERNEL_CONFIG_TAG).csv
+
+# SIM (HW_EMU) tag
+# kernel tag
+# datetime time
 
 .PHONY: all clean cleanall docs emconfig
 all: check-devices $(EXECUTABLE) $(BINARY_CONTAINERS) emconfig
@@ -115,13 +131,13 @@ exe: $(EXECUTABLE)
 build: $(BINARY_CONTAINERS)
 
 .PHONY: run_aws
-run_aws: cp $(EXECUTABLE) ../../ederah/
+run_aws: cp $(EXECUTABLE) ../../../ederah/
 
 
 # Building bitsream
 $(BUILD_DIR)/ederah.xclbin: $(BINARY_CONTAINER_ederah_OBJS)
 	mkdir -p $(BUILD_DIR)
-	$(VPP) $(CLFLAGS) --temp_dir $(BUILD_DIR) -l $(LDCLFLAGS) -o'$@' $(+)
+	$(VPP) $(CLFLAGS) --temp_dir $(BUILD_DIR) -l $(LDCLFLAGS) --jobs $(shell grep -c ^processor /proc/cpuinfo) --optimize 3 --nk ederah:$(KERNELS)-o'$@' $(+)
 
 # Building kernel
 $(TEMP_DIR)/ederah.xo: ../hw/$(XL_SHELL)/kernel.xml ../hw/$(XL_SHELL)/package_kernel.tcl gen_xo.tcl ../hw/tools/*.vhd ../hw/engine/*.vhd ../hw/$(XL_SHELL)/*.sv ../hw/$(XL_SHELL)/*.v ../hw/$(XL_SHELL)/*.vhd

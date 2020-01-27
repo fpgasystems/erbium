@@ -307,7 +307,7 @@ int main(int argc, char** argv)
     
     uint32_t queries_size;
     uint32_t results_size;
-    uint32_t aux = 6555;
+    uint32_t aux = 0;
 
     std::chrono::duration<double, std::nano> total_ns;
     uint64_t queries_ns;

@@ -25,7 +25,7 @@ int main(int argc, char** argv)
 
     SortOption sorting_option = MCT_DESC;
     std::string dest_folder = "build/";
-    std::string rules_file = "../../../Documents/amadeus-share/mct_rules.csv";
+    std::string rules_file = "../data/mct_rules.csv";
 
     int opt;
     while ((opt = getopt(argc, argv, "d:r:zs:h")) != -1) {
@@ -44,7 +44,7 @@ int main(int argc, char** argv)
             break;
         case 'z':
             dest_folder = "build-zrh/";
-            rules_file = "../../../Documents/amadeus-share/zrh_rules.csv";
+            rules_file = "../data/mct_rules-zrh.csv";
             break;
         case 'h':
         default: /* '?' */
@@ -79,7 +79,7 @@ int main(int argc, char** argv)
     auto start = std::chrono::high_resolution_clock::now();
     
     nfa_bre::rulePack_s rp;
-    rp.load_ruleType("../../../Documents/amadeus-share/ruleTypeDefinition_MINCT_1-0_Template1.xml");
+    rp.load_ruleType("../data/ruleTypeDefinition_MCT_v1.xml");
     rp.load_rules(rules_file);
 
     auto finish = std::chrono::high_resolution_clock::now();

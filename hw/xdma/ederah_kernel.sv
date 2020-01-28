@@ -174,6 +174,7 @@ inst_wrapper (
   // output
   .wr_data_o                ( wr_tdata             ),
   .wr_valid_o               ( wr_tvalid            ),
+  .wr_last_o                (                      ),
   .wr_ready_i               ( wr_tready            )
 );
 

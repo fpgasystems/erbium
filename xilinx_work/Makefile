@@ -145,7 +145,7 @@ $(BUILD_DIR)/ederah.xclbin: $(BINARY_CONTAINER_ederah_OBJS)
 	$(VPP) $(CLFLAGS) --temp_dir $(BUILD_DIR) -l $(LDCLFLAGS) --jobs $(shell grep -c ^processor /proc/cpuinfo) --optimize 3 --nk ederah:$(KERNELS) -o'$@' $(+)
 
 # Building kernel
-$(TEMP_DIR)/ederah.xo: ../hw/$(XL_SHELL)/kernel.xml ../hw/$(XL_SHELL)/package_kernel.tcl gen_xo.tcl ../hw/tools/*.vhd ../hw/engine/*.vhd ../hw/$(XL_SHELL)/*.sv ../hw/$(XL_SHELL)/*.v ../hw/$(XL_SHELL)/*.vhd
+$(TEMP_DIR)/ederah.xo: ../hw/$(XL_SHELL)/kernel.xml ../hw/$(XL_SHELL)/package_kernel.tcl gen_xo.tcl ../hw/tools/*.vhd ../hw/engine/*.vhd ../hw/$(XL_SHELL)/*.sv ../hw/$(XL_SHELL)/*.v
 	mkdir -p $(TEMP_DIR)
 	$(VIVADO) -mode batch -source gen_xo.tcl -tclargs $(TEMP_DIR)/ederah.xo ederah $(TARGET) $(XSA) $(XL_SHELL)
 

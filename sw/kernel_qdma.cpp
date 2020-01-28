@@ -1,7 +1,6 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <iostream>
-#include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <assert.h>
@@ -17,6 +16,8 @@
 #include <vector>
 #include <chrono>
 #include <unistd.h>     // parameters
+#include <stdlib.h>     /* srand, rand */
+#include <time.h>       /* time */
 #include <thread>
 
 typedef uint16_t                                operands_t;
@@ -318,6 +319,9 @@ int main(int argc, char** argv)
     printf("> NFA size: %u bytes\n", nfadata_size);
     printf("> NFA hash: %lu\n", nfa_hash);
 
+    srand(time(NULL));
+    nfa_hash = nfa_hash + rand();
+
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // WORKLOAD SETUP                                                                             //
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -365,6 +369,7 @@ int main(int argc, char** argv)
         // batch workload
         queries_size = bsize * query_size;
         results_size = bsize * sizeof(operands_t) * ((has_statistics) ? 4 : 1);
+        results_size = (results_size / 64 + ((results_size % 64) ? 1 : 0)) * 64; // gets full lines
         queries_data = new std::vector<operands_t, aligned_allocator<operands_t>>(queries_size);
         results = new std::vector<uint16_t, aligned_allocator<uint16_t>>(results_size);
         gabarito = (uint32_t*) calloc(bsize, sizeof(*gabarito));
@@ -399,38 +404,50 @@ int main(int argc, char** argv)
             {
                 // Send NFA
                 cl_stream_xfer_req wr_req{0};
-                wr_req.flags = CL_STREAM_EOT;
-                std::thread thread_nfa(xcl::Stream::writeStream,
-                                 input_stream,
-                                 nfa_data->data(),
-                                 nfadata_size,
-                                 &wr_req,
-                                 &ret);
-                thread_nfa.join();
-                first_exec = false;
+                wr_req.flags = CL_STREAM_EOT | CL_STREAM_NONBLOCKING;
+                wr_req.priv_data = (void *)"nfa_stream";
+                OCL_CHECK(ret,
+                        xcl::Stream::writeStream(
+                            input_stream, nfa_data->data(), nfadata_size, &wr_req, &ret));
             }
+
             // Send Queries
             cl_stream_xfer_req queries_wr{0};
-            queries_wr.flags = CL_STREAM_EOT;
-            std::thread thread_queries(xcl::Stream::writeStream,
-                     input_stream,
-                     queries_data->data(),
-                     queries_size,
-                     &queries_wr,
-                     &ret);
+            queries_wr.flags = CL_STREAM_EOT | CL_STREAM_NONBLOCKING;
+            queries_wr.priv_data = (void *)"query_stream";
+            OCL_CHECK(ret,
+                        xcl::Stream::writeStream(
+                            input_stream, queries_data->data(), queries_size, &queries_wr, &ret));
 
             // Receive results
             cl_stream_xfer_req rd_req{0};
-            rd_req.flags = CL_STREAM_EOT;
-            std::thread thread_results(xcl::Stream::readStream,
-                             result_stream,
-                             results->data(),
-                             results_size,
-                             &rd_req,
-                             &ret);
+            rd_req.flags = CL_STREAM_EOT | CL_STREAM_NONBLOCKING;
+            rd_req.priv_data = (void *)"result_stream";
+            OCL_CHECK(ret,
+                    xcl::Stream::readStream(
+                        result_stream, results->data(), results_size, &rd_req, &ret));
 
-            thread_queries.join();
-            thread_results.join();
+
+            if (first_exec)
+            {
+                // Checking the request completion
+                cl_streams_poll_req_completions poll_req[3]{0, 0, 0}; // 2 Requests
+                auto num_compl = 3;
+                OCL_CHECK(ret,
+                          xcl::Stream::pollStreams(
+                              device.get(), poll_req, 3, 3, &num_compl, 10000, &ret));
+                first_exec = false;
+            }
+            else
+            {    
+                // Checking the request completion
+                cl_streams_poll_req_completions poll_req[2]{0, 0}; // 2 Requests
+                auto num_compl = 2;
+                OCL_CHECK(ret,
+                          xcl::Stream::pollStreams(
+                              device.get(), poll_req, 2, 2, &num_compl, 10000, &ret));
+                // Blocking API, waits for 2 poll request completion or 50000ms, whichever occurs first.
+            }
 
             finish = std::chrono::high_resolution_clock::now();
             queue.finish();
@@ -444,10 +461,10 @@ int main(int argc, char** argv)
 
             file_benchmark << bsize
                          << "," << kernel_ns
-                         << "," << total_ns.count() << std::endl;
+                         << "," << (uint64_t) total_ns.count() << std::endl;
             
-            double throput = calc_throput(evtKernel, results_size);
-            std::cout << "[ Case: 1 ] -> Throughput = " << throput << " GB/s\n";
+            /*double throput = calc_throput(evtKernel, results_size);
+            std::cout << " -> Throughput = " << throput << " GB/s\n";*/
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////
@@ -480,6 +497,7 @@ int main(int argc, char** argv)
     // Releasing Streams
     xcl::Stream::releaseStream(input_stream);
     xcl::Stream::releaseStream(result_stream);
+    queue.flush();
 
     delete [] workload_buff;
     file_benchmark.close();

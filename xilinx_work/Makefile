@@ -105,7 +105,11 @@ endif
 
 # Execution
 KERNEL_CONFIG_TAG := $(KERNELS)K1E
-DATA_INPUT_PATH := $(if ($(TARGET), hw),../sw/build-zrh,../sw/build-mct_pfD)
+ifeq ($(TARGET),hw_emu)
+	DATA_INPUT_PATH ?= ../sw/build-zrh
+else
+	DATA_INPUT_PATH ?= ../sw/build-mct_pfD
+endif
 DATA_OUTPUT_PATH := ~/Documents/workspace
 FIRST_BATCH_SIZE := 1
 MAX_BATCH_SIZE := 1000000
@@ -120,8 +124,9 @@ BENCHMARK_FILE := $(DATA_OUTPUT_PATH)/ben_$(FRIENDLY_DEVICE)_pfD_$(KERNEL_CONFIG
 # SIM (HW_EMU) tag
 # kernel tag
 # datetime time
+# exec directory
 
-.PHONY: all clean cleanall docs emconfig
+.PHONY: all clean cleanall emconfig
 all: check-devices $(EXECUTABLE) $(BINARY_CONTAINERS) emconfig
 
 .PHONY: exe
@@ -137,7 +142,7 @@ run_aws: cp $(EXECUTABLE) ../../../ederah/
 # Building bitsream
 $(BUILD_DIR)/ederah.xclbin: $(BINARY_CONTAINER_ederah_OBJS)
 	mkdir -p $(BUILD_DIR)
-	$(VPP) $(CLFLAGS) --temp_dir $(BUILD_DIR) -l $(LDCLFLAGS) --jobs $(shell grep -c ^processor /proc/cpuinfo) --optimize 3 --nk ederah:$(KERNELS)-o'$@' $(+)
+	$(VPP) $(CLFLAGS) --temp_dir $(BUILD_DIR) -l $(LDCLFLAGS) --jobs $(shell grep -c ^processor /proc/cpuinfo) --optimize 3 --nk ederah:$(KERNELS) -o'$@' $(+)
 
 # Building kernel
 $(TEMP_DIR)/ederah.xo: ../hw/$(XL_SHELL)/kernel.xml ../hw/$(XL_SHELL)/package_kernel.tcl gen_xo.tcl ../hw/tools/*.vhd ../hw/engine/*.vhd ../hw/$(XL_SHELL)/*.sv ../hw/$(XL_SHELL)/*.v ../hw/$(XL_SHELL)/*.vhd
@@ -170,6 +175,13 @@ endif
 ifeq ($(HOST_ARCH), x86)
 	perf_analyze profile -i profile_summary.csv -f html
 endif
+
+.PHONE: run
+run:
+	$(CP) $(BUILD_DIR)/ederah.xclbin /home/maschif/ederah/ederah_$(FRIENDLY_DEVICE)_$(KERNEL_CONFIG_TAG).xclbin
+	$(CP) $(EXECUTABLE) /home/maschif/ederah/
+	/home/maschif/ederah/$(EXECUTABLE) -b /home/maschif/ederah/ederah_$(FRIENDLY_DEVICE)_$(KERNEL_CONFIG_TAG).xclbin -n $(NFA_DATA_FILE) -w $(WORKLOAD_FILE) -r $(RESULT_FILE) -o $(BENCHMARK_FILE) -f $(FIRST_BATCH_SIZE) -m $(MAX_BATCH_SIZE) -i $(ITERATIONS) -k $(KERNELS_TO_RUN)
+
 
 aws_build: check-aws_repo #$(BINARY_CONTAINERS)
 	mkdir -p _aws

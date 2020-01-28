@@ -62,6 +62,7 @@ reg  [1:0]                           nxt_reader_state;
 
 reg  [64-1:0]                        nfa_hash_r;
 wire                                 nfa_reload;
+wire                                 inputs_stream_tvalid_krl;
 //
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -98,7 +99,6 @@ assign ap_ready = ap_done;
 
 localparam [1:0] IDLE           = 2'b00,
                  READ_NFA       = 2'b01,
-                 WAIT_ALL_EDGES = 2'b10,
                  READ_QUERY     = 2'b11;
 
 // Reader State
@@ -113,16 +113,16 @@ end
 
 always@(*) begin
     case (reader_state)
-      IDLE           : nxt_reader_state = (ap_start_pulse) ? ((nfa_reload) ? READ_NFA : WAIT_ALL_EDGES) : IDLE;
-      READ_NFA       : nxt_reader_state = (inputs_stream_tlast & inputs_stream_tready & inputs_stream_tvalid) ? WAIT_ALL_EDGES : READ_NFA;
-      WAIT_ALL_EDGES : nxt_reader_state = READ_QUERY;
-      READ_QUERY     : nxt_reader_state = (inputs_stream_tlast & inputs_stream_tready & inputs_stream_tvalid) ? IDLE           : READ_QUERY;
+      IDLE           : nxt_reader_state = (ap_start_pulse) ? ((nfa_reload) ? READ_NFA : READ_QUERY) : IDLE;
+      READ_NFA       : nxt_reader_state = (inputs_stream_tlast & inputs_stream_tready & inputs_stream_tvalid) ? READ_QUERY : READ_NFA;
+      READ_QUERY     : nxt_reader_state = (inputs_stream_tlast & inputs_stream_tready & inputs_stream_tvalid) ? IDLE       : READ_QUERY;
       default        : nxt_reader_state = IDLE;
     endcase
 end
 
-assign inputs_stream_ttype = (reader_state == READ_NFA) ? 1'b0          : 1'b1;
+assign inputs_stream_ttype = (reader_state == READ_NFA) ? 1'b0 : 1'b1;
 
+assign inputs_stream_tvalid_krl = (reader_state == IDLE) ? 1'b0 : inputs_stream_tvalid;
 
 // NFA ID control
 always@(posedge data_clk) begin
@@ -150,7 +150,7 @@ inst_wrapper (
   .stats_on_i               ( 1'b0                  ),
   // input
   .rd_data_i                ( inputs_stream_tdata   ),
-  .rd_valid_i               ( inputs_stream_tvalid  ),
+  .rd_valid_i               ( inputs_stream_tvalid_krl ),
   .rd_last_i                ( inputs_stream_tlast   ),
   .rd_stype_i               ( inputs_stream_ttype   ),
   .rd_ready_o               ( inputs_stream_tready  ),

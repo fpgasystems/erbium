@@ -1,5 +1,5 @@
 set path_to_packaged "./packaged_kernel/ip_${suffix}"
-set path_to_tmp_project "./tmp_kernel_pack_${suffix}"
+set path_to_tmp_project "./_xo-tmp_${suffix}"
 
 create_project -force kernel_pack $path_to_tmp_project 
 read_vhdl -library tools [glob ../hw/tools/*.vhd]

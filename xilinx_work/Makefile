@@ -46,8 +46,8 @@ HOST_ARCH := x86
 SYSROOT := 
 
 XSA := $(call device2xsa, $(DEVICE))
-TEMP_DIR := ./_x.$(TARGET).$(XSA)
-BUILD_DIR := ./build_dir.$(TARGET).$(XSA)
+TEMP_DIR := ./_xo.$(TARGET).$(XSA)
+BUILD_DIR := ./_xclbin.$(TARGET).$(XSA).$(shell printf "%X" $(KERNELS))k
 
 VPP := v++
 VIVADO := $(XILINX_VIVADO)/bin/vivado
@@ -81,8 +81,7 @@ ifneq ($(TARGET), hw)
 	CLFLAGS += -g
 endif
 
-EXECUTABLE = host
-CMD_ARGS = $(BUILD_DIR)/ederah.xclbin
+EXECUTABLE = ederah_$(XL_SHELL)
 EMCONFIG_DIR = $(TEMP_DIR)
 EMU_DIR = $(TEMP_DIR)/data/emulation
 
@@ -95,7 +94,7 @@ ifeq ($(DEVICE),xilinx_u250_xdma_201830_2)
 	FRIENDLY_DEVICE ?= x250
 else ifeq ($(DEVICE),xilinx_u250_qdma_201920_1)
 	FRIENDLY_DEVICE ?= q250
-else ifeq ($(DEVICE),xilinx_u280_xdma_201920_1) 
+else ifeq ($(DEVICE),xilinx_u280_xdma_201920_1)
 	FRIENDLY_DEVICE ?= x280
 else ifeq ($(DEVICE),$(AWS_PLATFORM))
 	FRIENDLY_DEVICE ?= AWS
@@ -104,7 +103,7 @@ else
 endif
 
 # Execution
-KERNEL_CONFIG_TAG := $(KERNELS)K1E
+KERNEL_CONFIG_TAG := $(shell printf "%X" $(KERNELS))k1e
 ifeq ($(TARGET),hw_emu)
 	DATA_INPUT_PATH ?= ../sw/build-zrh
 else
@@ -122,22 +121,23 @@ RESULT_FILE := $(DATA_OUTPUT_PATH)/res_$(FRIENDLY_DEVICE)_pfD_$(KERNEL_CONFIG_TA
 BENCHMARK_FILE := $(DATA_OUTPUT_PATH)/ben_$(FRIENDLY_DEVICE)_pfD_$(KERNEL_CONFIG_TAG).csv
 
 # SIM (HW_EMU) tag
-# kernel tag
 # datetime time
 # exec directory
 
 .PHONY: all clean cleanall emconfig
 all: check-devices $(EXECUTABLE) $(BINARY_CONTAINERS) emconfig
 
-.PHONY: exe
-exe: $(EXECUTABLE)
-
 .PHONY: build
 build: $(BINARY_CONTAINERS)
 
-.PHONY: run_aws
-run_aws: cp $(EXECUTABLE) ../../../ederah/
+.PHONY: compile
+compile: $(EXECUTABLE)
 
+.PHONE: run
+run:
+ifeq ($(HOST_ARCH), x86)
+	./$(EXECUTABLE) -b $(BUILD_DIR)/ederah.xclbin -n $(NFA_DATA_FILE) -w $(WORKLOAD_FILE) -r $(RESULT_FILE) -o $(BENCHMARK_FILE) -f $(FIRST_BATCH_SIZE) -m $(MAX_BATCH_SIZE) -i $(ITERATIONS) -k $(KERNELS_TO_RUN)
+endif
 
 # Building bitsream
 $(BUILD_DIR)/ederah.xclbin: $(BINARY_CONTAINER_ederah_OBJS)
@@ -158,32 +158,23 @@ $(EMCONFIG_DIR)/emconfig.json:
 	emconfigutil --platform $(DEVICE) --od $(EMCONFIG_DIR)
 
 check: all
-ifeq ($(TARGET),$(filter $(TARGET),sw_emu hw_emu))
+ifeq ($(TARGET),$(filter $(TARGET),hw_emu))
 ifeq ($(HOST_ARCH), x86)
 	$(CP) $(EMCONFIG_DIR)/emconfig.json .
 	XCL_EMULATION_MODE=$(TARGET) ./$(EXECUTABLE) -b $(BUILD_DIR)/ederah.xclbin -n $(NFA_DATA_FILE) -w $(WORKLOAD_FILE) -r $(RESULT_FILE) -o $(BENCHMARK_FILE) -f $(FIRST_BATCH_SIZE) -m $(MAX_BATCH_SIZE) -i $(ITERATIONS) -k $(KERNELS_TO_RUN)
 endif
-else
-ifeq ($(HOST_ARCH), x86)
-	./$(EXECUTABLE) -b $(BUILD_DIR)/ederah.xclbin -n $(NFA_DATA_FILE) -w $(WORKLOAD_FILE) -r $(RESULT_FILE) -o $(BENCHMARK_FILE) -f $(FIRST_BATCH_SIZE) -m $(MAX_BATCH_SIZE) -i $(ITERATIONS) -k $(KERNELS_TO_RUN)
-endif
 endif
 ifneq ($(TARGET),$(findstring $(TARGET), hw hw_emu))
-$(warning WARNING:Application supports only hw hw_emu TARGET. Please use the target for running the application)
+$(warning WARNING: Application supports only hw hw_emu TARGET. Please use the target for running the application)
 endif
 
-ifeq ($(HOST_ARCH), x86)
-	perf_analyze profile -i profile_summary.csv -f html
-endif
-
-.PHONE: run
-run:
-	$(CP) $(BUILD_DIR)/ederah.xclbin /home/maschif/ederah/ederah_$(FRIENDLY_DEVICE)_$(KERNEL_CONFIG_TAG).xclbin
-	$(CP) $(EXECUTABLE) /home/maschif/ederah/
-	/home/maschif/ederah/$(EXECUTABLE) -b /home/maschif/ederah/ederah_$(FRIENDLY_DEVICE)_$(KERNEL_CONFIG_TAG).xclbin -n $(NFA_DATA_FILE) -w $(WORKLOAD_FILE) -r $(RESULT_FILE) -o $(BENCHMARK_FILE) -f $(FIRST_BATCH_SIZE) -m $(MAX_BATCH_SIZE) -i $(ITERATIONS) -k $(KERNELS_TO_RUN)
+# ifeq ($(HOST_ARCH), x86)
+# 	perf_analyze profile -i profile_summary.csv -f html
+# endif
 
 
-aws_build: check-aws_repo #$(BINARY_CONTAINERS)
+
+aws_build: check-aws_repo
 	mkdir -p _aws
 	(cd _aws && ../$(COMMON_REPO)/utility/aws/run_aws.py ../$(BINARY_CONTAINERS))
 	-$(RMDIR) _aws/to_aws
@@ -194,9 +185,9 @@ aws_build: check-aws_repo #$(BINARY_CONTAINERS)
 clean:
 	-$(RMDIR) $(EXECUTABLE) $(XCLBIN)/{*sw_emu*,*hw_emu*} 
 	-$(RMDIR) profile_* TempConfig system_estimate.xtxt *.rpt *.csv 
-	-$(RMDIR) src/*.ll *v++* .Xil emconfig.json dltmp* xmltmp* *.log *.jou *.wcfg *.wdb
+	-$(RMDIR) src/*.ll *v++* .Xil emconfig.json dltmp* xmltmp* *.log *.jou *.wcfg *.wdb *.protoinst
 
 cleanall: clean
 	-$(RMDIR) build_dir*
-	-$(RMDIR) _x.* *xclbin.run_summary qemu-memory-_* emulation/ _vimage/ pl* start_simulation.sh *.xclbin
-	-$(RMDIR) ./tmp_kernel_pack* ./packaged_kernel* 
+	-$(RMDIR) _xo.* *xclbin.run_summary qemu-memory-_* emulation/ _vimage/ pl* start_simulation.sh *.xclbin
+	-$(RMDIR) ./_xo-tmp_* ./packaged_kernel* 

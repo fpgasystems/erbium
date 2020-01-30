@@ -1,24 +1,19 @@
-#include <fcntl.h>
-#include <stdio.h>
 #include <iostream>
-#include <string.h>
-#include <math.h>
-#include <assert.h>
-#include <stdbool.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-#include <CL/opencl.h>
-#include <CL/cl_ext.h>
-#include "xclhal2.h"
+#include <string>
 
 #include <fstream>
 #include <vector>
 #include <chrono>
 #include <unistd.h>     // parameters
-#include <stdlib.h>     /* srand, rand */
-#include <time.h>       /* time */
-#include <thread>
+#include <stdlib.h>     // srand, rand
+#include <time.h>       // time
+
+// This extension file is required for stream APIs
+#include "CL/cl_ext_xilinx.h"
+// This file is required for OpenCL C++ wrapper APIs
+#include "xcl2.hpp"
+
+const unsigned char C_CACHELINE_SIZE   = 64; // in bytes
 
 typedef uint16_t                                operands_t;
 
@@ -59,6 +54,26 @@ uint64_t get_duration_ns (const cl::Event &event) {
     event.getProfilingInfo<uint64_t>(CL_PROFILING_COMMAND_END, &nstimeend);
     return (nstimeend - nstimestart);
 }
+
+struct kernel_pkg_s {
+    uint32_t num_queries;
+    uint32_t queries_size; // in bytes with padding
+    uint32_t results_size; // in bytes with padding
+    cl::Kernel krnl;
+    cl::Event  evtKernel;
+
+    bool first_exec = true;
+
+    uint offset_queries;
+    uint offset_results;
+
+    cl_stream input_stream;
+    cl_stream result_stream;
+
+    char tag_nfa[32];
+    char tag_query[32];
+    char tag_result[32];
+};
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //                                                                                                //
@@ -265,7 +280,6 @@ int main(int argc, char** argv)
     cl::Context context;
     cl::CommandQueue queue;
     cl::Program program;
-    cl::Kernel kernel;
 
     auto devices = xcl::get_xil_devices();
     device = devices[0];
@@ -277,31 +291,41 @@ int main(int argc, char** argv)
     OCL_CHECK(err, context = cl::Context({device}, NULL, NULL, NULL, &err));
     OCL_CHECK(err, queue = cl::CommandQueue(context, {device}, CL_QUEUE_PROFILING_ENABLE, &err));
     OCL_CHECK(err, program = cl::Program(context, devices, bins, NULL, &err));
-    OCL_CHECK(err, kernel = cl::Kernel(program, "ederah:{ederah_1}", &err));
     auto platform_id = device.getInfo<CL_DEVICE_PLATFORM>(&err);
+
+    //Creating Kernel objects
+    std::vector<kernel_pkg_s> krnls(n_kernels);
+    for (int i = 0; i < n_kernels; i++) {
+        auto krnl_name_full = "ederah:{ederah_" + std::to_string(i + 1) + "}";
+        OCL_CHECK(err, krnls[i].krnl = cl::Kernel(program, krnl_name_full.c_str(), &err));
+        sprintf(krnls[i].tag_nfa, "tag_nfa_%da", i);
+        sprintf(krnls[i].tag_query, "tag_query_%da", i);
+        sprintf(krnls[i].tag_result, "tag_result_%da", i);
+    }
 
     //----------- Streaming Queues
 
     xcl::Stream::init(platform_id);
 
     cl_int ret;
-    cl_mem_ext_ptr_t ext;
+    for (int i = 0; i < n_kernels; i++)
+    {
+        cl_mem_ext_ptr_t ext;
+        ext.param = krnls[i].krnl.get();
+        ext.obj = NULL;
 
-    cl_stream input_stream;
-    cl_stream result_stream;
+        // Input stream
+        ext.flags = 6;
+        OCL_CHECK(ret,
+                krnls[i].input_stream = xcl::Stream::createStream(
+                    device.get(), CL_STREAM_WRITE_ONLY, CL_STREAM, &ext, &ret));
 
-    // Input stream
-    ext.param = kernel.get();
-    ext.obj = NULL;
-    ext.flags = 6;
-    OCL_CHECK(ret, input_stream = xcl::Stream::createStream(
-                        device.get(), CL_STREAM_WRITE_ONLY, CL_STREAM, &ext, &ret));
-
-    // Result stream
-    ext.flags = 5;
-    OCL_CHECK(ret, result_stream = xcl::Stream::createStream(
-                        device.get(), CL_STREAM_READ_ONLY, CL_STREAM, &ext, &ret));
-
+        // Result stream
+        ext.flags = 5;
+        OCL_CHECK(ret,
+                krnls[i].result_stream = xcl::Stream::createStream(
+                    device.get(), CL_STREAM_READ_ONLY, CL_STREAM, &ext, &ret));
+    }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // NFA SETUP                                                                                  //
@@ -349,7 +373,6 @@ int main(int argc, char** argv)
     uint32_t aux = 0;
     uint32_t* gabarito;
 
-    cl::Event evtKernel;
     auto start = std::chrono::high_resolution_clock::now();
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::nano> total_ns;
@@ -357,22 +380,54 @@ int main(int argc, char** argv)
 
     // Set the arguments to our compute kernel
     cl_uint d_empty = 0;
-    kernel.setArg(0, sizeof(cl_uint), &d_empty); // TODO: remove them
-    kernel.setArg(1, sizeof(cl_uint), &d_empty);
-    kernel.setArg(2, sizeof(cl_uint), &d_empty);
-    kernel.setArg(3, sizeof(cl_uint), &d_empty);
-    kernel.setArg(4, sizeof(cl_uint), &nfa_hash);
+    int kid = 0;
+    for (kid = 0; kid < n_kernels; kid++)
+    {
+        krnls[kid].krnl.setArg(0, sizeof(cl_uint), &d_empty); // TODO: remove them
+        krnls[kid].krnl.setArg(1, sizeof(cl_uint), &d_empty);
+        krnls[kid].krnl.setArg(2, sizeof(cl_uint), &d_empty);
+        krnls[kid].krnl.setArg(3, sizeof(cl_uint), &d_empty);
+        krnls[kid].krnl.setArg(4, sizeof(cl_uint), &nfa_hash);
+    }
 
-    bool first_exec = true;
     for (uint32_t bsize = min_batch_size; bsize < max_batch_size; bsize = bsize << 1)
     {
-        // batch workload
+        // Data management
         queries_size = bsize * query_size;
-        results_size = bsize * sizeof(operands_t) * ((has_statistics) ? 4 : 1);
-        results_size = (results_size / 64 + ((results_size % 64) ? 1 : 0)) * 64; // gets full lines
         queries_data = new std::vector<operands_t, aligned_allocator<operands_t>>(queries_size);
-        results = new std::vector<uint16_t, aligned_allocator<uint16_t>>(results_size);
         gabarito = (uint32_t*) calloc(bsize, sizeof(*gabarito));
+
+        ////////////////////////////////////////////////////////////////////////////////////////////
+        // KERNEL PARTITIONS                                                                      //
+        ////////////////////////////////////////////////////////////////////////////////////////////
+
+        uint the_auxq = 0;
+        uint the_auxr = 0;
+        int  used_kernels = n_kernels;
+        for (kid = 0; kid < n_kernels; kid++)
+        {
+            krnls[kid].num_queries  = bsize / n_kernels;
+            if (kid == 0)
+                krnls[kid].num_queries += bsize % n_kernels;
+
+            if (krnls[kid].num_queries == 0)
+            {
+                used_kernels = kid;
+                break;
+            }
+
+            krnls[kid].queries_size = krnls[kid].num_queries * query_size;
+            krnls[kid].results_size = krnls[kid].num_queries * sizeof(operands_t) * ((has_statistics) ? 4 : 1);
+            krnls[kid].results_size = (krnls[kid].results_size / C_CACHELINE_SIZE + ((krnls[kid].results_size % C_CACHELINE_SIZE) ? 1 : 0)) * C_CACHELINE_SIZE; // gets full liness
+
+            krnls[kid].offset_queries = the_auxq;
+            krnls[kid].offset_results = the_auxr;
+            the_auxq += krnls[kid].queries_size / sizeof(operands_t);
+            the_auxr += krnls[kid].results_size / sizeof(operands_t);
+        }
+
+        results_size = the_auxr * sizeof(uint16_t);
+        results = new std::vector<uint16_t, aligned_allocator<uint16_t>>(results_size);
 
         printf("> # of queries: %9u\n", bsize);
         printf("> Queries size: %9u bytes\n", queries_size);
@@ -395,69 +450,76 @@ int main(int argc, char** argv)
             // KERNEL EXECUTION                                                                   //
             ////////////////////////////////////////////////////////////////////////////////////////
 
+            int n_queues = 0;
             start = std::chrono::high_resolution_clock::now();
 
-            // Launch the Kernel
-            OCL_CHECK(err, err = queue.enqueueTask(kernel, NULL, &evtKernel));
-
-            if (first_exec)
+            for (kid = 0; kid < used_kernels; kid++)
             {
-                // Send NFA
-                cl_stream_xfer_req wr_req{0};
-                wr_req.flags = CL_STREAM_EOT | CL_STREAM_NONBLOCKING;
-                wr_req.priv_data = (void *)"nfa_stream";
+                // Launch the Kernel
+                OCL_CHECK(err, err = queue.enqueueTask(krnls[kid].krnl, NULL, &krnls[kid].evtKernel));
+
+                if (krnls[kid].first_exec)
+                {
+                    // Send NFA
+                    cl_stream_xfer_req wr_req{0};
+                    wr_req.flags = CL_STREAM_EOT | CL_STREAM_NONBLOCKING;
+                    wr_req.priv_data = (void *)krnls[kid].tag_nfa;
+                    OCL_CHECK(ret,
+                            xcl::Stream::writeStream(
+                                krnls[kid].input_stream, nfa_data->data(), nfadata_size, &wr_req, &ret));
+                    krnls[kid].first_exec = false;
+                    n_queues++;
+                }
+
+                // Send Queries
+                cl_stream_xfer_req queries_wr{0};
+                queries_wr.flags = CL_STREAM_EOT | CL_STREAM_NONBLOCKING;
+                queries_wr.priv_data = (void *)krnls[kid].tag_query;
                 OCL_CHECK(ret,
-                        xcl::Stream::writeStream(
-                            input_stream, nfa_data->data(), nfadata_size, &wr_req, &ret));
+                        xcl::Stream::writeStream(krnls[kid].input_stream,
+                            queries_data->data() + krnls[kid].offset_queries, krnls[kid].queries_size, &queries_wr, &ret));
+
+                // Receive results
+                cl_stream_xfer_req rd_req{0};
+                rd_req.flags = CL_STREAM_EOT | CL_STREAM_NONBLOCKING;
+                rd_req.priv_data = (void *)krnls[kid].tag_result;
+                OCL_CHECK(ret,
+                        xcl::Stream::readStream(krnls[kid].result_stream,
+                            results->data() + krnls[kid].offset_results, krnls[kid].results_size, &rd_req, &ret));
+
             }
 
-            // Send Queries
-            cl_stream_xfer_req queries_wr{0};
-            queries_wr.flags = CL_STREAM_EOT | CL_STREAM_NONBLOCKING;
-            queries_wr.priv_data = (void *)"query_stream";
+            // Checking the request completion
+            cl_int num_compl = n_queues + 2*used_kernels;
+            cl_streams_poll_req_completions poll_req[num_compl];
+            memset(poll_req, 0, sizeof(cl_streams_poll_req_completions) * num_compl);
             OCL_CHECK(ret,
-                        xcl::Stream::writeStream(
-                            input_stream, queries_data->data(), queries_size, &queries_wr, &ret));
-
-            // Receive results
-            cl_stream_xfer_req rd_req{0};
-            rd_req.flags = CL_STREAM_EOT | CL_STREAM_NONBLOCKING;
-            rd_req.priv_data = (void *)"result_stream";
-            OCL_CHECK(ret,
-                    xcl::Stream::readStream(
-                        result_stream, results->data(), results_size, &rd_req, &ret));
-
-
-            if (first_exec)
-            {
-                // Checking the request completion
-                cl_streams_poll_req_completions poll_req[3]{0, 0, 0}; // 2 Requests
-                auto num_compl = 3;
-                OCL_CHECK(ret,
-                          xcl::Stream::pollStreams(
-                              device.get(), poll_req, 3, 3, &num_compl, 10000, &ret));
-                first_exec = false;
-            }
-            else
-            {    
-                // Checking the request completion
-                cl_streams_poll_req_completions poll_req[2]{0, 0}; // 2 Requests
-                auto num_compl = 2;
-                OCL_CHECK(ret,
-                          xcl::Stream::pollStreams(
-                              device.get(), poll_req, 2, 2, &num_compl, 10000, &ret));
-                // Blocking API, waits for 2 poll request completion or 50000ms, whichever occurs first.
-            }
+                      xcl::Stream::pollStreams(
+                          device.get(), poll_req, num_compl, num_compl, &num_compl, 10000, &ret));
 
             finish = std::chrono::high_resolution_clock::now();
-            queue.finish();
 
+            if (num_compl != (n_queues + 2*used_kernels))
+            {
+                // Releasing Streams
+                for (kid = 0; kid < n_kernels; kid++)
+                {
+                    xcl::Stream::releaseStream(krnls[kid].input_stream);
+                    xcl::Stream::releaseStream(krnls[kid].result_stream);
+                }
+
+                delete [] workload_buff;
+                file_benchmark.close();
+                file_results.close();
+                exit(EXIT_FAILURE);
+            }
+            queue.finish();
             ////////////////////////////////////////////////////////////////////////////////////////
             // TIMING REPORT                                                                      //
             ////////////////////////////////////////////////////////////////////////////////////////
 
             total_ns  = finish - start;
-            kernel_ns = get_duration_ns(evtKernel);
+            kernel_ns = get_duration_ns(krnls[0].evtKernel);
 
             file_benchmark << bsize
                          << "," << kernel_ns
@@ -495,8 +557,11 @@ int main(int argc, char** argv)
     }
 
     // Releasing Streams
-    xcl::Stream::releaseStream(input_stream);
-    xcl::Stream::releaseStream(result_stream);
+    for (kid = 0; kid < n_kernels; kid++)
+    {
+        xcl::Stream::releaseStream(krnls[kid].input_stream);
+        xcl::Stream::releaseStream(krnls[kid].result_stream);
+    }
     queue.flush();
 
     delete [] workload_buff;

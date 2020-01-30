@@ -103,7 +103,6 @@ else
 endif
 
 # Execution
-KERNEL_CONFIG_TAG := $(shell printf "%X" $(KERNELS))k1e
 ifeq ($(TARGET),hw_emu)
 	DATA_INPUT_PATH ?= ../sw/build-zrh
 else
@@ -111,9 +110,10 @@ else
 endif
 DATA_OUTPUT_PATH := ~/Documents/workspace
 FIRST_BATCH_SIZE := 1
-MAX_BATCH_SIZE := 1000000
-ITERATIONS := 10
+MAX_BATCH_SIZE := 10000
+ITERATIONS := 101
 KERNELS_TO_RUN := 1
+KERNEL_CONFIG_TAG := $(shell printf "%X" $(KERNELS_TO_RUN))k1e
 #
 NFA_DATA_FILE := $(DATA_INPUT_PATH)/mem_edges.bin
 WORKLOAD_FILE := $(DATA_INPUT_PATH)/benchmark.bin

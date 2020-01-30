@@ -31,6 +31,7 @@ HOST_ARCH := x86
 SYSROOT := 
 DEVICE = xilinx_u250_xdma_201830_2
 KERNELS = 1
+ENGINES = 8
 
 include ./utils.mk
 
@@ -42,12 +43,9 @@ else
 	$(error This kernel is not supported by $(DEVICE))
 endif
 
-HOST_ARCH := x86
-SYSROOT := 
-
 XSA := $(call device2xsa, $(DEVICE))
-TEMP_DIR := ./_xo.$(TARGET).$(XSA)
-BUILD_DIR := ./_xclbin.$(TARGET).$(XSA).$(shell printf "%X" $(KERNELS))k
+TEMP_DIR := ./_xo.$(TARGET).$(XSA).$(shell printf "%X" $(ENGINES))e
+BUILD_DIR := ./_xclbin.$(TARGET).$(XSA).$(shell printf "%X" $(ENGINES))e_$(shell printf "%X" $(KERNELS))k
 
 VPP := v++
 VIVADO := $(XILINX_VIVADO)/bin/vivado
@@ -113,7 +111,7 @@ FIRST_BATCH_SIZE := 1
 MAX_BATCH_SIZE := 10000
 ITERATIONS := 101
 KERNELS_TO_RUN := 1
-KERNEL_CONFIG_TAG := $(shell printf "%X" $(KERNELS_TO_RUN))k1e
+KERNEL_CONFIG_TAG := $(shell printf "%X" $(ENGINES))e$(shell printf "%X" $(KERNELS_TO_RUN))k
 #
 NFA_DATA_FILE := $(DATA_INPUT_PATH)/mem_edges.bin
 WORKLOAD_FILE := $(DATA_INPUT_PATH)/benchmark.bin
@@ -147,7 +145,7 @@ $(BUILD_DIR)/ederah.xclbin: $(BINARY_CONTAINER_ederah_OBJS)
 # Building kernel
 $(TEMP_DIR)/ederah.xo: ../hw/$(XL_SHELL)/kernel.xml ../hw/$(XL_SHELL)/package_kernel.tcl gen_xo.tcl ../hw/tools/*.vhd ../hw/engine/*.vhd ../hw/$(XL_SHELL)/*.sv ../hw/$(XL_SHELL)/*.v
 	mkdir -p $(TEMP_DIR)
-	$(VIVADO) -mode batch -source gen_xo.tcl -tclargs $(TEMP_DIR)/ederah.xo ederah $(TARGET) $(XSA) $(XL_SHELL)
+	$(VIVADO) -mode batch -nojournal -nolog -source gen_xo.tcl -tclargs $(TEMP_DIR)/ederah.xo ederah $(TARGET) $(XSA) $(XL_SHELL) $(ENGINES)
 
 # Building Host
 $(EXECUTABLE): check-xrt $(HOST_SRCS) $(HOST_HDRS)
@@ -171,7 +169,6 @@ endif
 # ifeq ($(HOST_ARCH), x86)
 # 	perf_analyze profile -i profile_summary.csv -f html
 # endif
-
 
 
 aws_build: check-aws_repo

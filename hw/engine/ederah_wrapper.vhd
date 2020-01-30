@@ -50,16 +50,22 @@ architecture rtl of ederah_wrapper is
     constant C_RESULTS_PARTITIONS : integer := G_DATA_BUS_WIDTH / CFG_RAW_RESULTS_WIDTH;
     constant C_STATS_PARTITIONS   : integer := G_DATA_BUS_WIDTH / CFG_RAW_RESULT_STATS_WIDTH;
     --
-    signal sig_query_ready    : std_logic;
-    signal sig_result_last    : std_logic;
-    signal sig_result_valid   : std_logic;
-    signal sig_result_value   : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+    type result_value_array is array (CFG_ENGINES_NUMBER - 1 downto 0) of std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+    type result_stats_array is array (CFG_ENGINES_NUMBER - 1 downto 0) of result_stats_type;
+    --
     signal sig_query_id       : std_logic_vector(CFG_QUERY_ID_WIDTH - 1 downto 0);
-    signal sig_result_stats   : result_stats_type;
+    signal sig_query_ready    : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
+    signal sig_query_wr       : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
+    --
+    signal sig_result_ready   : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
+    signal sig_result_last    : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
+    signal sig_result_valid   : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
+    signal sig_result_value   : result_value_array;
+    signal sig_result_stats   : result_stats_array;
     signal sig_resstats_value : std_logic_vector(CFG_RAW_RESULT_STATS_WIDTH - 1 downto 0);
-    
+    --
     type flow_ctrl_type is (FLW_CTRL_WAIT, FLW_CTRL_READ, FLW_CTRL_WRITE, FLW_CTRL_DLAY);
-    
+    --
     type query_reg_type is record
         flow_ctrl       : flow_ctrl_type;
         query_array     : query_in_array_type;
@@ -68,7 +74,7 @@ architecture rtl of ederah_wrapper is
         ready           : std_logic;
         wr_en           : std_logic;
     end record;
-
+    --
     type nfa_reg_type is record
         flow_ctrl       : flow_ctrl_type;
         ready           : std_logic;
@@ -108,6 +114,20 @@ architecture rtl of ederah_wrapper is
     signal inout_r, inout_rin : inout_wrapper_array;
     signal io_r : inout_wrapper_type;
 
+    --
+    -- DOPIO
+    type dopio_reg_type is record
+        core_running    : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
+        --
+        query_flow_ctrl : integer range 0 to CFG_ENGINES_NUMBER;
+        reslt_flow_ctrl : integer range 0 to CFG_ENGINES_NUMBER;
+        --
+        result_value    : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        result_valid    : std_logic;
+        result_last     : std_logic;
+    end record;
+    signal dopio_r, dopio_rin   : dopio_reg_type;
+
 begin
 
 rd_ready_o <= query_r.ready or nfa_r.ready;
@@ -118,7 +138,8 @@ rd_ready_o <= query_r.ready or nfa_r.ready;
 -- extract input query criteria from the rd_data_i bus. each query has CFG_ENGINE_NCRITERIA criteria
 -- and each criterium has two operands of CFG_CRITERION_VALUE_WIDTH width
 
-query_comb : process(query_r, rd_stype_i, rd_valid_i, rd_data_i, rd_last_i, sig_query_ready, sig_query_id)
+query_comb : process(query_r, rd_stype_i, rd_valid_i, rd_data_i, rd_last_i, sig_query_ready,
+    dopio_r.query_flow_ctrl, sig_query_id)
     constant C_SLICES_REM     : integer := CFG_ENGINE_NCRITERIA / C_QUERY_PARTITIONS;
     constant C_SLICES_MOD     : integer := CFG_ENGINE_NCRITERIA mod C_QUERY_PARTITIONS;
     --
@@ -193,7 +214,7 @@ begin
             v.ready := '0';
             v.wr_en := '0';
 
-            if sig_query_ready = '1' then
+            if sig_query_ready(dopio_r.query_flow_ctrl) = '1' then
                 v.wr_en := '1';
                 v.flow_ctrl := FLW_CTRL_WAIT;
             end if;
@@ -336,16 +357,17 @@ end process;
 sig_resstats_value <= (CFG_RAW_RESULT_STATS_WIDTH - 1
                         downto
                       CFG_RAW_RESULT_STATS_WIDTH - (CFG_RAW_RESULTS_WIDTH - CFG_MEM_ADDR_WIDTH) => '0')
-                      & sig_result_value
-                      & sig_result_stats.clock_cycle_counter
-                      & sig_result_stats.match_higher_weight
-                      & sig_result_stats.match_lower_weight;
+                      & dopio_r.result_value
+                      & sig_result_stats(dopio_r.reslt_flow_ctrl).clock_cycle_counter
+                      & sig_result_stats(dopio_r.reslt_flow_ctrl).match_higher_weight
+                      & sig_result_stats(dopio_r.reslt_flow_ctrl).match_lower_weight;
 
 wr_data_o  <= result_r.value;
 wr_valid_o <= result_r.valid;
 wr_last_o  <= result_r.last;
 
-result_comb : process(result_r, sig_result_valid, sig_result_value, wr_ready_i, io_r.stats_on, sig_resstats_value, sig_result_last)
+result_comb : process(result_r, wr_ready_i, io_r.stats_on, sig_resstats_value,
+    dopio_r.result_value, dopio_r.result_valid, dopio_r.result_last)
     variable v : result_reg_type;
 begin
     v := result_r;
@@ -357,7 +379,7 @@ begin
             v.ready := '1';
             v.valid := '0';
 
-            if sig_result_valid = '1' and io_r.stats_on = '0' then
+            if dopio_r.result_valid = '1' and io_r.stats_on = '0' then
 
                 v.slice := result_r.slice + 1;
 
@@ -366,111 +388,111 @@ begin
                 case result_r.slice is
                   when  0 =>
                         v.value(CFG_RAW_RESULTS_WIDTH - 1 downto  0)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when  1 =>
                         v.value(( 1 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  1 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when  2 =>
                         v.value(( 2 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  2 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when  3 =>
                         v.value(( 3 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  3 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when  4 =>
                         v.value(( 4 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  4 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when  5 =>
                         v.value(( 5 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  5 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when  6 =>
                         v.value(( 6 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  6 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when  7 =>
                         v.value(( 7 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  7 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when  8 =>
                         v.value(( 8 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  8 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when  9 =>
                         v.value(( 9 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  9 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when 10 =>
                         v.value((10 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 10 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when 11 =>
                         v.value((11 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 11 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when 12 =>
                         v.value((12 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 12 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when 13 =>
                         v.value((13 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 13 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when 14 =>
                         v.value((14 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 14 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when 15 =>
                         v.value((15 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 15 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when 16 =>
                         v.value((16 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 16 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when 17 =>
                         v.value((17 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 17 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when 18 =>
                         v.value((18 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 18 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when 19 =>
                         v.value((19 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 19 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when 20 =>
                         v.value((20 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 20 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when 21 =>
                         v.value((21 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 21 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when 22 =>
                         v.value((22 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 22 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when 23 =>
                         v.value((23 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 23 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when 24 =>
                         v.value((24 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 24 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when 25 =>
                         v.value((25 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 25 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when 26 =>
                         v.value((26 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 26 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when 27 =>
                         v.value((27 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 27 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when 28 =>
                         v.value((28 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 28 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when 29 =>
                         v.value((29 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 29 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when 30 =>
                         v.value((30 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 30 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when 31 =>
                         v.value((31 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 31 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & sig_result_value;
+                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
                   when others =>
                 end case;
 
-                if v.slice = C_RESULTS_PARTITIONS or sig_result_last = '1' then
+                if v.slice = C_RESULTS_PARTITIONS or dopio_r.result_last = '1' then
                     v.ready := '0';
                     v.valid := '1';
-                    v.last  := sig_result_last;
+                    v.last := dopio_r.result_last;
                     v.flow_ctrl := FLW_CTRL_WRITE;
                 end if;
 
-            elsif sig_result_valid = '1' and io_r.stats_on = '1' then
+            elsif dopio_r.result_valid = '1' and io_r.stats_on = '1' then
                 
                 v.slice := result_r.slice + 1;
 
@@ -502,10 +524,10 @@ begin
                   when others =>
                 end case;
 
-                if v.slice = C_STATS_PARTITIONS or sig_result_last = '1' then
+                if v.slice = C_STATS_PARTITIONS or dopio_r.result_last = '1' then
                     v.ready := '0';
                     v.valid := '1';
-                    v.last  := sig_result_last;
+                    v.last  := dopio_r.result_last;
                     v.flow_ctrl := FLW_CTRL_WRITE;
                 end if;
             end if;
@@ -553,28 +575,86 @@ begin
 end process;
 
 ----------------------------------------------------------------------------------------------------
+-- DOPIO ENGINE                                                                                   --
+----------------------------------------------------------------------------------------------------
+
+dopio_comb: process(dopio_r, query_r.wr_en, sig_result_valid, result_r.ready, sig_result_last)
+    variable v : dopio_reg_type;
+begin
+    v := dopio_r;
+
+    -- reslt_flow_ctrl
+    if (sig_result_valid(dopio_r.reslt_flow_ctrl) and result_r.ready) = '1' then
+        v.core_running(dopio_r.reslt_flow_ctrl) := not sig_result_last(dopio_r.reslt_flow_ctrl);
+        v.reslt_flow_ctrl := dopio_r.reslt_flow_ctrl + 1;
+        if v.reslt_flow_ctrl = CFG_ENGINES_NUMBER then
+            v.reslt_flow_ctrl := 0;
+        end if;
+    end if;
+
+    -- query_flow_ctrl
+    if query_r.wr_en = '1' then
+        v.core_running(dopio_r.query_flow_ctrl) := '1';
+        v.query_flow_ctrl := dopio_r.query_flow_ctrl + 1;
+        if v.query_flow_ctrl = CFG_ENGINES_NUMBER then
+            v.query_flow_ctrl := 0;
+        end if;
+    end if;
+
+    --
+    v.result_value := sig_result_value(dopio_r.reslt_flow_ctrl);
+    v.result_valid := sig_result_valid(dopio_r.reslt_flow_ctrl) and result_r.ready;
+    v.result_last  := (not v_or((power_of_two(dopio_r.reslt_flow_ctrl, CFG_ENGINES_NUMBER) and sig_result_last)
+                       xor dopio_r.core_running)) and sig_result_last(dopio_r.reslt_flow_ctrl);
+    dopio_rin <= v;
+end process;
+
+dopio_seq: process(clk_i)
+begin
+    if rising_edge(clk_i) then
+        if rst_i = '0' then
+            dopio_r.core_running <= (others => '0');
+            dopio_r.query_flow_ctrl <= 0;
+            dopio_r.reslt_flow_ctrl <= 0;
+            dopio_r.result_valid <= '0';
+            dopio_r.result_last  <= '0';
+        else
+            dopio_r <= dopio_rin;
+        end if;
+    end if;
+end process;
+
+----------------------------------------------------------------------------------------------------
 -- NFA-BRE ENGINE TOP                                                                             --
 ----------------------------------------------------------------------------------------------------
-mct_engine_top: entity bre.engine port map 
-(
-    clk_i           => clk_i,
-    rst_i           => nfa_r.engine_rst,
-    --
-    query_i         => query_r.query_array,
-    query_last_i    => query_r.query_last,
-    query_wr_en_i   => query_r.wr_en,
-    query_ready_o   => sig_query_ready,
-    --
-    mem_i           => io_r.mem_data,
-    mem_wren_i      => io_r.mem_wren,
-    mem_addr_i      => io_r.mem_addr,
-    --
-    result_ready_i  => result_r.ready,
-    result_stats_o  => sig_result_stats,
-    result_valid_o  => sig_result_valid,
-    result_last_o   => sig_result_last,
-    result_value_o  => sig_result_value
-);
+gen_engines: for D in 0 to CFG_ENGINES_NUMBER - 1 generate
+
+    mct_engine_top: entity bre.engine port map 
+    (
+        clk_i           => clk_i,
+        rst_i           => nfa_r.engine_rst,
+        --
+        query_i         => query_r.query_array,
+        query_last_i    => query_r.query_last,
+        query_wr_en_i   => sig_query_wr(D),
+        query_ready_o   => sig_query_ready(D),
+        --
+        mem_i           => io_r.mem_data,
+        mem_wren_i      => io_r.mem_wren,
+        mem_addr_i      => io_r.mem_addr,
+        --
+        result_ready_i  => sig_result_ready(D),
+        result_stats_o  => sig_result_stats(D),
+        result_valid_o  => sig_result_valid(D),
+        result_last_o   => sig_result_last(D),
+        result_value_o  => sig_result_value(D)
+    );
+
+    -- DOPIO
+    sig_query_wr(D)    <= query_r.wr_en when dopio_r.query_flow_ctrl = D else '0';
+    sig_result_ready(D)    <= result_r.ready when dopio_r.reslt_flow_ctrl = D else '0';
+
+end generate gen_engines;
 
 ----------------------------------------------------------------------------------------------------
 -- QUERY ID GENERATOR                                                                             --

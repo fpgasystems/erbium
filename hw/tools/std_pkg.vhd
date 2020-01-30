@@ -28,6 +28,7 @@ PACKAGE std_pkg IS
     function FLOOR (X : real ) return integer;
         -- returns largest integer value (as real) not greater than X
     function clogb2 (depth: in natural) return integer;
+    function power_of_two(value: integer; depth: integer) return std_logic_vector;
 
 ----------------------------------------------------------------------------------------------------
 -- COMPONENTS IN std_pkg.vhd                                                                      --
@@ -307,4 +308,13 @@ PACKAGE BODY std_pkg IS
         return ret_val;
     end function;
 
+    function power_of_two(value: integer; depth: integer) return std_logic_vector is
+        variable res : std_logic_vector(depth - 1 downto 0);
+    begin
+        res := (others => '0');
+        res(value) := '1';
+
+        return res;
+    end function;
+    
 end std_pkg;

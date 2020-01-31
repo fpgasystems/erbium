@@ -12,7 +12,8 @@
 #include "dictionnary.h"
 #include "nfa_handler.h"
 
-enum SortOption { None, Ascending, Descending, MCT_DESC, MCT_PERF_ASC, MCT_PERF_DESC };
+enum SortOption { None, H1_Ascending, H1_Descending, MCT_DESC, H2_Ascending, H2_Descending };
+std::string SortOptionTag[] = {"hRand", "h1Asc", "h1Des", "h1Des", "h2Asc", "h2Desc"};
 
 //#define _DEBUG true
 
@@ -51,7 +52,7 @@ int main(int argc, char** argv)
             std::cerr << "Usage: " << argv[0] << "\n"
                       << "\t-d  destination folder\n"
                       << "\t-r  rules file\n"
-                      << "\t-s  sorting: 0=none 1=asc 2=desc 3=mct_asc 4=mct_perf_asc 5=mct_perf_desc\n"
+                      << "\t-s  sorting: 0=None 1=H1_Asc 2=H1_Desc 3=MCT_H1_Dec 4=H2_Asc 5=H2_Desc\n"
                       << "\t-z  [ZRH workload]\n"
                       << "\t-h  help\n";
             exit(EXIT_FAILURE);
@@ -63,13 +64,13 @@ int main(int argc, char** argv)
 
     std::cout << "-d destination folder: " << dest_folder << std::endl;
     std::cout << "-r rules file: " << rules_file << std::endl;
-    printf("-s sorting: [%c]none [%c]asc [%c]desc [%c]mct_desc [%c]mct_perf_asc [%c]mct_perf_desc\n",
-            (sorting_option==SortOption::None)       ? 'x' : ' ',
-            (sorting_option==SortOption::Ascending)  ? 'x' : ' ',
-            (sorting_option==SortOption::Descending) ? 'x' : ' ',
-            (sorting_option==SortOption::MCT_DESC)   ? 'x' : ' ',
-            (sorting_option==SortOption::MCT_PERF_ASC)  ? 'x' : ' ',
-            (sorting_option==SortOption::MCT_PERF_DESC)  ? 'x' : ' ');
+    printf("-s sorting: [%c]none [%c]H1_Asc [%c]H1_Desc [%c]MCT_H1_Dec [%c]H2_Asc [%c]H2_Desc\n",
+            (sorting_option==SortOption::None)          ? 'x' : ' ',
+            (sorting_option==SortOption::H1_Ascending)  ? 'x' : ' ',
+            (sorting_option==SortOption::H1_Descending) ? 'x' : ' ',
+            (sorting_option==SortOption::MCT_DESC)      ? 'x' : ' ',
+            (sorting_option==SortOption::H2_Ascending)  ? 'x' : ' ',
+            (sorting_option==SortOption::H2_Descending) ? 'x' : ' ');
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // LOAD                                                                                       //
@@ -98,13 +99,13 @@ int main(int argc, char** argv)
 
     switch (sorting_option)
     {
-        case SortOption::Ascending:
-            std::cout << "Ascending sort" << std::endl;
+        case SortOption::H1_Ascending:
+            std::cout << "H1_Ascending sort" << std::endl;
             the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Ascending);
             break;
 
-        case SortOption::Descending:
-            std::cout << "Descending sort" << std::endl;
+        case SortOption::H1_Descending:
+            std::cout << "H1_Descending sort" << std::endl;
             the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending);
             break;
 
@@ -138,9 +139,9 @@ int main(int argc, char** argv)
         }
             break;
 
-        case SortOption::MCT_PERF_ASC:
+        case SortOption::H2_Ascending:
         {
-            std::cout << "Arbitrary order MCT_PERF_ASC" << std::endl;
+            std::cout << "Arbitrary order H2_Ascending" << std::endl;
             std::vector<int16_t> arbitrary; // key=position; value=criteria_id
             for (auto& aux __attribute__((unused)) : rp.m_ruleType.m_criterionDefinition)
                  arbitrary.push_back(-1);
@@ -154,9 +155,9 @@ int main(int argc, char** argv)
         }
             break;
 
-        case SortOption::MCT_PERF_DESC:
+        case SortOption::H2_Descending:
         {
-            std::cout << "Arbitrary order MCT_PERF_DESC" << std::endl;
+            std::cout << "Arbitrary order H2_Descending" << std::endl;
             std::vector<int16_t> arbitrary; // key=position; value=criteria_id
             for (auto& aux __attribute__((unused)) : rp.m_ruleType.m_criterionDefinition)
                  arbitrary.push_back(-1);
@@ -259,7 +260,7 @@ int main(int argc, char** argv)
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::cout << "# EXPORT CORE PARAMETERS" << std::endl;
-    the_nfa.dump_core_parameters(dest_folder + "core_param.txt", rp);
+    the_nfa.dump_core_parameters(dest_folder + "cfg_criteria_" + SortOptionTag[sorting_option] + ".vhd", rp);
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // DROOLS                                                                                     //

@@ -48,15 +48,32 @@ PRECOMPILE =
 # postcompile step
 POSTCOMPILE = mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d
 
+.PHONY: all clean cleanall help
 all: $(BIN)
 
-.PHONY: clean
+.PHONY: benchmarks
+benchmarks: all
+	mkdir -p build-mct_h1Asc
+	mkdir -p build-mct_h1Des
+	mkdir -p build-mct_hRand
+	mkdir -p build-mct_h2Asc
+	mkdir -p build-mct_h2Des
+	mkdir -p build-zrh_h2Des
+	./$(BIN) -d build-mct_h1Asc -r ../data/mct_rules.csv -s 1 >> build-mct_h1Asc/log.txt
+	./$(BIN) -d build-mct_h1Des -r ../data/mct_rules.csv -s 2 >> build-mct_h1Des/log.txt
+	./$(BIN) -d build-mct_hRand -r ../data/mct_rules.csv -s 0 >> build-mct_hRand/log.txt
+	./$(BIN) -d build-mct_h2Asc -r ../data/mct_rules.csv -s 4 >> build-mct_h2Asc/log.txt
+	./$(BIN) -d build-mct_h2Des -r ../data/mct_rules.csv -s 5 >> build-mct_h2Des/log.txt
+	./$(BIN) -d build-zrh_h2Des -r ../data/mct_rules-zrh.csv -s 5 >> build-zrh_h2Des/log.txt
+
 clean:
 	$(RM) -r $(OBJDIR) $(DEPDIR)
 
-.PHONY: help
+cleanall:
+	$(RM) -r ./build-*
+
 help:
-	@echo available targets: all clean
+	@echo available targets: all clean cleanall benchmarks
 
 $(BIN): $(OBJS)
 	$(LINK.o) $^

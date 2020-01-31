@@ -648,6 +648,10 @@ void NFAHandler::dump_core_parameters(const std::string& filename, const rulePac
 {
     std::fstream outfile(filename, std::ios::out | std::ios::trunc);
 
+    outfile << "library ieee;\nuse ieee.std_logic_1164.all;\nuse ieee.std_logic_unsigned.all;\n\n"
+            << "library bre;\nuse bre.engine_pkg.all;\nuse bre.core_pkg.all;\n\n"
+            << "package cfg_criteria is\n\n";
+
     std::vector<uint> edges_per_level(m_vertexes.size()+1);
     edges_per_level[0] = m_graph[0].children.size();
     for (auto& level : m_vertexes)
@@ -732,6 +736,8 @@ void NFAHandler::dump_core_parameters(const std::string& filename, const rulePac
         else
             outfile << "\n    );";
     }
+
+    outfile << "\n\nend cfg_criteria;\n\npackage body cfg_criteria is\n\nend cfg_criteria;";
 
     outfile.close();
 }

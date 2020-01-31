@@ -650,7 +650,8 @@ void NFAHandler::dump_core_parameters(const std::string& filename, const rulePac
 
     outfile << "library ieee;\nuse ieee.numeric_std.all;\nuse ieee.std_logic_1164.all;\n\n"
             << "library bre;\nuse bre.engine_pkg.all;\nuse bre.core_pkg.all;\n\n"
-            << "package cfg_criteria is\n\n";
+            << "package cfg_criteria is\n";
+            << "    type CORE_PARAM_ARRAY is array (0 to CFG_ENGINE_NCRITERIA - 1) of core_parameters_type;\n\n";
 
     std::vector<uint> edges_per_level(m_vertexes.size()+1);
     edges_per_level[0] = m_graph[0].children.size();

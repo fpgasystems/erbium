@@ -33,7 +33,6 @@ entity engine is
 end engine;
 
 architecture behavioural of engine is
-    type CORE_PARAM_ARRAY is array (0 to CFG_ENGINE_NCRITERIA - 1) of core_parameters_type;
 
     -- CORE INTERFACE ARRAYS
     type edge_buffer_array  is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of edge_buffer_type;

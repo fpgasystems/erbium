@@ -12,7 +12,7 @@ set shell     [lindex $::argv 4]
 set engines   [lindex $::argv 5]
 set heuristic [lindex $::argv 6]
 
-set suffix "${krnl_name}_${target}_${device}_${heuristic}_${engines}"
+set suffix "${krnl_name}_${target}_${device}_${heuristic}_${engines}e"
 
 source -notrace ../hw/${shell}/package_kernel.tcl
 

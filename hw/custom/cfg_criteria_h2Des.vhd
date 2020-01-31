@@ -1,6 +1,6 @@
 library ieee;
+use ieee.numeric_std.all;
 use ieee.std_logic_1164.all;
-use ieee.std_logic_unsigned.all;
 
 library bre;
 use bre.engine_pkg.all;

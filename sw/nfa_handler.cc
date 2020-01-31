@@ -648,7 +648,7 @@ void NFAHandler::dump_core_parameters(const std::string& filename, const rulePac
 {
     std::fstream outfile(filename, std::ios::out | std::ios::trunc);
 
-    outfile << "library ieee;\nuse ieee.std_logic_1164.all;\nuse ieee.std_logic_unsigned.all;\n\n"
+    outfile << "library ieee;\nuse ieee.numeric_std.all;\nuse ieee.std_logic_1164.all;\n\n"
             << "library bre;\nuse bre.engine_pkg.all;\nuse bre.core_pkg.all;\n\n"
             << "package cfg_criteria is\n\n";
 

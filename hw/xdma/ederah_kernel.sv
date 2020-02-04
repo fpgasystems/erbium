@@ -164,7 +164,6 @@ ederah_wrapper #(
 inst_wrapper (
   .clk_i                    ( kernel_clk           ),
   .rst_i                    ( kernel_rst_n         ),
-  .stats_on_i               ( |scalar03            ),
   // input
   .rd_data_i                ( rd_tdata             ),
   .rd_valid_i               ( rd_tvalid            ),

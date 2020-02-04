@@ -25,7 +25,6 @@ entity engine is
         mem_addr_i        :  in std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
         --
         result_ready_i    :  in std_logic;
-        result_stats_o    : out result_stats_type;
         result_valid_o    : out std_logic;
         result_last_o     : out std_logic;
         result_value_o    : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0)
@@ -52,9 +51,7 @@ architecture behavioural of engine is
     type ncrieria_dopio     is array (CFG_ENGINE_DOPIO_CORES - 1 downto 0) of std_logic_vector(0 to CFG_ENGINE_NCRITERIA - 1);
     type ncrieria_dopio_p1  is array (CFG_ENGINE_DOPIO_CORES - 1 downto 0) of std_logic_vector(0 to CFG_ENGINE_NCRITERIA);
     type edge_buffer_ardopio is array (CFG_ENGINE_DOPIO_CORES - 1 downto 0) of edge_buffer_type;
-    type mem_data_ardopio   is array (CFG_ENGINE_DOPIO_CORES - 1 downto 0) of mem_data_array;
-    type result_stats_dopio is array (CFG_ENGINE_DOPIO_CORES - 1 downto 0) of result_stats_type;
-    --
+    type mem_data_ardopio   is array (CFG_ENGINE_DOPIO_CORES - 1 downto 0) of mem_data_array;    --
     signal pe_idle         : ncrieria_dopio;
     signal prev_idle       : ncrieria_dopio;
     signal prev_empty      : ncrieria_dopio_p1;
@@ -75,7 +72,6 @@ architecture behavioural of engine is
     --
     -- result reducer
     signal resred_value    : edge_buffer_ardopio;
-    signal resred_stats    : result_stats_dopio;
     signal resred_valid    : std_logic_vector(CFG_ENGINE_DOPIO_CORES - 1 downto 0);
     signal resred_last     : std_logic_vector(CFG_ENGINE_DOPIO_CORES - 1 downto 0);
     signal resred_ready    : std_logic_vector(CFG_ENGINE_DOPIO_CORES - 1 downto 0);
@@ -205,7 +201,6 @@ gen_dopio: for D in 0 to CFG_ENGINE_DOPIO_CORES - 1 generate
         result_ready_i  => resred_ready(D),
         result_data_o   => resred_value(D),
         result_last_o   => resred_last(D),
-        result_stats_o  => resred_stats(D),
         result_valid_o  => resred_valid(D)
     );
 
@@ -295,26 +290,11 @@ end generate gen_stages_mem;
 
 query_ready_o  <= dopio_rin.query_ready;
 
---result_last_o  <= v_or(resred_last) and not v_and(dopio_r.core_running);
 result_last_o  <= not v_or((sig_dopio_res and resred_last) xor dopio_r.core_running);
 result_valid_o <= v_or(resred_valid and sig_dopio_res);
-result_stats_o <= resred_stats(dopio_r.reslt_flow_ctrl);
 result_value_o <= resred_value(dopio_r.reslt_flow_ctrl).pointer;
 
 sig_dopio_res <= std_logic_vector(to_unsigned(dopio_r.reslt_flow_ctrl + 1, CFG_ENGINE_DOPIO_CORES));
-
--- query_wr_en(0) <= query_wr_en_i when dopio_r.wr_flow_ctrl = FLW_CTRL_A else '0';
--- query_wr_en(1) <= query_wr_en_i when dopio_r.wr_flow_ctrl = FLW_CTRL_B else '0';
--- --
--- resred_ready(0) <= result_ready_i when dopio_r.rd_flow_ctrl = FLW_CTRL_A else '0';
--- resred_ready(1) <= result_ready_i when dopio_r.rd_flow_ctrl = FLW_CTRL_B else '0';
---
--- result_stats_o <= resred_stats(0) when dopio_r.rd_flow_ctrl = FLW_CTRL_A
---                   else resred_stats(1);
--- result_valid_o <= resred_valid(0) when dopio_r.rd_flow_ctrl = FLW_CTRL_A
---                   else resred_valid(1);
--- result_value_o <= resred_value(0).pointer when dopio_r.rd_flow_ctrl = FLW_CTRL_A
---                   else resred_value(1).pointer;
 
 dopio_comb: process(dopio_r, query_wr_en_i, query_full, resred_valid, result_ready_i, resred_last)
     variable v : dopio_reg_type;
@@ -341,54 +321,6 @@ begin
     else
         v.query_ready := not query_full(dopio_r.query_flow_ctrl)(CFG_ENGINE_NCRITERIA - 1);
     end if;
-
-    -- -- rd state machine
-    -- case dopio_r.rd_flow_ctrl is
-    -- 
-    --   when FLW_CTRL_A =>
-    -- 
-    --         if (resred_valid(0) and result_ready_i) = '1' then
-    --             v.core_running(0) := not resred_last(0);
-    --             --v.rd_flow_ctrl := FLW_CTRL_B;
-    --         end if;
-    -- 
-    --   when FLW_CTRL_B =>
-    -- 
-    --         if (resred_valid(1) and result_ready_i) = '1' then
-    --             v.rd_flow_ctrl := FLW_CTRL_A;
-    --             v.core_running(1) := not resred_last(1);
-    --         end if;
-    -- 
-    -- end case;
-
-    -- wr state machine
-    -- case dopio_r.wr_flow_ctrl is
-    -- 
-    --   when FLW_CTRL_A =>
-    -- 
-    --         if query_wr_en_i = '1' then
-    --             v.core_running(0) := '1';
-    --             --if CFG_ENGINE_DOPIO_CORES = 2 then
-    --             --    v.wr_flow_ctrl := FLW_CTRL_B;
-    --             --    v.query_ready := not query_full(1)(CFG_ENGINE_NCRITERIA - 1);-- from core B
-    --             --else
-    --                 v.query_ready := not query_full(0)(CFG_ENGINE_NCRITERIA - 1);-- from core A;
-    --             --end if;
-    --         else
-    --             v.query_ready := not query_full(0)(CFG_ENGINE_NCRITERIA - 1);-- from core A;
-    --         end if;
-    -- 
-    --   when FLW_CTRL_B =>
-    -- 
-    --         if query_wr_en_i = '1' then
-    --             v.core_running(1) := '1';
-    --             v.wr_flow_ctrl := FLW_CTRL_A;
-    --             v.query_ready := not query_full(0)(CFG_ENGINE_NCRITERIA - 1);-- from core A;
-    --         else
-    --             v.query_ready := not query_full(1)(CFG_ENGINE_NCRITERIA - 1);-- from core B
-    --         end if;
-    -- 
-    -- end case;
     
     dopio_rin <= v;
 end process;
@@ -397,8 +329,6 @@ dopio_seq: process(clk_i)
 begin
     if rising_edge(clk_i) then
         if rst_i = '0' then
-            --dopio_r.rd_flow_ctrl <= FLW_CTRL_A;
-            --dopio_r.wr_flow_ctrl <= FLW_CTRL_A;
             dopio_r.query_ready <= '0';
             dopio_r.core_running <= (others => '0');
             dopio_r.query_flow_ctrl <= 0;
@@ -408,48 +338,5 @@ begin
         end if;
     end if;
 end process;
-
-----------------------------------------------------------------------------------------------------
--- STATS                                                                                          --
-----------------------------------------------------------------------------------------------------
-
--- sig_stats_en <= v_or(dopio_r.core_running);
--- 
--- -- non-idle counter
--- counter_computing_time: simple_counter generic map
--- (
---     G_WIDTH   => CFG_DBG_COUNTERS_WIDTH
--- )
--- port map
--- (
---     clk_i     => clk_i,
---     rst_i     => rst_i,
---     enable_i  => sig_stats_en,
---     counter_o => stats_idle_time_o
--- );
--- 
--- counter_queriesA: simple_counter generic map
--- (
---     G_WIDTH   => CFG_DBG_COUNTERS_WIDTH
--- )
--- port map
--- (
---     clk_i     => clk_i,
---     rst_i     => rst_i,
---     enable_i  => query_wr_en(0),
---     counter_o => sig_queries_a
--- );
--- 
--- counter_queriesB: simple_counter generic map
--- (
---     G_WIDTH   => CFG_DBG_COUNTERS_WIDTH
--- )
--- port map
--- (
---     clk_i     => clk_i,
---     rst_i     => rst_i,
---     enable_i  => query_wr_en(1),
---     counter_o => sig_queries_b
--- );
 
 end architecture behavioural;

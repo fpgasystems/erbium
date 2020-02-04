@@ -147,7 +147,6 @@ ederah_wrapper #(
 inst_wrapper (
   .clk_i                    ( data_clk              ), // kernel_clk
   .rst_i                    ( data_rst_n            ), // kernel_rst_n
-  .stats_on_i               ( 1'b0                  ),
   // input
   .rd_data_i                ( inputs_stream_tdata   ),
   .rd_valid_i               ( inputs_stream_tvalid_krl ),

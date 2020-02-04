@@ -90,12 +90,6 @@ package core_pkg is
         G_WILDCARD_ENABLED    : std_logic;
     end record;
 
-    type result_stats_type is record
-        clock_cycle_counter   : std_logic_vector(CFG_DBG_N_OF_CLK_CYCS_WIDTH - 1 downto 0);
-        match_higher_weight   : std_logic_vector(CFG_DBG_COUNTERS_WIDTH - 1 downto 0);
-        match_lower_weight    : std_logic_vector(CFG_DBG_COUNTERS_WIDTH - 1 downto 0);
-    end record;
-
 ----------------------------------------------------------------------------------------------------
 -- COMPONENTS                                                                                     --
 ----------------------------------------------------------------------------------------------------
@@ -196,7 +190,6 @@ package core_pkg is
         result_ready_i  :  in std_logic;
         result_data_o   : out edge_buffer_type;
         result_last_o   : out std_logic;
-        result_stats_o  : out result_stats_type;
         result_valid_o  : out std_logic
     );
     end component;

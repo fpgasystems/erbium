@@ -26,8 +26,6 @@ entity ederah_wrapper is
     port (
         clk_i        :  in std_logic;
         rst_i        :  in std_logic;
-        -- stats option
-        stats_on_i   :  in std_logic;
         -- input bus
         rd_data_i    :  in std_logic_vector(G_DATA_BUS_WIDTH - 1 downto 0);
         rd_valid_i   :  in std_logic;
@@ -48,10 +46,8 @@ architecture rtl of ederah_wrapper is
     constant C_QUERY_PARTITIONS   : integer := G_DATA_BUS_WIDTH / CFG_RAW_QUERY_WIDTH;
     constant C_EDGES_PARTITIONS   : integer := G_DATA_BUS_WIDTH / CFG_EDGE_BRAM_WIDTH;
     constant C_RESULTS_PARTITIONS : integer := G_DATA_BUS_WIDTH / CFG_RAW_RESULTS_WIDTH;
-    constant C_STATS_PARTITIONS   : integer := G_DATA_BUS_WIDTH / CFG_RAW_RESULT_STATS_WIDTH;
     --
     type result_value_array is array (CFG_ENGINES_NUMBER - 1 downto 0) of std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
-    type result_stats_array is array (CFG_ENGINES_NUMBER - 1 downto 0) of result_stats_type;
     --
     signal sig_query_id       : std_logic_vector(CFG_QUERY_ID_WIDTH - 1 downto 0);
     signal sig_query_ready    : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
@@ -61,8 +57,6 @@ architecture rtl of ederah_wrapper is
     signal sig_result_last    : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
     signal sig_result_valid   : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
     signal sig_result_value   : result_value_array;
-    signal sig_result_stats   : result_stats_array;
-    signal sig_resstats_value : std_logic_vector(CFG_RAW_RESULT_STATS_WIDTH - 1 downto 0);
     --
     type flow_ctrl_type is (FLW_CTRL_WAIT, FLW_CTRL_READ, FLW_CTRL_WRITE, FLW_CTRL_DLAY);
     --
@@ -102,8 +96,6 @@ architecture rtl of ederah_wrapper is
 
     -- IN/OUT REGISTER WRAPPER (REDUCE ROUTING TIMES)
     type inout_wrapper_type is record
-        -- stats option
-        stats_on   : std_logic;
         -- nfa to mem
         mem_data   : std_logic_vector(CFG_EDGE_BRAM_WIDTH - 1 downto 0);
         mem_wren   : std_logic_vector(CFG_ENGINE_NCRITERIA - 1 downto 0);
@@ -354,20 +346,11 @@ end process;
 -- A query result consists of the index of the content it points to. This result value occupies
 -- CFG_MEM_ADDR_WIDTH bits (into a CFG_RAW_RESULTS_WIDTH bits field).
 
-sig_resstats_value <= (CFG_RAW_RESULT_STATS_WIDTH - 1
-                        downto
-                      CFG_RAW_RESULT_STATS_WIDTH - (CFG_RAW_RESULTS_WIDTH - CFG_MEM_ADDR_WIDTH) => '0')
-                      & dopio_r.result_value
-                      & sig_result_stats(dopio_r.reslt_flow_ctrl).clock_cycle_counter
-                      & sig_result_stats(dopio_r.reslt_flow_ctrl).match_higher_weight
-                      & sig_result_stats(dopio_r.reslt_flow_ctrl).match_lower_weight;
-
 wr_data_o  <= result_r.value;
 wr_valid_o <= result_r.valid;
 wr_last_o  <= result_r.last;
 
-result_comb : process(result_r, wr_ready_i, io_r.stats_on, sig_resstats_value,
-    dopio_r.result_value, dopio_r.result_valid, dopio_r.result_last)
+result_comb : process(result_r, wr_ready_i, dopio_r.result_value, dopio_r.result_valid, dopio_r.result_last)
     variable v : result_reg_type;
 begin
     v := result_r;
@@ -379,7 +362,7 @@ begin
             v.ready := '1';
             v.valid := '0';
 
-            if dopio_r.result_valid = '1' and io_r.stats_on = '0' then
+            if dopio_r.result_valid = '1' then
 
                 v.slice := result_r.slice + 1;
 
@@ -492,44 +475,6 @@ begin
                     v.flow_ctrl := FLW_CTRL_WRITE;
                 end if;
 
-            elsif dopio_r.result_valid = '1' and io_r.stats_on = '1' then
-                
-                v.slice := result_r.slice + 1;
-
-                case result_r.slice is
-                  when  0 =>
-                        v.value(CFG_RAW_RESULT_STATS_WIDTH - 1 downto  0)
-                            := sig_resstats_value;
-                  when  1 =>
-                        v.value(( 1 + 1) * CFG_RAW_RESULT_STATS_WIDTH - 1 downto  1 * CFG_RAW_RESULT_STATS_WIDTH)
-                            := sig_resstats_value;
-                  when  2 =>
-                        v.value(( 2 + 1) * CFG_RAW_RESULT_STATS_WIDTH - 1 downto  2 * CFG_RAW_RESULT_STATS_WIDTH)
-                            := sig_resstats_value;
-                  when  3 =>
-                        v.value(( 3 + 1) * CFG_RAW_RESULT_STATS_WIDTH - 1 downto  3 * CFG_RAW_RESULT_STATS_WIDTH)
-                            := sig_resstats_value;
-                  when  4 =>
-                        v.value(( 4 + 1) * CFG_RAW_RESULT_STATS_WIDTH - 1 downto  4 * CFG_RAW_RESULT_STATS_WIDTH)
-                            := sig_resstats_value;
-                  when  5 =>
-                        v.value(( 5 + 1) * CFG_RAW_RESULT_STATS_WIDTH - 1 downto  5 * CFG_RAW_RESULT_STATS_WIDTH)
-                            := sig_resstats_value;
-                  when  6 =>
-                        v.value(( 6 + 1) * CFG_RAW_RESULT_STATS_WIDTH - 1 downto  6 * CFG_RAW_RESULT_STATS_WIDTH)
-                            := sig_resstats_value;
-                  when  7 =>
-                        v.value(( 7 + 1) * CFG_RAW_RESULT_STATS_WIDTH - 1 downto  7 * CFG_RAW_RESULT_STATS_WIDTH)
-                            := sig_resstats_value;
-                  when others =>
-                end case;
-
-                if v.slice = C_STATS_PARTITIONS or dopio_r.result_last = '1' then
-                    v.ready := '0';
-                    v.valid := '1';
-                    v.last  := dopio_r.result_last;
-                    v.flow_ctrl := FLW_CTRL_WRITE;
-                end if;
             end if;
 
       when FLW_CTRL_WRITE =>
@@ -651,7 +596,6 @@ gen_engines: for D in 0 to CFG_ENGINES_NUMBER - 1 generate
         mem_addr_i      => io_r.mem_addr,
         --
         result_ready_i  => sig_result_ready(D),
-        result_stats_o  => sig_result_stats(D),
         result_valid_o  => sig_result_valid(D),
         result_last_o   => sig_result_last(D),
         result_value_o  => sig_result_value(D)
@@ -682,7 +626,7 @@ port  map
 -- IN/OUT REGISTER WRAPPER (REDUCE ROUTING TIMES)                                                 --
 ----------------------------------------------------------------------------------------------------
 
-ior_comb : process(inout_r, stats_on_i, nfa_r.mem_data, nfa_r.mem_wren, nfa_r.mem_addr)
+ior_comb : process(inout_r, nfa_r.mem_data, nfa_r.mem_wren, nfa_r.mem_addr)
     variable v : inout_wrapper_array;
 begin
     
@@ -690,7 +634,6 @@ begin
     
     v(0) := v(1);
 
-    v(1).stats_on := stats_on_i;
     v(1).mem_data := nfa_r.mem_data;
     v(1).mem_wren := nfa_r.mem_wren;
     v(1).mem_addr := nfa_r.mem_addr;

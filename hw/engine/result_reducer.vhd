@@ -21,7 +21,6 @@ entity result_reducer is
         result_ready_i  :  in std_logic;
         result_data_o   : out edge_buffer_type;
         result_last_o   : out std_logic;
-        result_stats_o  : out result_stats_type;
         result_valid_o  : out std_logic
     );
 end result_reducer;
@@ -41,11 +40,7 @@ architecture behavioural of result_reducer is
     end record;
 
     signal result_r, result_rin : result_reg_type;
-    signal stats_r              : result_stats_type;
     signal sig_stats_reset      : std_logic;
-    signal sig_match_higher_en  : std_logic;
-    signal sig_match_lower_en   : std_logic;
-    --
     signal stats_queries_out    : std_logic_vector(63 downto 0);
     signal stats_queries_in     : std_logic_vector(63 downto 0);
     signal stats_queries_in_en  : std_logic;
@@ -59,7 +54,6 @@ interim_read_o  <= result_r.read;
 result_data_o   <= result_r.result;
 result_last_o   <= result_r.last;
 result_valid_o  <= result_r.valid;
-result_stats_o  <= stats_r;
 
 result_comb: process(result_r, interim_empty_i, interim_data_i, result_ready_i, engine_idle_i)
     variable v          : result_reg_type;
@@ -171,44 +165,10 @@ end process;
 -- STATS                                                                                          --
 ----------------------------------------------------------------------------------------------------
 
-stats_r.clock_cycle_counter <= increment(result_r.result.clock_cycles);
-
 sig_stats_reset <= rst_i when (result_r.flow_ctrl = FLW_CTRL_READ) else '0';
-
-sig_match_higher_en <= result_r.read when (result_r.interim.query_id = interim_data_i.query_id and
-                my_conv_integer(interim_data_i.weight) < my_conv_integer(result_r.interim.weight))
-                       else '0';
-
-sig_match_lower_en  <= result_r.read when (result_r.interim.query_id = interim_data_i.query_id and
-                my_conv_integer(interim_data_i.weight) > my_conv_integer(result_r.interim.weight))
-                       else '0';
 
 stats_queries_in_en  <= result_r.read when (result_r.interim.query_id /= interim_data_i.query_id)
                         else '0';
-
-counter_weight_heigher: simple_counter generic map
-(
-    G_WIDTH   => CFG_DBG_COUNTERS_WIDTH
-)
-port map
-(
-    clk_i     => clk_i,
-    rst_i     => sig_stats_reset,
-    enable_i  => sig_match_higher_en,
-    counter_o => stats_r.match_higher_weight
-);
-
-counter_weight_lower: simple_counter generic map
-(
-    G_WIDTH   => CFG_DBG_COUNTERS_WIDTH
-)
-port map
-(
-    clk_i     => clk_i,
-    rst_i     => sig_stats_reset,
-    enable_i  => sig_match_lower_en,
-    counter_o => stats_r.match_lower_weight
-);
 
 counter_queries_out: simple_counter generic map
 (

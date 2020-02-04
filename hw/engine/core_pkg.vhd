@@ -216,19 +216,21 @@ package core_pkg is
 
     component buffer_query is
         generic (
-            G_DEPTH : integer := 32
+            G_DEPTH   : integer := 32;
+            G_ALMST   : integer := 1
         );
         port (
-            rst_i      :  in std_logic;
-            clk_i      :  in std_logic;
+            rst_i         :  in std_logic;
+            clk_i         :  in std_logic;
             -- FIFO Write Interface
-            wr_en_i    :  in std_logic;
-            wr_data_i  :  in query_buffer_type;
-            full_o     : out std_logic;
+            wr_en_i       :  in std_logic;
+            wr_data_i     :  in query_buffer_type;
+            full_o        : out std_logic;
+            almost_full_o : out std_logic;
             -- FIFO Read Interface
-            rd_en_i    :  in std_logic;
-            rd_data_o  : out query_buffer_type;
-            empty_o    : out std_logic
+            rd_en_i       :  in std_logic;
+            rd_data_o     : out query_buffer_type;
+            empty_o       : out std_logic
         );
     end component;
 

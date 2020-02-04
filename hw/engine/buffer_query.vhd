@@ -25,19 +25,21 @@ use bre.core_pkg.all;
 
 entity buffer_query is
     generic (
-        G_DEPTH : integer := 32
+        G_DEPTH   : integer := 32;
+        G_ALMST   : integer := 1
     );
     port (
-        rst_i      :  in std_logic;
-        clk_i      :  in std_logic;
+        rst_i         :  in std_logic;
+        clk_i         :  in std_logic;
         -- FIFO Write Interface
-        wr_en_i    :  in std_logic;
-        wr_data_i  :  in query_buffer_type;
-        full_o     : out std_logic;
+        wr_en_i       :  in std_logic;
+        wr_data_i     :  in query_buffer_type;
+        full_o        : out std_logic;
+        almost_full_o : out std_logic;
         -- FIFO Read Interface
-        rd_en_i    :  in std_logic;
-        rd_data_o  : out query_buffer_type;
-        empty_o    : out std_logic
+        rd_en_i       :  in std_logic;
+        rd_data_o     : out query_buffer_type;
+        empty_o       : out std_logic
     );
 end buffer_query;
  
@@ -54,7 +56,9 @@ architecture rtl of buffer_query is
 
     signal sig_full      : std_logic;
     signal sig_empty     : std_logic;
-
+    --
+    signal wr_en_r       : std_logic;
+    signal wr_data_r     : query_buffer_type;
 begin
  
 p_ctrl : process (clk_i) is
@@ -67,14 +71,14 @@ begin
         else
  
             -- Keeps track of the total number of words in the FIFO
-            if (wr_en_i = '1' and rd_en_i = '0') then
+            if (wr_en_r = '1' and rd_en_i = '0') then
                 fifo_cntr_reg <= fifo_cntr_reg + 1;
-            elsif (wr_en_i = '0' and rd_en_i = '1') then
+            elsif (wr_en_r = '0' and rd_en_i = '1') then
                 fifo_cntr_reg <= fifo_cntr_reg - 1;
             end if;
  
             -- Keeps track of the write index (and controls roll-over)
-            if (wr_en_i = '1' and sig_full = '0') then
+            if (wr_en_r = '1' and sig_full = '0') then
                 if wr_index_reg = G_DEPTH-1 then
                     wr_index_reg <= 0;
                 else
@@ -92,8 +96,8 @@ begin
             end if;
  
             -- Registers the input data when there is a write
-            if wr_en_i = '1' then
-                fifo_data_reg(wr_index_reg) <= wr_data_i;
+            if wr_en_r = '1' then
+                fifo_data_reg(wr_index_reg) <= wr_data_r;
             end if;
 
         end if;     -- sync reset
@@ -101,7 +105,9 @@ begin
 end process p_ctrl;
 
 rd_data_o <= fifo_data_reg(rd_index_reg);
- 
+
+sig_almst <= '1' when fifo_cntr_reg >= G_DEPTH-G_ALMST
+                 else '0';
 sig_full  <= '1' when fifo_cntr_reg = G_DEPTH else '0';
 sig_empty <= '1' when fifo_cntr_reg = 0       else '0';
  
@@ -113,7 +119,7 @@ empty_o <= sig_empty;
 p_assert : process (clk_i) is
 begin
     if rising_edge(clk_i) then
-        if wr_en_i = '1' and sig_full = '1' then
+        if wr_en_r = '1' and sig_full = '1' then
             report "ASSERT FAILURE - MODULE_REGISTER_FIFO: FIFO IS FULL AND BEING WRITTEN " severity failure;
         end if;
  
@@ -123,5 +129,22 @@ begin
     end if;
 end process p_ASSERT;
 -- synthesis translate_on
+
+---------------------------------------------------------------------------------
+-- REGISTERED WRITE INPUT
+---------------------------------------------------------------------------------
+
+p_ioreg : process(clk_i) is
+begin
+    if rising_edge(clk_i) then
+        if rst_i = '0' then
+            wr_en_r <= '0';
+        else
+            wr_en_r   <= wr_en_i;
+            wr_data_r <= wr_data_i;
+        end if;
+    end if;
+end process p_ioreg;
+
 
 end rtl;

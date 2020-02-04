@@ -134,7 +134,8 @@ gen_dopio: for D in 0 to CFG_ENGINE_DOPIO_CORES - 1 generate
         --
         wr_en_i         => query_wr_en(D),
         wr_data_i       => query_i(I),
-        full_o          => query_full(D)(I),
+        full_o          => open,
+        almost_full_o   => query_full(D)(I),
         --
         rd_en_i         => query_read(D)(I),
         rd_data_o       => query(D)(I),

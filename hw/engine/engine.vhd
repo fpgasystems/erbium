@@ -11,6 +11,9 @@ library tools;
 use tools.std_pkg.all;
 
 entity engine is
+    generic (
+        G_INOUT_LATENCY  : integer := 3
+    );
     port (
         clk_i             :  in std_logic;
         rst_i             :  in std_logic; -- rst low active
@@ -97,6 +100,17 @@ architecture behavioural of engine is
     end record;
     signal dopio_r, dopio_rin   : dopio_reg_type;
     signal sig_dopio_res : std_logic_vector(CFG_ENGINE_DOPIO_CORES - 1 downto 0);
+    --
+    -- IN/O UT REGISTER WRAPPER (REDUCE ROUTING TIMES)
+    type inout_wrapper_type is record
+        -- nfa to mem
+        mem_data   : std_logic_vector(CFG_EDGE_BRAM_WIDTH - 1 downto 0);
+        mem_wren   : std_logic_vector(CFG_ENGINE_NCRITERIA - 1 downto 0);
+        mem_addr   : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+    end record;
+    type inout_wrapper_array is array (G_INOUT_LATENCY - 1 downto 0) of inout_wrapper_type;
+    signal inout_r, inout_rin : inout_wrapper_array;
+    signal io_r   : inout_wrapper_type;
 begin
 
 ----------------------------------------------------------------------------------------------------
@@ -250,9 +264,9 @@ gen_stages_mem: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
         core_b_en_i   => '0',
         core_b_addr_i => (others => '0'),
         core_b_data_o => open,
-        wr_en_i       => mem_wren_i(I),
-        wr_addr_i     => mem_addr_i(clogb2(CFG_CORE_PARAM_ARRAY(I).G_RAM_DEPTH)-1 downto 0),
-        wr_data_i     => mem_i
+        wr_en_i       => io_r.mem_wren(I),
+        wr_addr_i     => io_r.mem_addr(clogb2(CFG_CORE_PARAM_ARRAY(I).G_RAM_DEPTH)-1 downto 0),
+        wr_data_i     => io_r.mem_data
     );
 
   end generate gen_dp_core;
@@ -274,9 +288,9 @@ gen_stages_mem: for I in 0 to CFG_ENGINE_NCRITERIA - 1 generate
         core_b_en_i   => mem_en(1)(I),
         core_b_addr_i => mem_addr(1)(I)(clogb2(CFG_CORE_PARAM_ARRAY(I).G_RAM_DEPTH)-1 downto 0),
         core_b_data_o => uram_rd_data(1)(I),
-        wr_en_i       => mem_wren_i(I),
-        wr_addr_i     => mem_addr_i(clogb2(CFG_CORE_PARAM_ARRAY(I).G_RAM_DEPTH)-1 downto 0),
-        wr_data_i     => mem_i
+        wr_en_i       => io_r.mem_wren(I),
+        wr_addr_i     => io_r.mem_addr(clogb2(CFG_CORE_PARAM_ARRAY(I).G_RAM_DEPTH)-1 downto 0),
+        wr_data_i     => io_r.mem_data
     );
 
   end generate gen_dp_cores;
@@ -338,5 +352,44 @@ begin
         end if;
     end if;
 end process;
+
+
+----------------------------------------------------------------------------------------------------
+-- IN/OUT REGISTER WRAPPER (REDUCE ROUTING TIMES)                                                 --
+----------------------------------------------------------------------------------------------------
+
+ior_comb : process(inout_r, mem_i, mem_wren_i, mem_addr_i)
+    variable v : inout_wrapper_array;
+begin
+    
+    v := inout_r;
+    
+    v(0) := inout_r(1);
+    v(1) := inout_r(2);
+
+    v(2).mem_data := mem_i;
+    v(2).mem_wren := mem_wren_i;
+    v(2).mem_addr := mem_addr_i;
+
+    inout_rin <= v;
+
+end process;
+
+ior_seq : process(clk_i)
+begin
+    if rising_edge(clk_i) then
+        if rst_i = '0' then
+            -- default rst
+            inout_r(0).mem_wren <= (others => '0');
+            inout_r(1).mem_wren <= (others => '0');
+            inout_r(2).mem_wren <= (others => '0');
+        else
+            inout_r <= inout_rin;
+        end if;
+    end if;
+end process;
+
+-- assign
+io_r <= inout_r(0);
 
 end architecture behavioural;

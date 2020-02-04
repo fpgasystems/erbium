@@ -112,6 +112,7 @@ sig_almst <= '1' when fifo_cntr_reg >= G_DEPTH-G_ALMST
 sig_full  <= '1' when fifo_cntr_reg = G_DEPTH else '0';
 sig_empty <= '1' when fifo_cntr_reg = 0       else '0';
  
+almost_full_o <= sig_almst;
 full_o  <= sig_full;
 empty_o <= sig_empty;
    

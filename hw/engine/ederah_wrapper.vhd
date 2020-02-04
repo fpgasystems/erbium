@@ -601,11 +601,18 @@ begin
         end if;
     end if;
 
-    --
-    v.result_value := sig_result_value(dopio_r.reslt_flow_ctrl);
-    v.result_valid := sig_result_valid(dopio_r.reslt_flow_ctrl) and result_r.ready;
-    v.result_last  := (not v_or((power_of_two(dopio_r.reslt_flow_ctrl, CFG_ENGINES_NUMBER) and sig_result_last)
-                       xor dopio_r.core_running)) and sig_result_last(dopio_r.reslt_flow_ctrl);
+    -- result value
+    if (result_r.ready = '1') then
+        if (sig_result_valid(dopio_r.reslt_flow_ctrl) = '1') then
+            v.result_value := sig_result_value(dopio_r.reslt_flow_ctrl);
+            v.result_valid := sig_result_valid(dopio_r.reslt_flow_ctrl) and result_r.ready;
+            v.result_last  := (not v_or((power_of_two(dopio_r.reslt_flow_ctrl, CFG_ENGINES_NUMBER) and sig_result_last)
+                               xor dopio_r.core_running)) and sig_result_last(dopio_r.reslt_flow_ctrl);
+        else
+            v.result_valid := '0';
+            v.result_last  := '0';
+        end if;
+    end if;
     dopio_rin <= v;
 end process;
 
@@ -651,8 +658,8 @@ gen_engines: for D in 0 to CFG_ENGINES_NUMBER - 1 generate
     );
 
     -- DOPIO
-    sig_query_wr(D)    <= query_r.wr_en when dopio_r.query_flow_ctrl = D else '0';
-    sig_result_ready(D)    <= result_r.ready when dopio_r.reslt_flow_ctrl = D else '0';
+    sig_query_wr(D)     <= query_r.wr_en  when dopio_r.query_flow_ctrl = D else '0';
+    sig_result_ready(D) <= result_r.ready when dopio_r.reslt_flow_ctrl = D else '0';
 
 end generate gen_engines;
 

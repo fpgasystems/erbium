@@ -188,11 +188,11 @@ aws_build: check-aws_repo
 
 # Cleaning stuff
 clean:
-	-$(RMDIR) $(EXECUTABLE) $(XCLBIN)/{*sw_emu*,*hw_emu*} 
+	-$(RMDIR) $(EXECUTABLE)
 	-$(RMDIR) profile_* TempConfig system_estimate.xtxt *.rpt *.csv 
-	-$(RMDIR) src/*.ll *v++* .Xil emconfig.json dltmp* xmltmp* *.log *.jou *.wcfg *.wdb *.protoinst
+	-$(RMDIR) *v++* .Xil .run emconfig.json *.log *.jou *.wcfg *.wdb *.protoinst
 
 cleanall: clean
-	-$(RMDIR) build_dir*
-	-$(RMDIR) _xo.* *xclbin.run_summary qemu-memory-_* emulation/ _vimage/ pl* start_simulation.sh *.xclbin
+	-$(RMDIR) ./_xclbin.*
+	-$(RMDIR) _xo.* *xclbin.run_summary
 	-$(RMDIR) ./_xo-tmp_* ./packaged_kernel* 

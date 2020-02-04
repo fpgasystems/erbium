@@ -52,7 +52,7 @@ POSTCOMPILE = mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d
 all: $(BIN)
 
 .PHONY: benchmarks
-benchmarks: all
+benchmarks: cleanall all
 	mkdir -p build-mct_h1Asc
 	mkdir -p build-mct_h1Des
 	mkdir -p build-mct_hRand
@@ -69,7 +69,7 @@ benchmarks: all
 clean:
 	$(RM) -r $(OBJDIR) $(DEPDIR)
 
-cleanall:
+cleanall: clean
 	$(RM) -r ./build-*
 
 help:

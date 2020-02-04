@@ -54,6 +54,7 @@ architecture rtl of buffer_query is
     signal wr_index_reg  : integer range 0 to G_DEPTH-1;
     signal rd_index_reg  : integer range 0 to G_DEPTH-1;
 
+    signal sig_almst     : std_logic;
     signal sig_full      : std_logic;
     signal sig_empty     : std_logic;
     --

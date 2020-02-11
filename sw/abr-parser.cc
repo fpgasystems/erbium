@@ -12,7 +12,7 @@
 #include "dictionnary.h"
 #include "nfa_handler.h"
 
-enum SortOption { None, H1_Ascending, H1_Descending, MCT_DESC, H2_Ascending, H2_Descending };
+enum SortOption { None, H1_Ascending, H1_Descending, H2_Ascending, H2_Descending };
 std::string SortOptionTag[] = {"hRand", "h1Asc", "h1Des", "h1Des", "h2Asc", "h2Desc"};
 
 //#define _DEBUG true
@@ -24,7 +24,7 @@ int main(int argc, char** argv)
     ////////////////////////////////////////////////////////////////////////////////////////////////
     std::cout << "# PARAMETERS" << std::endl;
 
-    SortOption sorting_option = MCT_DESC;
+    SortOption sorting_option = H2_Descending;
     std::string dest_folder = "build/";
     std::string rules_file = "../data/mct_rules.csv";
 
@@ -52,7 +52,7 @@ int main(int argc, char** argv)
             std::cerr << "Usage: " << argv[0] << "\n"
                       << "\t-d  destination folder\n"
                       << "\t-r  rules file\n"
-                      << "\t-s  sorting: 0=None 1=H1_Asc 2=H1_Desc 3=MCT_H1_Dec 4=H2_Asc 5=H2_Desc\n"
+                      << "\t-s  sorting: 0=None 1=H1_Asc 2=H1_Desc 4=H2_Asc 5=H2_Desc\n"
                       << "\t-z  [ZRH workload]\n"
                       << "\t-h  help\n";
             exit(EXIT_FAILURE);
@@ -64,11 +64,10 @@ int main(int argc, char** argv)
 
     std::cout << "-d destination folder: " << dest_folder << std::endl;
     std::cout << "-r rules file: " << rules_file << std::endl;
-    printf("-s sorting: [%c]none [%c]H1_Asc [%c]H1_Desc [%c]MCT_H1_Dec [%c]H2_Asc [%c]H2_Desc\n",
+    printf("-s sorting: [%c]none [%c]H1_Asc [%c]H1_Desc [%c]H2_Asc [%c]H2_Desc\n",
             (sorting_option==SortOption::None)          ? 'x' : ' ',
             (sorting_option==SortOption::H1_Ascending)  ? 'x' : ' ',
             (sorting_option==SortOption::H1_Descending) ? 'x' : ' ',
-            (sorting_option==SortOption::MCT_DESC)      ? 'x' : ' ',
             (sorting_option==SortOption::H2_Ascending)  ? 'x' : ' ',
             (sorting_option==SortOption::H2_Descending) ? 'x' : ' ');
 
@@ -107,36 +106,6 @@ int main(int argc, char** argv)
         case SortOption::H1_Descending:
             std::cout << "H1_Descending sort" << std::endl;
             the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending);
-            break;
-
-        case SortOption::MCT_DESC:
-        {
-            std::cout << "Arbitrary order MCT_DESC" << std::endl;
-            nfa_bre::sorting_map_t sorting_map(22);
-            sorting_map[ 0] = rp.m_ruleType.get_criterion_id("MCT_OFF");
-            sorting_map[ 1] = rp.m_ruleType.get_criterion_id("MCT_BRD");
-            sorting_map[ 2] = rp.m_ruleType.get_criterion_id("IN_FLT_NB");
-            sorting_map[ 3] = rp.m_ruleType.get_criterion_id("OUT_FLT_NB");
-            sorting_map[ 4] = rp.m_ruleType.get_criterion_id("IN_FLT_RG");
-            sorting_map[ 5] = rp.m_ruleType.get_criterion_id("OUT_FLT_RG");
-            sorting_map[ 6] = rp.m_ruleType.get_criterion_id("NXT_APT");
-            sorting_map[ 7] = rp.m_ruleType.get_criterion_id("PRV_APT");
-            sorting_map[ 8] = rp.m_ruleType.get_criterion_id("MCT_PRD");
-            sorting_map[ 9] = rp.m_ruleType.get_criterion_id("IN_CRR");
-            sorting_map[10] = rp.m_ruleType.get_criterion_id("OUT_CRR");
-            sorting_map[11] = rp.m_ruleType.get_criterion_id("PRV_CTRY");
-            sorting_map[12] = rp.m_ruleType.get_criterion_id("NXT_CTRY");
-            sorting_map[13] = rp.m_ruleType.get_criterion_id("IN_EQP");
-            sorting_map[14] = rp.m_ruleType.get_criterion_id("IN_TER");
-            sorting_map[15] = rp.m_ruleType.get_criterion_id("OUT_TER");
-            sorting_map[16] = rp.m_ruleType.get_criterion_id("OUT_EQP");
-            sorting_map[17] = rp.m_ruleType.get_criterion_id("NXT_STATE");
-            sorting_map[18] = rp.m_ruleType.get_criterion_id("PRV_STATE");
-            sorting_map[19] = rp.m_ruleType.get_criterion_id("CTN_TYPE");
-            sorting_map[20] = rp.m_ruleType.get_criterion_id("NXT_AREA");
-            sorting_map[21] = rp.m_ruleType.get_criterion_id("PRV_AREA");
-            the_dictionnary.m_sorting_map = sorting_map;
-        }
             break;
 
         case SortOption::H2_Ascending:
@@ -219,31 +188,36 @@ int main(int argc, char** argv)
     std::cout << "# NFA COMPLETED in " << elapsed.count() << " s\n";
     
     ////////////////////////////////////////////////////////////////////////////////////////////////
+    // DFA                                                                                        //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
+    std::cout << "# DFA" << std::endl;
+    start = std::chrono::high_resolution_clock::now();
+    
+    the_nfa.build_dfa(&the_dictionnary);
+
+    finish = std::chrono::high_resolution_clock::now();
+    elapsed = finish - start;
+
+    // Stats
+    std::cout << "DFA: " << boost::num_vertices(the_nfa.m_dfa) << std::endl;
+    std::cout << "# DFA COMPLETED in " << elapsed.count() << " s\n";
+    
+    return 0;
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
     // OPTIMISATIONS                                                                              //
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::cout << "# OPTIMISATIONS" << std::endl;
     start = std::chrono::high_resolution_clock::now();
 
-    uint n_merged_nodes = the_nfa.optimise();
+    the_nfa.optimise();
+    the_nfa.deletion();
     
     finish = std::chrono::high_resolution_clock::now();
     elapsed = finish - start;
     std::cout << "# OPTIMISATIONS COMPLETED in " << elapsed.count() << " s\n";
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-    // DELETION                                                                                   //
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-
-    std::cout << "# DELETION" << std::endl;
-    std::cout << "deleting " << n_merged_nodes << " states" << std::endl;
-    start = std::chrono::high_resolution_clock::now();
-
-    the_nfa.deletion();
-
-    finish = std::chrono::high_resolution_clock::now();
-    elapsed = finish - start;
-    std::cout << "# DELETING COMPLETED in " << elapsed.count() << " s\n";
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // FINAL STATS                                                                                //

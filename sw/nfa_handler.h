@@ -15,11 +15,17 @@ namespace nfa_bre {
 class NFAHandler {
   public:
     vertexes_t m_vertexes; // per level > per value_id > nodes list
-    graph_t    m_graph;
+    graph_t    m_graph; // graph and NFA
+    graph_t    m_dfa;   // DFA
+    vertexes_t m_dfa_vertexes; // per level > per value_id > nodes list
 
     NFAHandler(const rulePack_s&, Dictionnary* dic);
+    // NFA
     uint optimise();
     void deletion();
+    // DFA
+    void build_dfa(Dictionnary* dic);
+
     uint print_stats(); // returns n_bram_edges_max
     void export_dot_file(const std::string& filename);
     void memory_dump(const std::string& filename, const rulePack_s& rulepack);
@@ -35,6 +41,10 @@ class NFAHandler {
   private:
     Dictionnary* m_dic;
     bool m_imported_param;
+
+    // DFA-only
+    void merge_paths(vertex_id_t orgi_state, vertex_id_t dest_state);
+    void append_path(vertex_id_t orgi_children, vertex_id_t dest_state);
 
     void dump_nfa_state(std::fstream* outfile,
                         const vertex_id_t& vertex_id,

@@ -62,6 +62,7 @@ struct vertex_info {
     criterionid_t level;
     std::string   label;
     std::string   path;
+    weight_t      weight; // only used for DFA filtering at last level
     std::set<vertex_id_t> parents;
     std::set<vertex_id_t> children;
     uint16_t dump_pointer;

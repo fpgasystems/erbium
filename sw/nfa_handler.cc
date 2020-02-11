@@ -45,9 +45,9 @@ NFAHandler::NFAHandler(const rulePack_s& rulepack, Dictionnary* dic)
     add_vertex(m_graph); // origin;
 
 	std::map<std::string, vertex_id_t> path_map;   // from node_path to node_id
-    std::string    path_fwd;
-    vertex_id_t    prev_id = 0;
-    vertex_id_t    node_to_use = 0;
+    std::string   path_fwd;
+    vertex_id_t   prev_id = 0;
+    vertex_id_t   node_to_use = 0;
     criterionid_t level = 0;
 
     for (auto& rule : rulepack.m_rules)
@@ -66,11 +66,12 @@ NFAHandler::NFAHandler(const rulePack_s& rulepack, Dictionnary* dic)
             node_to_use = 0;
             if (path_map[path_fwd] == 0) // new path
             {
-                node_to_use = add_vertex(m_graph);
+                node_to_use = boost::add_vertex(m_graph);
                 path_map[path_fwd] = node_to_use;
                 m_graph[node_to_use].label = criterion.m_value;
                 m_graph[node_to_use].level = level;
                 m_graph[node_to_use].path = path_fwd;
+                m_graph[node_to_use].weight = criterion.m_weight; // only used for last level DFA filtering
                 m_vertexes[level][dic->m_dic_criteria[criterion.m_index][criterion.m_value]].insert(node_to_use);
             }
             else // use existing path
@@ -86,7 +87,7 @@ NFAHandler::NFAHandler(const rulePack_s& rulepack, Dictionnary* dic)
         if (path_map[rule.m_content] == 0)
         {
             // It does not exist
-            node_to_use = add_vertex(m_graph);
+            node_to_use = boost::add_vertex(m_graph);
             path_map[rule.m_content] = node_to_use;
             m_graph[node_to_use].label = rule.m_content;
             m_graph[node_to_use].level = level;
@@ -100,6 +101,106 @@ NFAHandler::NFAHandler(const rulePack_s& rulepack, Dictionnary* dic)
         m_graph[prev_id].children.insert(node_to_use);
     }
     m_dic = dic;
+}
+
+void NFAHandler::build_dfa(Dictionnary* dic)
+{
+    m_dfa = m_graph;
+    m_dfa_vertexes = m_vertexes;
+    
+    // iterate all level from origin
+    for (auto& level : m_dfa_vertexes)
+    {
+        if (string::compare(dic->m_dic_criteria[level.first].begin()->first, "*") =! 0)
+            continue;
+
+        // for each wildcard vertex in this level
+        for (auto& the_wildcard : m_dfa_vertexes[level.first][dic->m_dic_criteria[level.first].begin()->second])
+        {
+            // for each of its parent -- N.B.: at this point it **should** be only one though...
+            for (auto& the_parent : m_dfa[the_wildcard].parents)
+            {
+                // for each other children
+                for (auto& the_child : m_dfa[the_parent].children)
+                {
+                    if (the_child == the_wildcard)
+                        continue;
+
+                    // duplicate the_wildcard into the_child
+                    // "crescite et multiplicamini"
+                    merge_paths(the_wildcard, the_child, level.first);
+                }
+            }
+        }
+    }
+}
+
+void NFAHandler::merge_paths(vertex_id_t orgi_state, vertex_id_t dest_state)
+{
+    if (m_dfa[orgi_state].state == m_dfa_vertexes.size() - 2)
+    {
+        // keep only highest weight
+        if (m_dfa[orgi_state].weight > m_dfa[dest_state].weight)
+        {
+            std::cout << "I'm not sure when this would happen..." << std::endl;
+
+            // remove initial content
+            m_dfa[m_dfa[dest_state].children.begin()].parents.erase(dest_state);
+            m_dfa[dest_state].children.clear();
+
+            // add new one
+            m_dfa[m_dfa[orgi_state].children.begin()].parents.insert(dest_state);
+            m_dfa[dest_state].children.insert(m_dfa[orgi_state].children.begin());
+
+            // update weight
+            m_dfa[dest_state].weight = m_dfa[orgi_state].weight;
+        }
+        return;
+    }
+
+    bool existing_edge;
+    // iterates all outgoing transition of origin state
+    for (auto& orgi_children : m_dfa[orgi_state].children)
+    {
+        existing_edge = false;
+        
+        // check for same-value out. transitions
+        for (auto& dest_children : m_dfa[dest_state].children)
+        {
+            if (m_dfa[orgi_children].label == m_dfa[dest_children].label)
+            {
+                existing_edge = true;
+
+                // merge children paths
+                merge_paths(orgi_children, dest_children)
+                break;
+            }
+        }
+
+        if (not existing_edge)
+        {
+            // append full path
+            append_path(orgi_children, orgi_state);
+        }
+    }
+}
+
+void NFAHandler::append_path(vertex_id_t orgi_children, vertex_id_t dest_state)
+{
+    vertex_id_t neo_child = boost::add_vertex(m_dfa);
+    m_dfa[neo_child].label  = m_dfa[orgi_children].label;
+    m_dfa[neo_child].level  = m_dfa[orgi_children].level;
+    m_dfa[neo_child].path   = m_dfa[orgi_children].path;
+    m_dfa[neo_child].weight = m_dfa[orgi_children].weight; // only used for last level DFA filtering
+    
+    // TODO: is it necessary?
+    // m_vertexes[m_dfa[neo_child].level][dic->m_dic_criteria[criterion.m_index][criterion.m_value]].insert(neo_child);
+    
+    m_dfa[dest_state].children.insert(neo_child);
+    m_dfa[neo_child].parents.insert(dest_state);
+
+    for (auto& grand_children : m_dfa[neo_child].children)
+        append_path(grand_children, neo_child);
 }
 
 uint NFAHandler::optimise()
@@ -650,7 +751,7 @@ void NFAHandler::dump_core_parameters(const std::string& filename, const rulePac
 
     outfile << "library ieee;\nuse ieee.numeric_std.all;\nuse ieee.std_logic_1164.all;\n\n"
             << "library bre;\nuse bre.engine_pkg.all;\nuse bre.core_pkg.all;\n\n"
-            << "package cfg_criteria is\n";
+            << "package cfg_criteria is\n"
             << "    type CORE_PARAM_ARRAY is array (0 to CFG_ENGINE_NCRITERIA - 1) of core_parameters_type;\n\n";
 
     std::vector<uint> edges_per_level(m_vertexes.size()+1);

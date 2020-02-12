@@ -108,15 +108,15 @@ bool Dictionnary::exists_in_vector(const std::vector<int16_t> vec, const criteri
     return false;
 }
 
-dictionnary_t Dictionnary::get_criterion_dic_by_level(const criterionid_t& level)
+dictionnary_t Dictionnary::get_criterion_dic_by_level(const criterionid_t& level) const
 {
     if (level == m_dic_criteria.size())
         return m_dic_contents;
     else
-        return m_dic_criteria[m_sorting_map[level]];
+        return m_dic_criteria.at(m_sorting_map[level]);
 }
 
-int16_t Dictionnary::get_level_by_criterion_id(const criterionid_t& criterion_id)
+int16_t Dictionnary::get_level_by_criterion_id(const criterionid_t& criterion_id) const
 {
     int16_t key = 0;
     for (auto& aux : m_sorting_map)
@@ -126,6 +126,14 @@ int16_t Dictionnary::get_level_by_criterion_id(const criterionid_t& criterion_id
         key++;
     }
     return -1;
+}
+
+valueid_t Dictionnary::get_valueid_by_sort(const criterionid_t& sort_id, const std::string& value) const
+{
+    if (sort_id == m_dic_criteria.size())
+        return m_dic_contents.at(value);
+    else
+        return m_dic_criteria.at(sort_id).at(value);
 }
 
 void Dictionnary::dump_dictionnary(const std::string& filename)

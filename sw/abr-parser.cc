@@ -1,21 +1,17 @@
 #include <string>
 #include <exception>
-#include <iostream>
-#include <fstream>
-#include <chrono>
+#include <iostream>     // std::cout
+#include <chrono>       // time
 #include <math.h>
 #include <unistd.h>
 
-#include <boost/graph/adjacency_list.hpp>
-
 #include "definitions.h"
+#include "rule_parser.h"
 #include "dictionnary.h"
-#include "nfa_handler.h"
+#include "graph_handler.h"
 
 enum SortOption { None, H1_Ascending, H1_Descending, H2_Ascending, H2_Descending };
 std::string SortOptionTag[] = {"hRand", "h1Asc", "h1Des", "h1Des", "h2Asc", "h2Desc"};
-
-//#define _DEBUG true
 
 int main(int argc, char** argv)
 {
@@ -27,9 +23,10 @@ int main(int argc, char** argv)
     SortOption sorting_option = H2_Descending;
     std::string dest_folder = "build/";
     std::string rules_file = "../data/mct_rules.csv";
+    std::string ruletype_file = "../data/mct_ruleTypeDefinition_MCT_v1.xml";
 
     int opt;
-    while ((opt = getopt(argc, argv, "d:r:zs:h")) != -1) {
+    while ((opt = getopt(argc, argv, "d:r:zs:t:h")) != -1) {
         switch (opt) {
         case 'd':
             dest_folder = optarg;
@@ -38,7 +35,7 @@ int main(int argc, char** argv)
             rules_file = optarg;
             break;
         case 't':
-            printf("option t with value '%s'\n", optarg);
+            ruletype_file = optarg;
             break;
         case 's':
             sorting_option = static_cast<SortOption>(atoi(optarg));
@@ -53,6 +50,7 @@ int main(int argc, char** argv)
                       << "\t-d  destination folder\n"
                       << "\t-r  rules file\n"
                       << "\t-s  sorting: 0=None 1=H1_Asc 2=H1_Desc 4=H2_Asc 5=H2_Desc\n"
+                      << "\t-r  ruletype file\n"
                       << "\t-z  [ZRH workload]\n"
                       << "\t-h  help\n";
             exit(EXIT_FAILURE);
@@ -70,6 +68,7 @@ int main(int argc, char** argv)
             (sorting_option==SortOption::H1_Descending) ? 'x' : ' ',
             (sorting_option==SortOption::H2_Ascending)  ? 'x' : ' ',
             (sorting_option==SortOption::H2_Descending) ? 'x' : ' ');
+    std::cout << "-t ruletype file: " << ruletype_file << std::endl;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // LOAD                                                                                       //
@@ -78,13 +77,13 @@ int main(int argc, char** argv)
     std::cout << "# LOAD" << std::endl;
     auto start = std::chrono::high_resolution_clock::now();
     
-    nfa_bre::rulePack_s rp;
-    rp.load_ruleType("../data/ruleTypeDefinition_MCT_v1.xml");
-    rp.load_rules(rules_file);
+    nfa_bre::rulePack_s the_rulePack;
+    the_rulePack.load_ruleType(ruletype_file);
+    the_rulePack.load_rules(rules_file);
 
     auto finish = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = finish - start;
-    std::cout << rp.m_rules.size() << " rules loaded" << std::endl;
+    std::cout << the_rulePack.m_rules.size() << " rules loaded" << std::endl;
     std::cout << "# LOAD COMPLETED in " << elapsed.count() << " s\n";
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -94,7 +93,7 @@ int main(int argc, char** argv)
     std::cout << "# DICTIONNARY" << std::endl;
     start = std::chrono::high_resolution_clock::now();
     
-    nfa_bre::Dictionnary the_dictionnary(rp);
+    nfa_bre::Dictionnary the_dictionnary(the_rulePack);
 
     switch (sorting_option)
     {
@@ -112,14 +111,14 @@ int main(int argc, char** argv)
         {
             std::cout << "Arbitrary order H2_Ascending" << std::endl;
             std::vector<int16_t> arbitrary; // key=position; value=criteria_id
-            for (auto& aux __attribute__((unused)) : rp.m_ruleType.m_criterionDefinition)
+            for (auto& aux __attribute__((unused)) : the_rulePack.m_ruleType.m_criterionDefinition)
                  arbitrary.push_back(-1);
-            arbitrary[ 0] = rp.m_ruleType.get_criterion_id("MCT_OFF");
-            arbitrary[ 1] = rp.m_ruleType.get_criterion_id("MCT_BRD");
-            arbitrary[ 2] = rp.m_ruleType.get_criterion_id("CTN_TYPE");
-            arbitrary[19] = rp.m_ruleType.get_criterion_id("MCT_PRD");
-            arbitrary[20] = rp.m_ruleType.get_criterion_id("OUT_FLT_RG");
-            arbitrary[21] = rp.m_ruleType.get_criterion_id("IN_FLT_RG");
+            arbitrary[ 0] = the_rulePack.m_ruleType.get_criterion_id("MCT_OFF");
+            arbitrary[ 1] = the_rulePack.m_ruleType.get_criterion_id("MCT_BRD");
+            arbitrary[ 2] = the_rulePack.m_ruleType.get_criterion_id("CTN_TYPE");
+            arbitrary[19] = the_rulePack.m_ruleType.get_criterion_id("MCT_PRD");
+            arbitrary[20] = the_rulePack.m_ruleType.get_criterion_id("OUT_FLT_RG");
+            arbitrary[21] = the_rulePack.m_ruleType.get_criterion_id("IN_FLT_RG");
             the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Ascending, &arbitrary);
         }
             break;
@@ -128,14 +127,14 @@ int main(int argc, char** argv)
         {
             std::cout << "Arbitrary order H2_Descending" << std::endl;
             std::vector<int16_t> arbitrary; // key=position; value=criteria_id
-            for (auto& aux __attribute__((unused)) : rp.m_ruleType.m_criterionDefinition)
+            for (auto& aux __attribute__((unused)) : the_rulePack.m_ruleType.m_criterionDefinition)
                  arbitrary.push_back(-1);
-            arbitrary[ 0] = rp.m_ruleType.get_criterion_id("MCT_OFF");
-            arbitrary[ 1] = rp.m_ruleType.get_criterion_id("MCT_BRD");
-            arbitrary[ 2] = rp.m_ruleType.get_criterion_id("CTN_TYPE");
-            arbitrary[19] = rp.m_ruleType.get_criterion_id("MCT_PRD");
-            arbitrary[20] = rp.m_ruleType.get_criterion_id("OUT_FLT_RG");
-            arbitrary[21] = rp.m_ruleType.get_criterion_id("IN_FLT_RG");
+            arbitrary[ 0] = the_rulePack.m_ruleType.get_criterion_id("MCT_OFF");
+            arbitrary[ 1] = the_rulePack.m_ruleType.get_criterion_id("MCT_BRD");
+            arbitrary[ 2] = the_rulePack.m_ruleType.get_criterion_id("CTN_TYPE");
+            arbitrary[19] = the_rulePack.m_ruleType.get_criterion_id("MCT_PRD");
+            arbitrary[20] = the_rulePack.m_ruleType.get_criterion_id("OUT_FLT_RG");
+            arbitrary[21] = the_rulePack.m_ruleType.get_criterion_id("IN_FLT_RG");
             the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending, &arbitrary);
         }
             break;
@@ -149,75 +148,74 @@ int main(int argc, char** argv)
 
     the_dictionnary.dump_dictionnary(dest_folder + "dictionnary.csv");
 
-    // uint key = 0;
-    // for (auto& aux : the_dictionnary.m_sorting_map)
-    // {
-    //     std::cout << "[" << key++ << "] ";
-    //     std::cout << std::next(rp.m_ruleType.m_criterionDefinition.begin(), aux)->m_code;
-    //     std::cout <<  " #" << the_dictionnary.m_dic_criteria[aux].size() << std::endl;
-    // }
-
     elapsed = finish - start;
     std::cout << "# DICTIONNARY COMPLETED in " << elapsed.count() << " s\n";
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // GRAPH                                                                                      //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
+    std::cout << "# GRAPH" << std::endl;
+    start = std::chrono::high_resolution_clock::now();
+    
+    nfa_bre::GraphHandler the_tree(&the_rulePack, &the_dictionnary);
+    the_tree.consolidate_graph();
+
+    finish = std::chrono::high_resolution_clock::now();
+    elapsed = finish - start;
+
+    // Stats
+    std::cout << "number of states: " << the_tree.get_num_states() << std::endl;
+    std::cout << "number of transitions: " << the_tree.get_num_transitions() << std::endl;
+    std::cout << "# GRAPH COMPLETED in " << elapsed.count() << " s\n";
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // DFA                                                                                        //
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
+    std::cout << "# DFA" << std::endl;
+
+    nfa_bre::GraphHandler the_dfa(&the_rulePack, &the_dictionnary);
+    start = std::chrono::high_resolution_clock::now();
+
+    the_dfa.make_deterministic();
+    the_dfa.consolidate_graph();
+
+    finish = std::chrono::high_resolution_clock::now();
+    elapsed = finish - start;
+
+    // Stats
+    std::cout << "number of states: " << the_dfa.get_num_states() << std::endl;
+    std::cout << "number of transitions: " << the_dfa.get_num_transitions() << std::endl;
+    std::cout << "# DFA COMPLETED in " << elapsed.count() << " s\n";
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // NFA                                                                                        //
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::cout << "# NFA" << std::endl;
-    start = std::chrono::high_resolution_clock::now();
     
-    nfa_bre::NFAHandler the_nfa(rp, &the_dictionnary);
+    nfa_bre::GraphHandler the_nfa(&the_rulePack, &the_dictionnary);
+    start = std::chrono::high_resolution_clock::now();
+
+    the_nfa.suffix_reduction();
+    the_nfa.consolidate_graph();
 
     finish = std::chrono::high_resolution_clock::now();
     elapsed = finish - start;
-    
-    #ifdef _DEBUG
-    for (auto& level : the_nfa.m_vertexes)
-    {
-        aux=0;
-        for (auto& value : level.second)
-            aux += value.second.size();
-        std::cout << "level " << level.first << " has " << aux << " states" << std::endl;
-    }
-    #endif
 
     // Stats
-    std::cout << "initial number of states: " << boost::num_vertices(the_nfa.m_graph) << std::endl;
-    //std::cout << "initial number of transitions: " << boost::num_edges(the_nfa.m_graph) << std::endl;
+    std::cout << "number of states: " << the_nfa.get_num_states() << std::endl;
+    std::cout << "number of transitions: " << the_nfa.get_num_transitions() << std::endl;
     std::cout << "# NFA COMPLETED in " << elapsed.count() << " s\n";
     
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    // DFA                                                                                        //
+    // SANDBOX                                                                                    //
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    std::cout << "# DFA" << std::endl;
-    start = std::chrono::high_resolution_clock::now();
-    
-    the_nfa.build_dfa(&the_dictionnary);
-
-    finish = std::chrono::high_resolution_clock::now();
-    elapsed = finish - start;
-
-    // Stats
-    std::cout << "DFA: " << boost::num_vertices(the_nfa.m_dfa) << std::endl;
-    std::cout << "# DFA COMPLETED in " << elapsed.count() << " s\n";
-    
-    return 0;
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-    // OPTIMISATIONS                                                                              //
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-
-    std::cout << "# OPTIMISATIONS" << std::endl;
-    start = std::chrono::high_resolution_clock::now();
-
-    the_nfa.optimise();
-    the_nfa.deletion();
-    
-    finish = std::chrono::high_resolution_clock::now();
-    elapsed = finish - start;
-    std::cout << "# OPTIMISATIONS COMPLETED in " << elapsed.count() << " s\n";
+    the_tree.export_graphviz(dest_folder + "graphviz_tree.dot");
+    the_dfa.export_graphviz(dest_folder + "graphviz_dfa.dot");
+    the_nfa.export_graphviz(dest_folder + "graphviz_nfa.dot");
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // FINAL STATS                                                                                //
@@ -226,29 +224,29 @@ int main(int argc, char** argv)
     std::cout << "# FINAL STATS" << std::endl;
     uint n_bram_edges_max = the_nfa.print_stats();
 
-    std::cout << "total number of states: " << boost::num_vertices(the_nfa.m_graph) << std::endl;
-    std::cout << "total number of transitions: " << boost::num_edges(the_nfa.m_graph) << std::endl;
+    std::cout << "total number of states: " << the_nfa.get_num_states() << std::endl;
+    std::cout << "total number of transitions: " << the_nfa.get_num_transitions() << std::endl;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // EXPORT CORE PARAMETERS                                                                     //
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::cout << "# EXPORT CORE PARAMETERS" << std::endl;
-    the_nfa.dump_core_parameters(dest_folder + "cfg_criteria_" + SortOptionTag[sorting_option] + ".vhd", rp);
+    nfa_bre::RuleParser::export_vhdl_parameters(
+                dest_folder + "cfg_criteria_" + SortOptionTag[sorting_option] + ".vhd",
+                the_rulePack,
+                &the_dictionnary,
+                the_nfa.get_transitions_per_level());
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    // DROOLS                                                                                     //
+    // EXPORT GRAPHVIZ DOT FILE                                                                   //
     ////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    std::cout << "# EXPORT GRAPHVIZ DOT FILE" << std::endl;
 
-    std::cout << "# DROOLS" << std::endl;
-    the_nfa.dump_drools_rules(dest_folder, rp);
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-    // EXPORT DOT FILE                                                                            //
-    ////////////////////////////////////////////////////////////////////////////////////////////////
-
-    std::cout << "# EXPORT DOT FILE" << std::endl;
-    the_nfa.export_dot_file(dest_folder + "automaton.dot");
+    the_tree.export_graphviz(dest_folder + "graphviz_tree.dot");
+    the_dfa.export_graphviz(dest_folder + "graphviz_dfa.dot");
+    the_nfa.export_graphviz(dest_folder + "graphviz_nfa.dot");
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // MEMORY DUMP                                                                                //
@@ -256,7 +254,7 @@ int main(int argc, char** argv)
 
     std::cout << "# MEMORY DUMP" << std::endl;
 
-    // const uint CFG_ENGINE_NCRITERIA       = rp.m_ruleType.m_criterionDefinition.size();
+    // const uint CFG_ENGINE_NCRITERIA       = the_rulePack.m_ruleType.m_criterionDefinition.size();
     // const uint CFG_EDGE_BUFFERS_DEPTH     = 5;
     // const uint CFG_EDGE_BRAM_DEPTH        = (1 << (nfa_bre::CFG_MEM_ADDR_WIDTH + 1)) - 1;
     // const uint BRAM_USED_BITS             = nfa_bre::CFG_WEIGHT_WIDTH + nfa_bre::CFG_MEM_ADDR_WIDTH + 2*nfa_bre::CFG_ENGINE_CRITERION_WIDTH + 1;
@@ -282,7 +280,8 @@ int main(int argc, char** argv)
 
     start = std::chrono::high_resolution_clock::now();
 
-    the_nfa.memory_dump(dest_folder + "mem_edges.bin", rp);
+    the_dfa.export_memory(dest_folder + "mem_dfa_edges.bin");
+    the_nfa.export_memory(dest_folder + "mem_nfa_edges.bin");
 
     finish = std::chrono::high_resolution_clock::now();
 
@@ -295,7 +294,7 @@ int main(int argc, char** argv)
     std::cout << "# WORKLOAD DUMP" << std::endl;
     start = std::chrono::high_resolution_clock::now();
 
-    the_nfa.dump_benchmark_workload(dest_folder, rp);
+    nfa_bre::RuleParser::export_benchmark_workload(dest_folder, the_rulePack, &the_dictionnary);
 
     finish = std::chrono::high_resolution_clock::now();
     elapsed = finish - start;

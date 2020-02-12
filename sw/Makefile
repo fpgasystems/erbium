@@ -51,8 +51,15 @@ POSTCOMPILE = mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d
 .PHONY: all clean cleanall help
 all: $(BIN)
 
+.PHONY: demo
+demo: all
+	mkdir -p build-demo01
+	mkdir -p build-demo02
+	./$(BIN) -d build-demo01 -r ../data/demo_01.csv -s 0 -t ../data/demo_ruletype.xml
+	./$(BIN) -d build-demo02 -r ../data/demo_02.csv -s 0 -t ../data/demo_ruletype.xml
+
 .PHONY: benchmarks
-benchmarks: cleanall all
+benchmarks: all
 	mkdir -p build-mct_h1Asc
 	mkdir -p build-mct_h1Des
 	mkdir -p build-mct_hRand

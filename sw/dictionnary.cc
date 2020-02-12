@@ -136,6 +136,14 @@ valueid_t Dictionnary::get_valueid_by_sort(const criterionid_t& sort_id, const s
         return m_dic_criteria.at(sort_id).at(value);
 }
 
+valueid_t Dictionnary::get_valueid_by_level(const criterionid_t& level, const std::string& value) const
+{
+    if (level == m_dic_criteria.size())
+        return m_dic_contents.at(value);
+    else
+        return m_dic_criteria.at(m_sorting_map[level]).at(value);
+}
+
 void Dictionnary::dump_dictionnary(const std::string& filename)
 {
     std::ofstream filecsv(filename, std::ios::out | std::ios::trunc);

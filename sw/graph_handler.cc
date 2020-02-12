@@ -212,10 +212,12 @@ void GraphHandler::make_deterministic()
         for (auto& the_wildcard : m_vertexes[level.first][dic.begin()->second])
         {
             // for each of its parent -- N.B.: at this point it **should** be only one though...
-            for (auto& the_parent : m_graph[the_wildcard].parents)
+            auto list_parents = m_graph[the_wildcard].parents;
+            for (auto& the_parent : list_parents)
             {
                 // for each other children
-                for (auto& the_child : m_graph[the_parent].children)
+                auto list_child = m_graph[the_parent].children;
+                for (auto& the_child : list_child)
                 {
                     if (the_child == the_wildcard)
                         continue;
@@ -232,15 +234,15 @@ void GraphHandler::make_deterministic()
 void GraphHandler::dfa_merge_paths(const vertex_id_t& orgi_state, const vertex_id_t& dest_state)
 {
     /*std::cout << "merge at " << m_graph[orgi_state].level
-                << " for " << m_graph[orgi_state].path << " into "
-                << m_graph[dest_state].path << std::endl;*/
+                << " for " << m_graph[orgi_state].label << " into "
+                << m_graph[dest_state].label << std::endl;*/
 
     if (m_graph[orgi_state].level == m_vertexes.size() - 2)
     {
         // keep only highest weight
         if (m_graph[orgi_state].weight > m_graph[dest_state].weight)
         {
-            std::cout << "I'm not sure when this would happen... [GraphHandler::dfa_merge_paths]\n";
+            //std::cout << "I'm not sure when this would happen... [GraphHandler::dfa_merge_paths]\n";
 
             // remove initial content
             m_graph[*(m_graph[dest_state].children.begin())].parents.erase(dest_state);
@@ -258,12 +260,14 @@ void GraphHandler::dfa_merge_paths(const vertex_id_t& orgi_state, const vertex_i
 
     bool existing_edge;
     // iterates all outgoing transition of origin state
-    for (auto& orgi_children : m_graph[orgi_state].children)
+    auto list = m_graph[orgi_state].children;
+    for (auto& orgi_children : list)
     {
         existing_edge = false;
         
         // check for same-value out. transitions
-        for (auto& dest_children : m_graph[dest_state].children)
+        auto child_list = m_graph[dest_state].children;
+        for (auto& dest_children : child_list)
         {
             if (m_graph[orgi_children].label == m_graph[dest_children].label)
             {
@@ -285,6 +289,13 @@ void GraphHandler::dfa_merge_paths(const vertex_id_t& orgi_state, const vertex_i
 
 void GraphHandler::dfa_append_path(const vertex_id_t& orgi_children, const vertex_id_t& dest_state)
 {
+    /*std::cout << "[" << m_graph[orgi_children].level << "] "
+              << m_graph[orgi_children].label
+              << m_graph[orgi_children].weight
+              << " into " << "[" << m_graph[dest_state].level << "] "
+              << m_graph[dest_state].label
+              << m_graph[dest_state].weight << std::endl;*/
+
     vertex_id_t neo_child = boost::add_vertex(m_graph);
     m_graph[neo_child].label  = m_graph[orgi_children].label;
     m_graph[neo_child].level  = m_graph[orgi_children].level;
@@ -292,13 +303,19 @@ void GraphHandler::dfa_append_path(const vertex_id_t& orgi_children, const verte
     m_graph[neo_child].weight = m_graph[orgi_children].weight; // only used for last level DFA filtering
     
     m_vertexes[m_graph[neo_child].level]
-        [m_dic->get_criterion_dic_by_level(m_graph[neo_child].level)
-            [m_graph[neo_child].label]].insert(neo_child);
+        [m_dic->get_valueid_by_level(m_graph[neo_child].level, m_graph[neo_child].label)].insert(neo_child);
     
     m_graph[dest_state].children.insert(neo_child);
     m_graph[neo_child].parents.insert(dest_state);
 
-    for (auto& grand_children : m_graph[orgi_children].children)
+    if (m_graph[orgi_children].level == m_vertexes.size() - 2)
+    {
+        m_graph[neo_child].children.insert(*m_graph[orgi_children].children.begin());
+        return;
+    }
+
+    auto list = m_graph[orgi_children].children;
+    for (auto& grand_children : list)
         dfa_append_path(grand_children, neo_child);
 }
 

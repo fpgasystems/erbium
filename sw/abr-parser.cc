@@ -1,6 +1,7 @@
 #include <string>
 #include <exception>
 #include <iostream>     // std::cout
+#include <iomanip>      // std::setw
 #include <chrono>       // time
 #include <math.h>
 #include <unistd.h>
@@ -152,6 +153,56 @@ int main(int argc, char** argv)
     std::cout << "# DICTIONNARY COMPLETED in " << elapsed.count() << " s\n";
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
+    // SANDBOX
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+
+    std::cout.fill(' ');
+    std::cout << ". Experiments on " << rules_file << " (r=" << the_rulePack.m_rules.size() << "):" << std::endl;
+
+    start = std::chrono::high_resolution_clock::now();
+    nfa_bre::GraphHandler ticaTRE(&the_rulePack, &the_dictionnary);
+    ticaTRE.consolidate_graph();
+    finish = std::chrono::high_resolution_clock::now();
+    elapsed = finish - start;
+
+    std::cout << ".. Tre: s= " << std::setw(9) << ticaTRE.get_num_states()
+              << ", t= " << std::setw(9) << ticaTRE.get_num_transitions()
+              << " (" << elapsed.count() << ")" << std::endl;
+
+    nfa_bre::GraphHandler ticaDFA(&the_rulePack, &the_dictionnary);
+    start = std::chrono::high_resolution_clock::now();
+    ticaDFA.make_deterministic();
+    ticaDFA.consolidate_graph();
+    finish = std::chrono::high_resolution_clock::now();
+    elapsed = finish - start;
+
+    std::cout << ".. DFA: s= " << std::setw(9) << ticaDFA.get_num_states()
+              << ", t= " << std::setw(9) << ticaDFA.get_num_transitions()
+              << " (" << elapsed.count() << ")" << std::endl;
+
+    start = std::chrono::high_resolution_clock::now();
+    ticaDFA.suffix_reduction();
+    ticaDFA.consolidate_graph();
+    finish = std::chrono::high_resolution_clock::now();
+    elapsed = finish - start;
+
+    std::cout << ".. DFA: s= " << std::setw(9) << ticaDFA.get_num_states()
+              << ", t= " << std::setw(9) << ticaDFA.get_num_transitions()
+              << " (" << elapsed.count() << ")" << std::endl;
+
+    nfa_bre::GraphHandler ticaNFA(&the_rulePack, &the_dictionnary);
+    start = std::chrono::high_resolution_clock::now();
+    ticaNFA.suffix_reduction();
+    ticaNFA.consolidate_graph();
+    finish = std::chrono::high_resolution_clock::now();
+    elapsed = finish - start;
+
+    std::cout << ".. NFA: s= " << std::setw(9) << ticaNFA.get_num_states()
+              << ", t= " << std::setw(9) << ticaNFA.get_num_transitions()
+              << " (" << elapsed.count() << ")" << std::endl;
+
+    return 0;
+    ////////////////////////////////////////////////////////////////////////////////////////////////
     // GRAPH                                                                                      //
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -179,6 +230,7 @@ int main(int argc, char** argv)
     start = std::chrono::high_resolution_clock::now();
 
     the_dfa.make_deterministic();
+    the_dfa.suffix_reduction();
     the_dfa.consolidate_graph();
 
     finish = std::chrono::high_resolution_clock::now();
@@ -208,12 +260,12 @@ int main(int argc, char** argv)
     std::cout << "number of states: " << the_nfa.get_num_states() << std::endl;
     std::cout << "number of transitions: " << the_nfa.get_num_transitions() << std::endl;
     std::cout << "# NFA COMPLETED in " << elapsed.count() << " s\n";
-    
+
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // FINAL STATS                                                                                //
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    std::cout << "# FINAL STATS" << std::endl;
+    std::cout << "# NFA FINAL STATS" << std::endl;
     uint n_bram_edges_max = the_nfa.print_stats();
 
     std::cout << "total number of states: " << the_nfa.get_num_states() << std::endl;

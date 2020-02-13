@@ -69,9 +69,9 @@ benchmarks: all
 	./$(BIN) -d build-mct_h1Asc -r ../data/mct_rules.csv -s 1 >> build-mct_h1Asc/log.txt
 	./$(BIN) -d build-mct_h1Des -r ../data/mct_rules.csv -s 2 >> build-mct_h1Des/log.txt
 	./$(BIN) -d build-mct_hRand -r ../data/mct_rules.csv -s 0 >> build-mct_hRand/log.txt
-	./$(BIN) -d build-mct_h2Asc -r ../data/mct_rules.csv -s 4 >> build-mct_h2Asc/log.txt
-	./$(BIN) -d build-mct_h2Des -r ../data/mct_rules.csv -s 5 >> build-mct_h2Des/log.txt
-	./$(BIN) -d build-zrh_h2Des -r ../data/mct_rules-zrh.csv -s 5 >> build-zrh_h2Des/log.txt
+	./$(BIN) -d build-mct_h2Asc -r ../data/mct_rules.csv -s 3 >> build-mct_h2Asc/log.txt
+	./$(BIN) -d build-mct_h2Des -r ../data/mct_rules.csv -s 4 >> build-mct_h2Des/log.txt
+	./$(BIN) -d build-zrh_h2Des -r ../data/mct_rules-zrh.csv -s 4 >> build-zrh_h2Des/log.txt
 
 clean:
 	$(RM) -r $(OBJDIR) $(DEPDIR)

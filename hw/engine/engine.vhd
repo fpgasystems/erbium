@@ -12,7 +12,7 @@ use tools.std_pkg.all;
 
 entity engine is
     generic (
-        G_INOUT_LATENCY  : integer := 3
+        G_INOUT_LATENCY  : integer := 4 -- TODO: not dynamic for the moment!
     );
     port (
         clk_i             :  in std_logic;
@@ -367,10 +367,11 @@ begin
     
     v(0) := inout_r(1);
     v(1) := inout_r(2);
+    v(2) := inout_r(3);
 
-    v(2).mem_data := mem_i;
-    v(2).mem_wren := mem_wren_i;
-    v(2).mem_addr := mem_addr_i;
+    v(3).mem_data := mem_i;
+    v(3).mem_wren := mem_wren_i;
+    v(3).mem_addr := mem_addr_i;
 
     inout_rin <= v;
 

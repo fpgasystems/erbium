@@ -337,8 +337,10 @@ gen_mode_strict_match : if G_MATCH_MODE = MODE_STRICT_MATCH generate
 
     -- if mandatory: to only one match (strict match)
     -- if non-mandatory: to only two (wildcard and strict match)
-    --    wildcard for mandatory is always '0'
-    sig_exe_branch <= sig_exe_match_result and mem_r.valid and not sig_exe_match_wildcard;
+    --    sig_exe_match_wildcard for mandatory is always '0'
+    -- also, if mem operand is bigger than query, stop scanning transitions (values are sorted)
+    sig_exe_branch <= (sig_exe_match_result or (my_conv_integer(mem_edge_i.operand_a) > my_conv_integer(query_r.query.operand)))
+                      and mem_r.valid and not sig_exe_match_wildcard;
 
 end generate;
 

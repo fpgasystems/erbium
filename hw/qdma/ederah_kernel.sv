@@ -52,8 +52,9 @@ logic                                ap_idle_r                      = 1'b1;
 logic                                ap_start_pulse                ;
 logic                                ap_done_i                     ;
 logic                                ap_done_r                      = 1'b0;
-logic [32-1:0]                       ctrl_xfer_size_in_bytes        = LP_DEFAULT_LENGTH_IN_BYTES;
-logic [32-1:0]                       ctrl_constant                  = 32'd1;
+//
+logic                                active_kernel_clk;
+logic                                active;
 //
 wire                                 inputs_stream_ttype;
 //
@@ -81,6 +82,7 @@ wire                                 inputs_stream_tvalid_krl;
 ///////////////////////////////////////////////////////////////////////////////
 // Begin RTL
 ///////////////////////////////////////////////////////////////////////////////
+assign active = ~ap_idle;
 
 always @(posedge data_clk) begin
   ap_start_r <= ap_start;
@@ -102,7 +104,7 @@ end
 assign ap_idle = ap_idle_r;
 assign ap_done = ap_done_r;
 
-assign ap_done_i = results_stream_tlast;
+assign ap_done_i = results_stream_tlast & results_stream_tvalid & results_stream_tready;
 
 assign ap_ready = ap_done;
 
@@ -199,15 +201,15 @@ xpm_fifo_axis #(
 )
 inst_xpm_fifo_axis_inputs (
   .s_aclk             ( data_clk                 ) ,
-  .s_aresetn          ( data_rst_n               ) , // Keep tready low when not active
+  .s_aresetn          ( active                   ) , // Keep tready low when not active
   .s_axis_tvalid      ( inputs_stream_tvalid_krl ) ,
   .s_axis_tready      ( inputs_stream_tready     ) ,
   .s_axis_tdata       ( inputs_stream_tdata      ) ,
   .s_axis_tstrb       ( 'b1                      ) ,
   .s_axis_tkeep       ( inputs_stream_tkeep      ) ,
   .s_axis_tlast       ( inputs_stream_tlast      ) ,
-  .s_axis_tid         ( 'b0                      ) ,
-  .s_axis_tdest       ( 'b0                      ) ,
+  .s_axis_tid         ( inputs_stream_ttype      ) ,
+  .s_axis_tdest       ( inputs_stream_ttype      ) ,
   .s_axis_tuser       ( inputs_stream_ttype      ) ,
   .almost_full_axis   (                          ) ,
   .prog_full_axis     (                          ) ,
@@ -232,6 +234,19 @@ inst_xpm_fifo_axis_inputs (
   .dbiterr_axis       (                          )
 );
 
+xpm_cdc_single #(
+  .DEST_SYNC_FF        ( 3                 ) ,
+  .INIT_SYNC_FF        ( 0                 ) ,
+  .SRC_INPUT_REG       ( 1                 ) ,
+  .SIM_ASSERT_CHK      ( 1                 )
+)
+inst_active_kernel_clk (
+  .src_in              ( active            ) ,
+  .src_clk             ( data_clk          ) ,
+  .dest_out            ( active_kernel_clk ) ,
+  .dest_clk            ( kernel_clk        )
+);
+
 xpm_fifo_axis #(
   .CDC_SYNC_STAGES     ( 3                      ) , // DECIMAL
   .CLOCKING_MODE       ( "independent_clock"    ) , // String
@@ -252,7 +267,7 @@ xpm_fifo_axis #(
 )
 inst_xpm_fifo_axis_results (
   .s_aclk             ( kernel_clk                ) ,
-  .s_aresetn          ( kernel_rst_n              ) , // Keep tready low when not active
+  .s_aresetn          ( active_kernel_clk         ) , // Keep tready low when not active
   .s_axis_tvalid      ( cdc_results_stream_tvalid ) ,
   .s_axis_tready      ( cdc_results_stream_tready ) ,
   .s_axis_tdata       ( cdc_results_stream_tdata  ) ,

@@ -17,12 +17,15 @@ help::
 	$(ECHO) "  make build"
 	$(ECHO) "      Command to build xclbin application."
 	$(ECHO) ""
+	$(ECHO) "  make compile"
+	$(ECHO) "      Command to compile host kernel only."
+	$(ECHO) ""
 	$(ECHO) "  make aws_build"
 	$(ECHO) "      Command to build AWS xclbin application on AWS Cloud."
 	$(ECHO) ""
 	$(ECHO) "  options:"
 	$(ECHO) "      TARGET=<hw_emu/hw>"
-	$(ECHO) "      DEVICE=<FPGA platform>"
+	$(ECHO) "      DEVICE=<FPGA platform> [xilinx_u250_xdma_201830_2,xilinx_u250_qdma_201920_1]"
 	$(ECHO) "      KERNELS=# -- in dec"
 	$(ECHO) "      ENGINES=# -- in hex"
 	$(ECHO) "      HEURISTIC=<h1Asc/h1Des/h2Asc/h2Des/hRand>"
@@ -38,7 +41,7 @@ HOST_ARCH := x86
 SYSROOT := 
 DEVICE = xilinx_u250_qdma_201920_1
 KERNELS = 1# in dec
-ENGINES = 8# in hex
+ENGINES = 1# in hex
 HEURISTIC = h2Des
 
 include ./utils.mk
@@ -68,11 +71,7 @@ HOST_SRCS += $(xcl2_SRCS)
 CXXFLAGS += $(opencl_CXXFLAGS) -Wall -O0 -g -std=c++11
 LDFLAGS += $(opencl_LDFLAGS)
 
-ifneq ($(XL_SHELL), xdma)
-	HOST_SRCS += ../sw/kernel_qdma.cpp
-else
-	HOST_SRCS += ../sw/kernel.cpp
-endif
+HOST_SRCS += ../sw/kernel_$(XL_SHELL).cpp
 # Host compiler global settings
 CXXFLAGS += -fmessage-length=0
 LDFLAGS += -lrt -lstdc++ 
@@ -114,7 +113,7 @@ ifeq ($(TARGET),hw_emu)
 else
 	DATA_INPUT_PATH ?= ../sw/build-mct_$(HEURISTIC)
 endif
-DATA_OUTPUT_PATH := ~/Documents/workspace
+DATA_OUTPUT_PATH := ./benchmark
 FIRST_BATCH_SIZE := 1
 MAX_BATCH_SIZE := 10000
 ITERATIONS := 101
@@ -142,6 +141,7 @@ compile: $(EXECUTABLE)
 .PHONE: run
 run:
 ifeq ($(HOST_ARCH), x86)
+	mkdir -p $(DATA_OUTPUT_PATH)
 	./$(EXECUTABLE) -b $(BUILD_DIR)/ederah.xclbin -n $(NFA_DATA_FILE) -w $(WORKLOAD_FILE) -r $(RESULT_FILE) -o $(BENCHMARK_FILE) -f $(FIRST_BATCH_SIZE) -m $(MAX_BATCH_SIZE) -i $(ITERATIONS) -k $(KERNELS_TO_RUN)
 endif
 
@@ -190,7 +190,7 @@ aws_build: check-aws_repo
 clean:
 	-$(RMDIR) $(EXECUTABLE)
 	-$(RMDIR) profile_* TempConfig system_estimate.xtxt *.rpt *.csv 
-	-$(RMDIR) *v++* .Xil .run emconfig.json *.log *.jou *.wcfg *.wdb *.protoinst
+	-$(RMDIR) *v++* .Xil .run emconfig.json *.log *.jou *.str *.wcfg *.wdb *.protoinst
 
 cleanall: clean
 	-$(RMDIR) ./_xclbin.*

@@ -4,6 +4,8 @@
 #include <vector>
 #include <unistd.h>     // parameters
 
+#include <iomanip> // print hex
+
 const unsigned char C_CACHELINE_SIZE   = 64; // in bytes
 
 typedef uint16_t                                operands_t;
@@ -231,25 +233,28 @@ int main(int argc, char** argv)
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // HARDWARE SETUP                                                                             //
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    printf(">> Hardware Setup\n"); fflush(stdout);
+    printf(">> Hardware Setup\n");
 
-    //The get_xil_devices will return vector of Xilinx Devices
-    std::vector<cl::Device> devices = xcl::get_xil_devices();
-    cl::Device device = devices[0];
+    // OpenCL objects
+    cl_int err;
+    cl::Device device;
+    cl::Context context;
+    cl::CommandQueue queue;
+    cl::Program program;
 
-    //Creating Context and Command Queue for selected Device
-    cl::Context context(device);
-    cl::CommandQueue queue(context, device, CL_QUEUE_PROFILING_ENABLE | CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE);
-    std::string device_name = device.getInfo<CL_DEVICE_NAME>();
+    auto devices = xcl::get_xil_devices();
+    device = devices[0];
+    devices.resize(1);
 
     auto fileBuf = xcl::read_binary_file(fullpath_bitstream);
     cl::Program::Binaries bins{{fileBuf.data(), fileBuf.size()}};
-    devices.resize(1);
 
-    cl_int err;
+    OCL_CHECK(err, context = cl::Context({device}, NULL, NULL, NULL, &err));
+    OCL_CHECK(err, queue = cl::CommandQueue(context, {device}, CL_QUEUE_PROFILING_ENABLE | CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &err));
     auto start = std::chrono::high_resolution_clock::now();
-    OCL_CHECK(err, cl::Program program(context, devices, bins, NULL, &err));
+    OCL_CHECK(err, program = cl::Program(context, devices, bins, NULL, &err));
     auto finish = std::chrono::high_resolution_clock::now();
+
     std::chrono::duration<double, std::ratio<1,1>> elapsed_s = finish - start;
     printf("Time to program FPGA: %.8f Seconds\n", elapsed_s.count()); fflush(stdout);
 
@@ -330,7 +335,10 @@ int main(int argc, char** argv)
         printf("> Queries size: %9u bytes\n", queries_size);
         printf("> Results size: %9u bytes\n", results_size); fflush(stdout);
 
-        // KERNEL PARTITIONS
+        ////////////////////////////////////////////////////////////////////////////////////////////
+        // KERNEL PARTITIONS                                                                      //
+        ////////////////////////////////////////////////////////////////////////////////////////////
+        
         uint the_auxq = 0;
         uint the_auxr = 0;
         uint32_t kid = 0;
@@ -427,6 +435,9 @@ int main(int argc, char** argv)
             queue.finish();
             finish = std::chrono::high_resolution_clock::now();
             queue.flush();
+
+            /*for (size_t i = 0; i < bsize; ++i)
+                std::cout << gabarito[i] << "," << (results->data())[i] << std::endl;*/
             
             ////////////////////////////////////////////////////////////////////////////////////////
             // TIMING REPORT                                                                      //
@@ -436,17 +447,8 @@ int main(int argc, char** argv)
             queries_ns = get_duration_ns(krnls[0].evtQueries);
             result_ns  = get_duration_ns(krnls[0].evtResults);
             kernel_ns  = get_duration_ns(krnls[0].evtKernel);
-            events_ns  = queries_ns + kernel_ns + result_ns;
-            if (total_ns.count() >= events_ns)
-                opencl_ns = total_ns.count() - events_ns;
-            else
-            {
-                queries_ns = 0.36 * total_ns.count();
-                kernel_ns = 0.43 * total_ns.count();
-                result_ns = 0.11 * total_ns.count();
-                opencl_ns = total_ns.count() - queries_ns - kernel_ns - result_ns;
-            }
-            // opencl_ns  = (total_ns.count() >= events_ns) ? total_ns.count() - events_ns : 0;
+            events_ns  = queries_ns + kernel_ns + result_ns;            
+            opencl_ns  = (total_ns.count() >= events_ns) ? total_ns.count() - events_ns : 0;
             file_benchmark << bsize
                          << "," << opencl_ns
                          << "," << nfadata_ns

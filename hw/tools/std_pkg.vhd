@@ -67,6 +67,47 @@ PACKAGE std_pkg IS
     );
     end component;
 
+    component rxtx_fifo_single is
+    generic (
+        G_DATA_WIDTH    : integer := 32
+    );
+    port (
+        clk_i           :  in std_logic;
+        rst_i           :  in std_logic; -- rst low active
+        -- input (slave)
+        slav_ready_o    : out std_logic;
+        slav_valid_i    :  in std_logic;
+        slav_last_i     :  in std_logic;
+        slav_value_i    :  in std_logic_vector(G_DATA_WIDTH - 1 downto 0);
+        -- output (master)
+        mast_ready_i    :  in std_logic;
+        mast_valid_o    : out std_logic;
+        mast_last_o     : out std_logic;
+        mast_value_o    : out std_logic_vector(G_DATA_WIDTH - 1 downto 0)
+    );
+    end component;
+
+    component rxtx_fifo_multi is
+    generic (
+        G_DATA_WIDTH    : integer := 32;
+        G_DEPTH         : integer := 5
+    );
+    port (
+        clk_i           :  in std_logic;
+        rst_i           :  in std_logic; -- rst low active
+        -- input (slave)
+        slav_ready_o    : out std_logic;
+        slav_valid_i    :  in std_logic;
+        slav_last_i     :  in std_logic;
+        slav_value_i    :  in std_logic_vector(G_DATA_WIDTH - 1 downto 0);
+        -- output (master)
+        mast_ready_i    :  in std_logic;
+        mast_valid_o    : out std_logic;
+        mast_last_o     : out std_logic;
+        mast_value_o    : out std_logic_vector(G_DATA_WIDTH - 1 downto 0)
+    );
+    end component;
+
 end std_pkg;
 
 PACKAGE BODY std_pkg IS

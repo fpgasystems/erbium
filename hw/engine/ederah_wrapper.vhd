@@ -29,7 +29,7 @@ entity ederah_wrapper is
         -- input bus
         rd_data_i    :  in std_logic_vector(G_DATA_BUS_WIDTH - 1 downto 0);
         rd_valid_i   :  in std_logic;
-        rd_last_i    :  in std_logic; -- not in use
+        rd_last_i    :  in std_logic;
         rd_stype_i   :  in std_logic;
         rd_ready_o   : out std_logic;
         -- output bus
@@ -52,6 +52,11 @@ architecture rtl of ederah_wrapper is
     signal sig_query_id       : std_logic_vector(CFG_QUERY_ID_WIDTH - 1 downto 0);
     signal sig_query_ready    : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
     signal sig_query_wr       : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
+    --
+    signal sig_result_fifo_ready   : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
+    signal sig_result_fifo_last    : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
+    signal sig_result_fifo_valid   : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
+    signal sig_result_fifo_value   : result_value_array;
     --
     signal sig_result_ready   : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
     signal sig_result_last    : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
@@ -581,7 +586,7 @@ end process;
 ----------------------------------------------------------------------------------------------------
 gen_engines: for D in 0 to CFG_ENGINES_NUMBER - 1 generate
 
-    mct_engine_top: entity bre.engine port map 
+    mct_engine_top: engine port map 
     (
         clk_i           => clk_i,
         rst_i           => nfa_r.engine_rst,
@@ -595,10 +600,31 @@ gen_engines: for D in 0 to CFG_ENGINES_NUMBER - 1 generate
         mem_wren_i      => io_r.mem_wren,
         mem_addr_i      => io_r.mem_addr,
         --
-        result_ready_i  => sig_result_ready(D),
-        result_valid_o  => sig_result_valid(D),
-        result_last_o   => sig_result_last(D),
-        result_value_o  => sig_result_value(D)
+        result_ready_i  => sig_result_fifo_ready(D),
+        result_valid_o  => sig_result_fifo_last(D),
+        result_last_o   => sig_result_fifo_valid(D),
+        result_value_o  => sig_result_fifo_value(D)
+    );
+
+    mct_engine_result_fifo : rxtx_fifo_multi generic map
+    (
+        G_DATA_WIDTH    => CFG_MEM_ADDR_WIDTH,
+        G_DEPTH         => CFG_ENGINES_NUMBER - 1
+    )
+    port map
+    (
+        clk_i           => clk_i,
+        rst_i           => rst_i,
+        --
+        slav_ready_o    => sig_result_fifo_ready(D),
+        slav_valid_i    => sig_result_fifo_last(D),
+        slav_last_i     => sig_result_fifo_valid(D),
+        slav_value_i    => sig_result_fifo_value(D),
+        --
+        mast_ready_i    => sig_result_ready(D),
+        mast_valid_o    => sig_result_valid(D),
+        mast_last_o     => sig_result_last(D),
+        mast_value_o    => sig_result_value(D)
     );
 
     -- DOPIO

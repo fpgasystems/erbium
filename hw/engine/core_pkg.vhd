@@ -236,6 +236,30 @@ package core_pkg is
         );
     end component;
 
+    component engine is
+    generic (
+        G_INOUT_LATENCY  : integer := 4 -- TODO: not dynamic for the moment!
+    );
+    port (
+        clk_i             :  in std_logic;
+        rst_i             :  in std_logic; -- rst low active
+        --
+        query_i           :  in query_in_array_type;
+        query_last_i      :  in std_logic;
+        query_wr_en_i     :  in std_logic;
+        query_ready_o     : out std_logic;
+        --
+        mem_i             :  in std_logic_vector(CFG_EDGE_BRAM_WIDTH - 1 downto 0);
+        mem_wren_i        :  in std_logic_vector(CFG_ENGINE_NCRITERIA - 1 downto 0);
+        mem_addr_i        :  in std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        --
+        result_ready_i    :  in std_logic;
+        result_valid_o    : out std_logic;
+        result_last_o     : out std_logic;
+        result_value_o    : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0)
+    );
+    end component;
+    
 ----------------------------------------------------------------------------------------------------
 -- FUNCTIONS                                                                                      --
 ----------------------------------------------------------------------------------------------------

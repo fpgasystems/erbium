@@ -4,7 +4,7 @@ use ieee.std_logic_unsigned.all;
 
 package cfg_engines is
 
-    constant THE_CFG_ENGINES_NUMBER       : integer :=  8; -- Number of engines per bitstrea
+    constant THE_CFG_ENGINES_NUMBER       : integer :=  8; -- Number of engines per bitstream
 
 end cfg_engines;
 

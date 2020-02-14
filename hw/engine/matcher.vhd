@@ -38,6 +38,7 @@ entity matcher is
         opA_rule_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
         opB_rule_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
         match_result_o      : out std_logic;
+        stopscan_o          : out std_logic;
         wildcard_o          : out std_logic
     );
 end matcher;
@@ -94,6 +95,7 @@ port map
     rule_i       => opA_rule_i,
     query_i      => op_query_i,
     funct_o      => sig_functorA,
+    stopscan_o   => stopscan_o,
     wildcard_o   => sig_wildcard_a
 );
 
@@ -107,6 +109,7 @@ port map
     rule_i       => opB_rule_i,
     query_i      => op_query_i,
     funct_o      => sig_functorB,
+    stopscan_o   => open,
     wildcard_o   => sig_wildcard_b
 );
 

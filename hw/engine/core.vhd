@@ -65,6 +65,7 @@ architecture behavioural of core is
 
     signal sig_exe_match_result   : std_logic;
     signal sig_exe_match_wildcard : std_logic;
+    signal sig_exe_match_stopscan : std_logic;
     signal sig_exe_branch         : std_logic;
     signal fetch_r, fetch_rin     : fetch_out_type;
     signal execute_r, execute_rin : execute_out_type;
@@ -262,6 +263,7 @@ port map
     opA_rule_i      => mem_edge_i.operand_a,
     opB_rule_i      => mem_edge_i.operand_b,
     match_result_o  => sig_exe_match_result,
+    stopscan_o      => sig_exe_match_stopscan,
     wildcard_o      => sig_exe_match_wildcard
 );
 
@@ -339,8 +341,7 @@ gen_mode_strict_match : if G_MATCH_MODE = MODE_STRICT_MATCH generate
     -- if non-mandatory: to only two (wildcard and strict match)
     --    sig_exe_match_wildcard for mandatory is always '0'
     -- also, if mem operand is bigger than query, stop scanning transitions (values are sorted)
-    sig_exe_branch <= (sig_exe_match_result or (my_conv_integer(mem_edge_i.operand_a) > my_conv_integer(query_r.query.operand)))
-                      and mem_r.valid and not sig_exe_match_wildcard;
+    sig_exe_branch <= (sig_exe_match_result or sig_exe_match_stopscan) and mem_r.valid and not sig_exe_match_wildcard;
 
 end generate;
 

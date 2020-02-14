@@ -31,14 +31,15 @@ use tools.std_pkg.all;
 
 entity functor is
     generic (
-        G_FUNCTION      : match_simp_function := FNCTR_SIMP_NOP;
-        G_WILDCARD      : std_logic           := '0'
+        G_FUNCTION          : match_simp_function := FNCTR_SIMP_NOP;
+        G_WILDCARD          : std_logic           := '0'
     );
     port (
-        rule_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
-        query_i         :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
-        funct_o         : out std_logic;
-        wildcard_o      : out std_logic
+        rule_i              :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
+        query_i             :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
+        funct_o             : out std_logic;
+        stopscan_o          : out std_logic;
+        wildcard_o          : out std_logic
     );
 end functor;
 
@@ -57,11 +58,13 @@ begin
 gen_wildcard : if G_WILDCARD = '1' and G_FUNCTION /= FNCTR_SIMP_NOP generate
     funct_o    <= sig_wildchar or sig_result;
     wildcard_o <= sig_wildchar;
+    stopscan_o <= sig_res_les;
 end generate;
 
 gen_wildcard_n : if G_WILDCARD = '0' or G_FUNCTION = FNCTR_SIMP_NOP generate
     funct_o    <= sig_result;
     wildcard_o <= '0';
+    stopscan_o <= '0';
 end generate;
 
 

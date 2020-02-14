@@ -103,6 +103,7 @@ package core_pkg is
             rule_i              :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
             query_i             :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
             funct_o             : out std_logic;
+            stopscan_o          : out std_logic;
             wildcard_o          : out std_logic
         );
     end component;
@@ -120,6 +121,7 @@ package core_pkg is
             opA_rule_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
             opB_rule_i          :  in std_logic_vector(CFG_CRITERION_VALUE_WIDTH-1 downto 0);
             match_result_o      : out std_logic;
+            stopscan_o          : out std_logic;
             wildcard_o          : out std_logic
         );
     end component;

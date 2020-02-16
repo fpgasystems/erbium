@@ -80,10 +80,10 @@ endif
 #   $(1) - full name of device
 device2xsa = $(strip $(patsubst %.xpfm, % , $(shell basename $(DEVICE))))
 
-check-aws_repo:
-ifndef SDACCEL_DIR
-	$(error SDACCEL_DIR not set. Please set it properly and rerun. Run "make help" for more details.)
-endif
+#check-aws_repo:
+#ifndef SDACCEL_DIR
+#	$(error SDACCEL_DIR not set. Please set it properly and rerun. Run "make help" for more details.)
+#endif
 
 # Cleaning stuff
 RM = rm -f

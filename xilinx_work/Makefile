@@ -50,6 +50,8 @@ ifeq ($(findstring xdma, $(DEVICE)), xdma)
 	XL_SHELL := xdma
 else ifeq ($(findstring qdma, $(DEVICE)), qdma)
 	XL_SHELL := qdma
+else ifeq ($(DEVICE),$(AWS_PLATFORM))
+	XL_SHELL := xdma
 else
 	$(error This kernel is not supported by $(DEVICE))
 endif
@@ -179,7 +181,7 @@ endif
 # endif
 
 
-aws_build: check-aws_repo
+aws_build: #check-aws_repo
 	mkdir -p _aws
 	(cd _aws && ../$(COMMON_REPO)/utility/aws/run_aws.py ../$(BINARY_CONTAINERS))
 	-$(RMDIR) _aws/to_aws

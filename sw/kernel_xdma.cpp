@@ -250,7 +250,8 @@ int main(int argc, char** argv)
     cl::Program::Binaries bins{{fileBuf.data(), fileBuf.size()}};
 
     OCL_CHECK(err, context = cl::Context({device}, NULL, NULL, NULL, &err));
-    OCL_CHECK(err, queue = cl::CommandQueue(context, {device}, CL_QUEUE_PROFILING_ENABLE | CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE, &err));
+    OCL_CHECK(err, queue = cl::CommandQueue(context, {device}, CL_QUEUE_PROFILING_ENABLE, &err));
+    // put CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE if multiple kernels (not a reality anymore)
     auto start = std::chrono::high_resolution_clock::now();
     OCL_CHECK(err, program = cl::Program(context, devices, bins, NULL, &err));
     auto finish = std::chrono::high_resolution_clock::now();
@@ -308,7 +309,7 @@ int main(int argc, char** argv)
 
     std::ofstream file_benchmark(fullpath_benchmark);
     std::ofstream file_results(fullpath_results);
-    file_benchmark << "batch_size,overhead,nfa,queries,kernel,result" << std::endl;
+    file_benchmark << "batch_size,overhead,nfa,queries,kernel,result,total_ns" << std::endl;
     
     uint32_t queries_size;
     uint32_t results_size;
@@ -384,6 +385,17 @@ int main(int argc, char** argv)
 
             the_auxq += krnls[kid].queries_size / sizeof(operands_t);
             the_auxr += krnls[kid].results_size / sizeof(uint16_t);
+
+            // kernel arguments
+            krnls[kid].krnl.setArg(0, nfadata_cls);
+            krnls[kid].krnl.setArg(1, krnls[kid].queries_cls);
+            krnls[kid].krnl.setArg(2, krnls[kid].results_cls);
+            krnls[kid].krnl.setArg(3, (has_statistics) ? 1 : 0);
+            krnls[kid].krnl.setArg(4, nfa_hash);
+            krnls[kid].krnl.setArg(5, buffer_nfadata);
+            krnls[kid].krnl.setArg(6, krnls[kid].buffer_queries);
+            krnls[kid].krnl.setArg(7, krnls[kid].buffer_results);
+            krnls[kid].krnl.setArg(8, krnls[kid].buffer_results);
         }
 
         for (uint32_t i = 0; i < iterations; i++)
@@ -411,16 +423,7 @@ int main(int argc, char** argv)
                 queue.enqueueMigrateMemObjects({krnls[kid].buffer_queries},
                                             0 /* 0 means from host*/, NULL, &krnls[kid].evtQueries);
 
-                // kernel arguments
-                krnls[kid].krnl.setArg(0, nfadata_cls);
-                krnls[kid].krnl.setArg(1, krnls[kid].queries_cls);
-                krnls[kid].krnl.setArg(2, krnls[kid].results_cls);
-                krnls[kid].krnl.setArg(3, (has_statistics) ? 1 : 0);
-                krnls[kid].krnl.setArg(4, nfa_hash);
-                krnls[kid].krnl.setArg(5, buffer_nfadata);
-                krnls[kid].krnl.setArg(6, krnls[kid].buffer_queries);
-                krnls[kid].krnl.setArg(7, krnls[kid].buffer_results);
-                krnls[kid].krnl.setArg(8, krnls[kid].buffer_results);
+                // kernel launch
                 queue.enqueueTask(krnls[kid].krnl, NULL, &krnls[kid].evtKernel);
             }
             queue.finish();
@@ -454,7 +457,8 @@ int main(int argc, char** argv)
                          << "," << nfadata_ns
                          << "," << queries_ns
                          << "," << kernel_ns
-                         << "," << result_ns << std::endl;
+                         << "," << result_ns
+                         << "," << total_ns.count() << std::endl;
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////

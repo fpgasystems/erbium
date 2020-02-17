@@ -32,7 +32,7 @@ help::
 	$(ECHO) ""
 
 # Points to SDAccel_Examples Directory
-COMMON_REPO = ../../Vitis_Accel_Examples/
+COMMON_REPO = ../../Vitis_Accel_Examples
 PWD = $(shell readlink -f .)
 ABS_COMMON_REPO = $(shell readlink -f $(COMMON_REPO))
 

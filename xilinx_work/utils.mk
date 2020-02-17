@@ -80,6 +80,12 @@ endif
 #   $(1) - full name of device
 device2xsa = $(strip $(patsubst %.xpfm, % , $(shell basename $(DEVICE))))
 
+#	get FpgaImageId value from *_afi_id.txt
+define GetFromJson
+$(shell cat ${1} | grep ${2} | awk -F: '{ print $$2 }' | sed 's/[",]//g')
+endef
+
+
 #check-aws_repo:
 #ifndef SDACCEL_DIR
 #	$(error SDACCEL_DIR not set. Please set it properly and rerun. Run "make help" for more details.)

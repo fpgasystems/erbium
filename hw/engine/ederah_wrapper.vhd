@@ -48,15 +48,22 @@ architecture rtl of ederah_wrapper is
     constant C_RESULTS_PARTITIONS : integer := G_DATA_BUS_WIDTH / CFG_RAW_RESULTS_WIDTH;
     --
     type result_value_array is array (CFG_ENGINES_NUMBER - 1 downto 0) of std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+    type query_value_array is array (CFG_ENGINES_NUMBER - 1 downto 0) of std_logic_vector(C_QUERYARRAY_WIDTH - 1 downto 0);
     --
-    signal sig_query_id       : std_logic_vector(CFG_QUERY_ID_WIDTH - 1 downto 0);
-    signal sig_query_ready    : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
-    signal sig_query_wr       : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
+    signal sig_query_id         : std_logic_vector(CFG_QUERY_ID_WIDTH - 1 downto 0);
+    signal sig_query_ready      : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
+    signal sig_query_wr         : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
+    signal sig_query_serialised : std_logic_vector(C_QUERYARRAY_WIDTH - 1 downto 0);
     --
-    signal sig_result_fifo_ready   : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
-    signal sig_result_fifo_last    : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
-    signal sig_result_fifo_valid   : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
-    signal sig_result_fifo_value   : result_value_array;
+    signal sig_fifo_query_ready   : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
+    signal sig_fifo_query_valid   : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
+    signal sig_fifo_query_last    : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
+    signal sig_fifo_query_value   : query_value_array;
+    --
+    signal sig_fifo_result_ready  : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
+    signal sig_fifo_result_valid  : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
+    signal sig_fifo_result_last   : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
+    signal sig_fifo_result_value  : result_value_array;
     --
     signal sig_result_ready   : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
     signal sig_result_last    : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
@@ -134,6 +141,8 @@ rd_ready_o <= query_r.ready or nfa_r.ready;
 ----------------------------------------------------------------------------------------------------
 -- extract input query criteria from the rd_data_i bus. each query has CFG_ENGINE_NCRITERIA criteria
 -- and each criterium has two operands of CFG_CRITERION_VALUE_WIDTH width
+
+sig_query_serialised <= serialise_query_array(query_r.query_array);
 
 query_comb : process(query_r, rd_stype_i, rd_valid_i, rd_data_i, rd_last_i, sig_query_ready,
     dopio_r.query_flow_ctrl, sig_query_id)
@@ -370,6 +379,7 @@ begin
             if dopio_r.result_valid = '1' then
 
                 v.slice := result_r.slice + 1;
+                --v.value := insert_into_vector(v.value, val, result_r.slice * CFG_RAW_RESULTS_WIDTH);
 
                 -- this is ugly, but it's a Xilinx problem
                 -- https://forums.xilinx.com/t5/Synthesis/Vivado2013-2-Synth-8-27-complex-assignment-not-supported/td-p/345805
@@ -591,22 +601,43 @@ gen_engines: for D in 0 to CFG_ENGINES_NUMBER - 1 generate
         clk_i           => clk_i,
         rst_i           => nfa_r.engine_rst,
         --
-        query_i         => query_r.query_array,
-        query_last_i    => query_r.query_last,
-        query_wr_en_i   => sig_query_wr(D),
-        query_ready_o   => sig_query_ready(D),
+        query_i         => deserialise_query_array(sig_fifo_query_value(D)),
+        query_last_i    => sig_fifo_query_last(D),
+        query_wr_en_i   => sig_fifo_query_valid(D),
+        query_ready_o   => sig_fifo_query_ready(D),
         --
         mem_i           => io_r.mem_data,
         mem_wren_i      => io_r.mem_wren,
         mem_addr_i      => io_r.mem_addr,
         --
-        result_ready_i  => sig_result_fifo_ready(D),
-        result_valid_o  => sig_result_fifo_last(D),
-        result_last_o   => sig_result_fifo_valid(D),
-        result_value_o  => sig_result_fifo_value(D)
+        result_ready_i  => sig_fifo_result_ready(D),
+        result_valid_o  => sig_fifo_result_valid(D),
+        result_last_o   => sig_fifo_result_last(D),
+        result_value_o  => sig_fifo_result_value(D)
     );
 
-    mct_engine_result_fifo : rxtx_fifo_multi generic map
+    mct_engine_fifo_queries : rxtx_fifo_multi generic map
+    (
+        G_DATA_WIDTH    => C_QUERYARRAY_WIDTH,
+        G_DEPTH         => CFG_ENGINES_NUMBER - 1
+    )
+    port map
+    (
+        clk_i           => clk_i,
+        rst_i           => rst_i,
+        --
+        slav_ready_o    => sig_query_ready(D),
+        slav_valid_i    => sig_query_wr(D),
+        slav_last_i     => query_r.query_last,
+        slav_value_i    => sig_query_serialised,
+        --
+        mast_ready_i    => sig_fifo_query_ready(D),
+        mast_valid_o    => sig_fifo_query_valid(D),
+        mast_last_o     => sig_fifo_query_last(D),
+        mast_value_o    => sig_fifo_query_value(D)
+    );
+
+    mct_engine_fifo_result : rxtx_fifo_multi generic map
     (
         G_DATA_WIDTH    => CFG_MEM_ADDR_WIDTH,
         G_DEPTH         => CFG_ENGINES_NUMBER - 1
@@ -616,10 +647,10 @@ gen_engines: for D in 0 to CFG_ENGINES_NUMBER - 1 generate
         clk_i           => clk_i,
         rst_i           => rst_i,
         --
-        slav_ready_o    => sig_result_fifo_ready(D),
-        slav_valid_i    => sig_result_fifo_last(D),
-        slav_last_i     => sig_result_fifo_valid(D),
-        slav_value_i    => sig_result_fifo_value(D),
+        slav_ready_o    => sig_fifo_result_ready(D),
+        slav_valid_i    => sig_fifo_result_valid(D),
+        slav_last_i     => sig_fifo_result_last(D),
+        slav_value_i    => sig_fifo_result_value(D),
         --
         mast_ready_i    => sig_result_ready(D),
         mast_valid_o    => sig_result_valid(D),

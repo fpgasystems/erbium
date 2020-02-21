@@ -18,6 +18,8 @@ package core_pkg is
     -- TODO define range of integer QUERY_ID as a subtype ;)
     constant C_INIT_QUERY_ID : integer := 2**CFG_QUERY_ID_WIDTH - 1;
 
+    constant C_QUERYARRAY_WIDTH : integer := CFG_CRITERION_VALUE_WIDTH * CFG_ENGINE_NCRITERIA + CFG_QUERY_ID_WIDTH;
+
     type match_structure_type is (STRCT_SIMPLE, STRCT_PAIR);
     type match_pair_function is (FNCTR_PAIR_NOP, FNCTR_PAIR_AND, FNCTR_PAIR_OR, FNCTR_PAIR_XOR, FNCTR_PAIR_NAND, FNCTR_PAIR_NOR);
     type match_simp_function is (FNCTR_SIMP_NOP, FNCTR_SIMP_EQU, FNCTR_SIMP_NEQ, FNCTR_SIMP_GRT, FNCTR_SIMP_GEQ, FNCTR_SIMP_LES, FNCTR_SIMP_LEQ);
@@ -266,13 +268,17 @@ package core_pkg is
 
     function deserialise_edge_store(vec : std_logic_vector) return edge_store_type;
 
+    function serialise_query_array(vec : query_in_array_type) return std_logic_vector;
+    function deserialise_query_array(vec : std_logic_vector) return query_in_array_type;
+
+    function insert_into_vector(vec : std_logic_vector; val : std_logic_vector; p : integer) return std_logic_vector;
+
 end core_pkg;
 
 package body core_pkg is
 
 function deserialise_edge_store(vec : std_logic_vector) return edge_store_type is
     variable res : edge_store_type;
-    variable line_v   : line;
     variable vec_buff : std_logic_vector(CFG_EDGE_BRAM_WIDTH - 1 downto 0);
   begin
     vec_buff      := vec;
@@ -282,5 +288,45 @@ function deserialise_edge_store(vec : std_logic_vector) return edge_store_type i
     res.last      := vec_buff(RNG_BRAM_EDGE_STORE_LAST'left);
     return res;
 end deserialise_edge_store;
+
+function deserialise_query_array(vec : std_logic_vector) return query_in_array_type is
+    variable res : query_in_array_type;
+    variable vec_buff : std_logic_vector(C_QUERYARRAY_WIDTH - 1 downto 0);
+  begin
+    vec_buff := vec;
+    for_des : for idx in 0 to CFG_ENGINE_NCRITERIA loop
+        res(idx).operand := vec_buff(CFG_CRITERION_VALUE_WIDTH * (idx+1) - 1
+                                    downto
+                                    CFG_CRITERION_VALUE_WIDTH * idx);
+        res(idx).query_id := to_integer(unsigned(vec_buff(C_QUERYARRAY_WIDTH - 1
+                                    downto
+                                    CFG_CRITERION_VALUE_WIDTH * CFG_ENGINE_NCRITERIA)));
+    end loop for_des;
+end deserialise_query_array;
+
+function insert_into_vector(vec : std_logic_vector;
+                            val : std_logic_vector;
+                            p : integer) return std_logic_vector is
+    variable res : std_logic_vector(vec'range);
+  begin
+    res := vec;
+    res(p + val'length - 1 downto p) := val;
+
+    return res;
+end insert_into_vector;
+
+function serialise_query_array(vec : query_in_array_type) return std_logic_vector is
+    variable res : std_logic_vector(C_QUERYARRAY_WIDTH - 1 downto 0);
+    variable v_id : std_logic_vector(CFG_QUERY_ID_WIDTH - 1 downto 0);
+  begin
+    v_id := std_logic_vector(to_unsigned(vec(0).query_id, v_id'length));
+
+    for_ser : for idx in 0 to CFG_ENGINE_NCRITERIA loop
+        res := insert_into_vector(res, vec(idx).operand, idx * CFG_CRITERION_VALUE_WIDTH);
+    end loop for_ser;
+    res := insert_into_vector(res, v_id, CFG_ENGINE_NCRITERIA * CFG_CRITERION_VALUE_WIDTH);
+    
+    return res;
+end serialise_query_array;
 
 end core_pkg;

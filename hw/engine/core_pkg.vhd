@@ -321,7 +321,7 @@ function serialise_query_array(vec : query_in_array_type) return std_logic_vecto
   begin
     v_id := std_logic_vector(to_unsigned(vec(0).query_id, v_id'length));
 
-    for_ser : for idx in 0 to CFG_ENGINE_NCRITERIA loop
+    for_ser : for idx in 0 to CFG_ENGINE_NCRITERIA - 1 loop
         res := insert_into_vector(res, vec(idx).operand, idx * CFG_CRITERION_VALUE_WIDTH);
     end loop for_ser;
     res := insert_into_vector(res, v_id, CFG_ENGINE_NCRITERIA * CFG_CRITERION_VALUE_WIDTH);

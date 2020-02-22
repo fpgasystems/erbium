@@ -294,7 +294,7 @@ function deserialise_query_array(vec : std_logic_vector) return query_in_array_t
     variable vec_buff : std_logic_vector(C_QUERYARRAY_WIDTH - 1 downto 0);
   begin
     vec_buff := vec;
-    for_des : for idx in 0 to CFG_ENGINE_NCRITERIA loop
+    for_des : for idx in 0 to CFG_ENGINE_NCRITERIA - 1 loop
         res(idx).operand := vec_buff(CFG_CRITERION_VALUE_WIDTH * (idx+1) - 1
                                     downto
                                     CFG_CRITERION_VALUE_WIDTH * idx);

@@ -6,6 +6,9 @@ use ieee.numeric_std.all;
 library std;
 use std.textio.all;
 
+library tools;
+use tools.std_pkg.all;
+
 library bre;
 use bre.engine_pkg.all;
 
@@ -294,14 +297,18 @@ function deserialise_query_array(vec : std_logic_vector) return query_in_array_t
     variable vec_buff : std_logic_vector(C_QUERYARRAY_WIDTH - 1 downto 0);
   begin
     vec_buff := vec;
-    for_des : for idx in 0 to CFG_ENGINE_NCRITERIA - 1 loop
-        res(idx).operand := vec_buff(CFG_CRITERION_VALUE_WIDTH * (idx+1) - 1
-                                    downto
-                                    CFG_CRITERION_VALUE_WIDTH * idx);
-        res(idx).query_id := to_integer(unsigned(vec_buff(C_QUERYARRAY_WIDTH - 1
-                                    downto
-                                    CFG_CRITERION_VALUE_WIDTH * CFG_ENGINE_NCRITERIA)));
-    end loop for_des;
+    if notx(vec) then
+        for_des : for idx in 0 to CFG_ENGINE_NCRITERIA - 1 loop
+            res(idx).operand := vec_buff(CFG_CRITERION_VALUE_WIDTH * (idx+1) - 1
+                                        downto
+                                        CFG_CRITERION_VALUE_WIDTH * idx);
+            res(idx).query_id := to_integer(unsigned(vec_buff(C_QUERYARRAY_WIDTH - 1
+                                        downto
+                                        CFG_CRITERION_VALUE_WIDTH * CFG_ENGINE_NCRITERIA)));
+        end loop for_des;
+    end if;
+    
+    return res;
 end deserialise_query_array;
 
 function insert_into_vector(vec : std_logic_vector;

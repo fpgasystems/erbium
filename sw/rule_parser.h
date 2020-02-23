@@ -1,12 +1,33 @@
-#ifndef NFA_BRE_RULE_PARSER_H
-#define NFA_BRE_RULE_PARSER_H
+#ifndef ERBIUM_RULE_PARSER_H
+#define ERBIUM_RULE_PARSER_H
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//  ERBium - Business Rule Engine Hardware Accelerator
+//  Copyright (C) 2020 Fabio Maschi - Systems Group, ETH Zurich
+
+//  This program is free software: you can redistribute it and/or modify it under the terms of the
+//  GNU Affero General Public License as published by the Free Software Foundation, either version 3
+//  of the License, or (at your option) any later version.
+
+//  This software is provided by the copyright holders and contributors "AS IS" and any express or
+//  implied warranties, including, but not limited to, the implied warranties of merchantability and
+//  fitness for a particular purpose are disclaimed. In no event shall the copyright holder or
+//  contributors be liable for any direct, indirect, incidental, special, exemplary, or
+//  consequential damages (including, but not limited to, procurement of substitute goods or
+//  services; loss of use, data, or profits; or business interruption) however caused and on any
+//  theory of liability, whether in contract, strict liability, or tort (including negligence or
+//  otherwise) arising in any way out of the use of this software, even if advised of the 
+//  possibility of such damage. See the GNU Affero General Public License for more details.
+
+//  You should have received a copy of the GNU Affero General Public License along with this
+//  program. If not, see <http://www.gnu.org/licenses/agpl-3.0.en.html>.
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <vector>
 #include <fstream>  // file read/write
 
 #include "definitions.h"
 
-namespace nfa_bre {
+namespace erbium {
 
 class Dictionnary;
 
@@ -42,6 +63,6 @@ class RuleParser {
     static std::fstream dump_csv_raw_workload(const std::string& filename, const rulePack_s& rulepack, const Dictionnary* dic);
 };
 
-} // namespace nfa_bre
+} // namespace erbium
 
-#endif // NFA_BRE_RULE_PARSER_H
+#endif // ERBIUM_RULE_PARSER_H

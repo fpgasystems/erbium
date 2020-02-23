@@ -1,3 +1,25 @@
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//  ERBium - Business Rule Engine Hardware Accelerator
+//  Copyright (C) 2020 Fabio Maschi - Systems Group, ETH Zurich
+
+//  This program is free software: you can redistribute it and/or modify it under the terms of the
+//  GNU Affero General Public License as published by the Free Software Foundation, either version 3
+//  of the License, or (at your option) any later version.
+
+//  This software is provided by the copyright holders and contributors "AS IS" and any express or
+//  implied warranties, including, but not limited to, the implied warranties of merchantability and
+//  fitness for a particular purpose are disclaimed. In no event shall the copyright holder or
+//  contributors be liable for any direct, indirect, incidental, special, exemplary, or
+//  consequential damages (including, but not limited to, procurement of substitute goods or
+//  services; loss of use, data, or profits; or business interruption) however caused and on any
+//  theory of liability, whether in contract, strict liability, or tort (including negligence or
+//  otherwise) arising in any way out of the use of this software, even if advised of the 
+//  possibility of such damage. See the GNU Affero General Public License for more details.
+
+//  You should have received a copy of the GNU Affero General Public License along with this
+//  program. If not, see <http://www.gnu.org/licenses/agpl-3.0.en.html>.
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 #include "rule_parser.h"
 #include "dictionnary.h"
 
@@ -5,7 +27,7 @@
 #include <iostream> // std::cout
 #include <random>   // std::default_random_engine
 
-namespace nfa_bre {
+namespace erbium {
 
 void RuleParser::parse_value(const std::string& value_raw,
                              const valueid_t& value_id,
@@ -235,7 +257,7 @@ void RuleParser::export_vhdl_parameters(
     std::fstream outfile(filename, std::ios::out | std::ios::trunc);
 
     outfile << "library ieee;\nuse ieee.numeric_std.all;\nuse ieee.std_logic_1164.all;\n\n"
-            << "library bre;\nuse bre.engine_pkg.all;\nuse bre.core_pkg.all;\n\n"
+            << "library erbium;\nuse erbium.engine_pkg.all;\nuse erbium.core_pkg.all;\n\n"
             << "package cfg_criteria is\n"
             << "    type CORE_PARAM_ARRAY is array (0 to CFG_ENGINE_NCRITERIA - 1) of core_parameters_type;\n\n";
 
@@ -315,4 +337,4 @@ void RuleParser::export_vhdl_parameters(
     outfile.close();
 }
 
-} // namespace nfa_bre
+} // namespace erbium

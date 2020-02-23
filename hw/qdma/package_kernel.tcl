@@ -3,9 +3,9 @@ set path_to_tmp_project "./_xo-tmp_${suffix}"
 
 create_project -force kernel_pack $path_to_tmp_project 
 read_vhdl -library tools [glob ../hw/tools/*.vhd]
-read_vhdl -library bre [glob ../hw/engine/*.vhd]
-read_vhdl -library bre [glob ../hw/custom/cfg_engines_${engines}.vhd]
-read_vhdl -library bre [glob ../hw/custom/cfg_criteria_${heuristic}.vhd]
+read_vhdl -library erbium [glob ../hw/engine/*.vhd]
+read_vhdl -library erbium [glob ../hw/custom/cfg_engines_${engines}.vhd]
+read_vhdl -library erbium [glob ../hw/custom/cfg_criteria_${heuristic}.vhd]
 add_files -norecurse [glob ../hw/${shell}/*.sv ../hw/${shell}/*.v ../hw/${shell}/*.vhd]
 update_compile_order -fileset sources_1
 update_compile_order -fileset sim_1

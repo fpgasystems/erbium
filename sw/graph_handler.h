@@ -1,11 +1,32 @@
-#ifndef NFA_BRE_GRAPH_HANDLER_H
-#define NFA_BRE_GRAPH_HANDLER_H
+#ifndef ERBIUM_GRAPH_HANDLER_H
+#define ERBIUM_GRAPH_HANDLER_H
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//  ERBium - Business Rule Engine Hardware Accelerator
+//  Copyright (C) 2020 Fabio Maschi - Systems Group, ETH Zurich
+
+//  This program is free software: you can redistribute it and/or modify it under the terms of the
+//  GNU Affero General Public License as published by the Free Software Foundation, either version 3
+//  of the License, or (at your option) any later version.
+
+//  This software is provided by the copyright holders and contributors "AS IS" and any express or
+//  implied warranties, including, but not limited to, the implied warranties of merchantability and
+//  fitness for a particular purpose are disclaimed. In no event shall the copyright holder or
+//  contributors be liable for any direct, indirect, incidental, special, exemplary, or
+//  consequential damages (including, but not limited to, procurement of substitute goods or
+//  services; loss of use, data, or profits; or business interruption) however caused and on any
+//  theory of liability, whether in contract, strict liability, or tort (including negligence or
+//  otherwise) arising in any way out of the use of this software, even if advised of the 
+//  possibility of such damage. See the GNU Affero General Public License for more details.
+
+//  You should have received a copy of the GNU Affero General Public License along with this
+//  program. If not, see <http://www.gnu.org/licenses/agpl-3.0.en.html>.
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "definitions.h"
 
 #include <string>
 
-namespace nfa_bre {
+namespace erbium {
 
 class Dictionnary;
 
@@ -41,7 +62,7 @@ class GraphHandler {
     // export dot file (for visualisation)
     void export_graphviz(const std::string& filename);
 
-    // export binary data for ederah engine
+    // export binary data for erbium engine
     void export_memory(const std::string& filename);
 
   private:
@@ -62,6 +83,6 @@ class GraphHandler {
     void dump_binary_padding(std::fstream* outfile, const size_t& slices);
 };
 
-} // namespace nfa_bre
+} // namespace erbium
 
-#endif // NFA_BRE_GRAPH_HANDLER_H
+#endif // ERBIUM_GRAPH_HANDLER_H

@@ -1,3 +1,25 @@
+----------------------------------------------------------------------------------------------------
+--  ERBium - Business Rule Engine Hardware Accelerator
+--  Copyright (C) 2020 Fabio Maschi - Systems Group, ETH Zurich
+
+--  This program is free software: you can redistribute it and/or modify it under the terms of the
+--  GNU Affero General Public License as published by the Free Software Foundation, either version 3
+--  of the License, or (at your option) any later version.
+
+--  This software is provided by the copyright holders and contributors "AS IS" and any express or
+--  implied warranties, including, but not limited to, the implied warranties of merchantability and
+--  fitness for a particular purpose are disclaimed. In no event shall the copyright holder or
+--  contributors be liable for any direct, indirect, incidental, special, exemplary, or
+--  consequential damages (including, but not limited to, procurement of substitute goods or
+--  services; loss of use, data, or profits; or business interruption) however caused and on any
+--  theory of liability, whether in contract, strict liability, or tort (including negligence or
+--  otherwise) arising in any way out of the use of this software, even if advised of the 
+--  possibility of such damage. See the GNU Affero General Public License for more details.
+
+--  You should have received a copy of the GNU Affero General Public License along with this
+--  program. If not, see <http://www.gnu.org/licenses/agpl-3.0.en.html>.
+----------------------------------------------------------------------------------------------------
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
@@ -9,8 +31,8 @@ use std.textio.all;
 library tools;
 use tools.std_pkg.all;
 
-library bre;
-use bre.engine_pkg.all;
+library erbium;
+use erbium.engine_pkg.all;
 
 package core_pkg is
 
@@ -128,24 +150,6 @@ package core_pkg is
             match_result_o      : out std_logic;
             stopscan_o          : out std_logic;
             wildcard_o          : out std_logic
-        );
-    end component;
-
-    component bram_edge_store is
-        generic (
-            G_RAM_WIDTH : integer := 64;                      -- Specify RAM witdh (number of bits per row)
-            G_RAM_DEPTH : integer := 1024;                    -- Specify RAM depth (number of entries)
-            G_RAM_PERFORMANCE : string := "LOW_LATENCY";      -- Select "HIGH_PERFORMANCE" or "LOW_LATENCY" 
-            G_INIT_FILE : string := "RAM_INIT.dat"            -- Specify name/location of RAM initialization file if using one (leave blank if not)
-        );
-        port (
-            clk_i        :  in std_logic;
-            ram_reg_en_i :  in std_logic; -- Output register enable
-            ram_en_i     :  in std_logic; -- RAM Enable, for additional power savings, disable port when not in use
-            addr_i       :  in std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
-            wr_data_i    :  in edge_store_type;
-            wr_en_i      :  in std_logic;
-            rd_data_o    : out edge_store_type
         );
     end component;
 

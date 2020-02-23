@@ -1,6 +1,28 @@
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//  ERBium - Business Rule Engine Hardware Accelerator
+//  Copyright (C) 2020 Fabio Maschi - Systems Group, ETH Zurich
+
+//  This program is free software: you can redistribute it and/or modify it under the terms of the
+//  GNU Affero General Public License as published by the Free Software Foundation, either version 3
+//  of the License, or (at your option) any later version.
+
+//  This software is provided by the copyright holders and contributors "AS IS" and any express or
+//  implied warranties, including, but not limited to, the implied warranties of merchantability and
+//  fitness for a particular purpose are disclaimed. In no event shall the copyright holder or
+//  contributors be liable for any direct, indirect, incidental, special, exemplary, or
+//  consequential damages (including, but not limited to, procurement of substitute goods or
+//  services; loss of use, data, or profits; or business interruption) however caused and on any
+//  theory of liability, whether in contract, strict liability, or tort (including negligence or
+//  otherwise) arising in any way out of the use of this software, even if advised of the 
+//  possibility of such damage. See the GNU Affero General Public License for more details.
+
+//  You should have received a copy of the GNU Affero General Public License along with this
+//  program. If not, see <http://www.gnu.org/licenses/agpl-3.0.en.html>.
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // default_nettype of none prevents implicit wire declaration.
 `default_nettype none
-module ederah_kernel #(
+module erbium_kernel #(
   parameter integer C_M00_AXI_ADDR_WIDTH = 64 ,
   parameter integer C_M00_AXI_DATA_WIDTH = 512
 )
@@ -37,12 +59,12 @@ module ederah_kernel #(
   input  wire [32-1:0]                     nfadata_cls    ,
   input  wire [32-1:0]                     queries_cls    ,
   input  wire [32-1:0]                     results_cls    ,
-  input  wire [32-1:0]                     scalar03       , // stats_on
+  input  wire [32-1:0]                     scalar03       , // not used
   input  wire [64-1:0]                     nfa_hash       ,
   input  wire [64-1:0]                     nfadata_ptr    ,
   input  wire [64-1:0]                     queries_ptr    ,
   input  wire [64-1:0]                     results_ptr    ,
-  input  wire [64-1:0]                     axi00_ptr3
+  input  wire [64-1:0]                     axi00_ptr3       // not used
 );
 
 
@@ -155,10 +177,10 @@ inst_InputChannel (
 );
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// EDERAH Engine Core                                                                             //
+// ERBIUM ENGINE WRAPPER                                                                          //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-ederah_wrapper #(
+erbium_wrapper #(
   .G_DATA_BUS_WIDTH         ( C_M00_AXI_DATA_WIDTH )
 )
 inst_wrapper (
@@ -214,5 +236,5 @@ inst_axi_write_master (
   .s_axis_tdata            ( wr_tdata                )
 );
 
-endmodule : ederah_kernel
+endmodule : erbium_kernel
 `default_nettype wire

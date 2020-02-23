@@ -1,10 +1,32 @@
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//  ERBium - Business Rule Engine Hardware Accelerator
+//  Copyright (C) 2020 Fabio Maschi - Systems Group, ETH Zurich
+
+//  This program is free software: you can redistribute it and/or modify it under the terms of the
+//  GNU Affero General Public License as published by the Free Software Foundation, either version 3
+//  of the License, or (at your option) any later version.
+
+//  This software is provided by the copyright holders and contributors "AS IS" and any express or
+//  implied warranties, including, but not limited to, the implied warranties of merchantability and
+//  fitness for a particular purpose are disclaimed. In no event shall the copyright holder or
+//  contributors be liable for any direct, indirect, incidental, special, exemplary, or
+//  consequential damages (including, but not limited to, procurement of substitute goods or
+//  services; loss of use, data, or profits; or business interruption) however caused and on any
+//  theory of liability, whether in contract, strict liability, or tort (including negligence or
+//  otherwise) arising in any way out of the use of this software, even if advised of the 
+//  possibility of such damage. See the GNU Affero General Public License for more details.
+
+//  You should have received a copy of the GNU Affero General Public License along with this
+//  program. If not, see <http://www.gnu.org/licenses/agpl-3.0.en.html>.
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/foreach.hpp>
 
 #include "definitions.h"
 
-namespace nfa_bre {
+namespace erbium {
 
 class CSVRow
 {
@@ -51,7 +73,7 @@ std::istream& operator>>(std::istream& str, CSVRow& data)
     return str;
 }
 
-void nfa_bre::abr_dataset_s::load(const std::string& filename)
+void erbium::abr_dataset_s::load(const std::string& filename)
 {
     // Create empty property tree object
     boost::property_tree::ptree tree;
@@ -125,7 +147,7 @@ void nfa_bre::abr_dataset_s::load(const std::string& filename)
     }
 }
 
-void nfa_bre::rulePack_s::load_rules(const std::string& filename)
+void erbium::rulePack_s::load_rules(const std::string& filename)
 {
     std::ifstream file(filename);
     CSVRow row;
@@ -148,13 +170,13 @@ void nfa_bre::rulePack_s::load_rules(const std::string& filename)
         //if (row.m_data[8] != "\"FIR\"" && row.m_data[9] != "\"FIR\"" && row.m_data[8] != "\"IBT\"" && row.m_data[9] != "\"IBT\"")
         //    continue;
 
-        nfa_bre::rule_s rl;
+        erbium::rule_s rl;
         rl.m_ruleId = std::stoi(row.m_data[0].substr(1));
         rl.m_weight = std::stoi(row.m_data[1]);
 
         for (int i=6; i<aux; i++)
         {
-            nfa_bre::criterion_s ct;
+            erbium::criterion_s ct;
             ct.m_index = i-6;
             if (!row.m_data[i].empty())
                 ct.m_value = row.get_value(i);
@@ -173,7 +195,7 @@ void nfa_bre::rulePack_s::load_rules(const std::string& filename)
     }
 }
 
-void nfa_bre::rulePack_s::load_ruleType(const std::string& filename)
+void erbium::rulePack_s::load_ruleType(const std::string& filename)
 {
     // for abr exported XML e.g. ruleTypeDefinition_MINCT_1-0_Template1.xml
 
@@ -217,4 +239,4 @@ void nfa_bre::rulePack_s::load_ruleType(const std::string& filename)
     }
 }
 
-} // namespace nfa_bre
+} // namespace erbium

@@ -1,8 +1,28 @@
-// This is a generated file. Use and modify at your own risk.
-//////////////////////////////////////////////////////////////////////////////// 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//  ERBium - Business Rule Engine Hardware Accelerator
+//  Copyright (C) 2020 Fabio Maschi - Systems Group, ETH Zurich
+
+//  This program is free software: you can redistribute it and/or modify it under the terms of the
+//  GNU Affero General Public License as published by the Free Software Foundation, either version 3
+//  of the License, or (at your option) any later version.
+
+//  This software is provided by the copyright holders and contributors "AS IS" and any express or
+//  implied warranties, including, but not limited to, the implied warranties of merchantability and
+//  fitness for a particular purpose are disclaimed. In no event shall the copyright holder or
+//  contributors be liable for any direct, indirect, incidental, special, exemplary, or
+//  consequential damages (including, but not limited to, procurement of substitute goods or
+//  services; loss of use, data, or profits; or business interruption) however caused and on any
+//  theory of liability, whether in contract, strict liability, or tort (including negligence or
+//  otherwise) arising in any way out of the use of this software, even if advised of the 
+//  possibility of such damage. See the GNU Affero General Public License for more details.
+
+//  You should have received a copy of the GNU Affero General Public License along with this
+//  program. If not, see <http://www.gnu.org/licenses/agpl-3.0.en.html>.
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // default_nettype of none prevents implicit wire declaration.
 `default_nettype none
-module ederah_kernel #(
+module erbium_kernel #(
   parameter integer C_RESULTS_STREAM_TDATA_WIDTH = 512,
   parameter integer C_INPUTS_STREAM_TDATA_WIDTH  = 512
 )
@@ -32,31 +52,19 @@ module ederah_kernel #(
   input  wire [32-1:0]                             nfa_hash             
 );
 
-
 timeunit 1ps;
 timeprecision 1ps;
 
-///////////////////////////////////////////////////////////////////////////////
-// Local Parameters
-///////////////////////////////////////////////////////////////////////////////
-// Large enough for interesting traffic.
-localparam integer  LP_DEFAULT_LENGTH_IN_BYTES = 16384;
-
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 // Wires and Variables
-///////////////////////////////////////////////////////////////////////////////
-(* KEEP = "yes" *)
-logic                                kernel_rst                     = 1'b0;
-logic                                ap_start_r                     = 1'b0;
-logic                                ap_idle_r                      = 1'b1;
-logic                                ap_start_pulse                ;
-logic                                ap_done_i                     ;
-logic                                ap_done_r                      = 1'b0;
-//
-logic                                active_kernel_clk;
-logic                                active;
-//
-wire                                 inputs_stream_ttype;
+////////////////////////////////////////////////////////////////////////////////////////////////////
+logic                                     ap_start_r                     = 1'b0;
+logic                                     ap_idle_r                      = 1'b1;
+logic                                     ap_start_pulse                ;
+logic                                     ap_done_i                     ;
+logic                                     ap_done_r                      = 1'b0;
+logic                                     active_kernel_clk;
+logic                                     active;
 //
 // Pipe (AXI4-Stream host) interface results_stream
 wire                                      cdc_results_stream_tvalid;
@@ -70,18 +78,17 @@ wire                                      cdc_inputs_stream_tready ;
 wire [C_INPUTS_STREAM_TDATA_WIDTH-1:0]    cdc_inputs_stream_tdata  ;
 wire                                      cdc_inputs_stream_tlast  ;
 wire                                      cdc_inputs_stream_ttype  ;
+wire                                      inputs_stream_ttype;
+wire                                      inputs_stream_tvalid_krl;
 //
-reg  [1:0]                           reader_state;
-reg  [1:0]                           nxt_reader_state;
+reg  [1:0]                                reader_state;
+reg  [1:0]                                nxt_reader_state;
+reg  [64-1:0]                             nfa_hash_r;
+wire                                      nfa_reload;
 
-reg  [64-1:0]                        nfa_hash_r;
-wire                                 nfa_reload;
-wire                                 inputs_stream_tvalid_krl;
-//
-
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 // Begin RTL
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 assign active = ~ap_idle;
 
 always @(posedge data_clk) begin
@@ -153,10 +160,10 @@ assign nfa_reload = (ap_start_pulse) && (nfa_hash !== nfa_hash_r);
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// EDERAH Engine Core                                                                             //
+// ERBIUM ENGINE WRAPPER                                                                          //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-ederah_wrapper #(
+erbium_wrapper #(
   .G_DATA_BUS_WIDTH         ( C_RESULTS_STREAM_TDATA_WIDTH )
 )
 inst_wrapper (
@@ -182,22 +189,22 @@ assign cdc_results_stream_tkeep = {C_INPUTS_STREAM_TDATA_WIDTH/8-1{1'b1}};
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 xpm_fifo_axis #(
-  .CDC_SYNC_STAGES     ( 3                      ) , // DECIMAL
-  .CLOCKING_MODE       ( "independent_clock"    ) , // String
-  .ECC_MODE            ( "no_ecc"               ) , // String
-  .FIFO_DEPTH          ( 32                     ) , // DECIMAL
-  .FIFO_MEMORY_TYPE    ( "auto"                 ) , // String
-  .PACKET_FIFO         ( "false"                ) , // String
-  .PROG_EMPTY_THRESH   ( 5                      ) , // DECIMAL
-  .PROG_FULL_THRESH    ( 32-5                   ) , // DECIMAL
-  .RD_DATA_COUNT_WIDTH ( 6                      ) , // DECIMAL
-  .RELATED_CLOCKS      ( 0                      ) , // DECIMAL
-  .TDATA_WIDTH         ( C_INPUTS_STREAM_TDATA_WIDTH ) , // DECIMAL
-  .TDEST_WIDTH         ( 1                      ) , // DECIMAL
-  .TID_WIDTH           ( 1                      ) , // DECIMAL
-  .TUSER_WIDTH         ( 1                      ) , // DECIMAL
-  .USE_ADV_FEATURES    ( "1000"                 ) , // String
-  .WR_DATA_COUNT_WIDTH ( 6                      )   // DECIMAL
+  .CDC_SYNC_STAGES     ( 3                      ) ,
+  .CLOCKING_MODE       ( "independent_clock"    ) ,
+  .ECC_MODE            ( "no_ecc"               ) ,
+  .FIFO_DEPTH          ( 32                     ) ,
+  .FIFO_MEMORY_TYPE    ( "auto"                 ) ,
+  .PACKET_FIFO         ( "false"                ) ,
+  .PROG_EMPTY_THRESH   ( 5                      ) ,
+  .PROG_FULL_THRESH    ( 32-5                   ) ,
+  .RD_DATA_COUNT_WIDTH ( 6                      ) ,
+  .RELATED_CLOCKS      ( 0                      ) ,
+  .TDATA_WIDTH         ( C_INPUTS_STREAM_TDATA_WIDTH ) ,
+  .TDEST_WIDTH         ( 1                      ) ,
+  .TID_WIDTH           ( 1                      ) ,
+  .TUSER_WIDTH         ( 1                      ) ,
+  .USE_ADV_FEATURES    ( "1000"                 ) ,
+  .WR_DATA_COUNT_WIDTH ( 6                      )
 )
 inst_xpm_fifo_axis_inputs (
   .s_aclk             ( data_clk                 ) ,
@@ -248,22 +255,22 @@ inst_active_kernel_clk (
 );
 
 xpm_fifo_axis #(
-  .CDC_SYNC_STAGES     ( 3                      ) , // DECIMAL
-  .CLOCKING_MODE       ( "independent_clock"    ) , // String
-  .ECC_MODE            ( "no_ecc"               ) , // String
-  .FIFO_DEPTH          ( 32                     ) , // DECIMAL
-  .FIFO_MEMORY_TYPE    ( "auto"                 ) , // String
-  .PACKET_FIFO         ( "false"                ) , // String
-  .PROG_EMPTY_THRESH   ( 5                      ) , // DECIMAL
-  .PROG_FULL_THRESH    ( 32-5                   ) , // DECIMAL
-  .RD_DATA_COUNT_WIDTH ( 6                      ) , // DECIMAL
-  .RELATED_CLOCKS      ( 0                      ) , // DECIMAL
-  .TDATA_WIDTH         ( C_INPUTS_STREAM_TDATA_WIDTH ) , // DECIMAL
-  .TDEST_WIDTH         ( 1                      ) , // DECIMAL
-  .TID_WIDTH           ( 1                      ) , // DECIMAL
-  .TUSER_WIDTH         ( 1                      ) , // DECIMAL
-  .USE_ADV_FEATURES    ( "1000"                 ) , // String
-  .WR_DATA_COUNT_WIDTH ( 6                      )   // DECIMAL
+  .CDC_SYNC_STAGES     ( 3                      ) ,
+  .CLOCKING_MODE       ( "independent_clock"    ) ,
+  .ECC_MODE            ( "no_ecc"               ) ,
+  .FIFO_DEPTH          ( 32                     ) ,
+  .FIFO_MEMORY_TYPE    ( "auto"                 ) ,
+  .PACKET_FIFO         ( "false"                ) ,
+  .PROG_EMPTY_THRESH   ( 5                      ) ,
+  .PROG_FULL_THRESH    ( 32-5                   ) ,
+  .RD_DATA_COUNT_WIDTH ( 6                      ) ,
+  .RELATED_CLOCKS      ( 0                      ) ,
+  .TDATA_WIDTH         ( C_INPUTS_STREAM_TDATA_WIDTH ) ,
+  .TDEST_WIDTH         ( 1                      ) ,
+  .TID_WIDTH           ( 1                      ) ,
+  .TUSER_WIDTH         ( 1                      ) ,
+  .USE_ADV_FEATURES    ( "1000"                 ) ,
+  .WR_DATA_COUNT_WIDTH ( 6                      )
 )
 inst_xpm_fifo_axis_results (
   .s_aclk             ( kernel_clk                ) ,
@@ -300,5 +307,5 @@ inst_xpm_fifo_axis_results (
   .dbiterr_axis       (                           )
 );
 
-endmodule : ederah_kernel
+endmodule : erbium_kernel
 `default_nettype wire

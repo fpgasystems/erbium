@@ -2,9 +2,9 @@ library ieee;
 use ieee.numeric_std.all;
 use ieee.std_logic_1164.all;
 
-library bre;
-use bre.engine_pkg.all;
-use bre.core_pkg.all;
+library erbium;
+use erbium.engine_pkg.all;
+use erbium.core_pkg.all;
 
 package cfg_criteria is
     type CORE_PARAM_ARRAY is array (0 to CFG_ENGINE_NCRITERIA - 1) of core_parameters_type;

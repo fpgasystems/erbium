@@ -1,3 +1,25 @@
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//  ERBium - Business Rule Engine Hardware Accelerator
+//  Copyright (C) 2020 Fabio Maschi - Systems Group, ETH Zurich
+
+//  This program is free software: you can redistribute it and/or modify it under the terms of the
+//  GNU Affero General Public License as published by the Free Software Foundation, either version 3
+//  of the License, or (at your option) any later version.
+
+//  This software is provided by the copyright holders and contributors "AS IS" and any express or
+//  implied warranties, including, but not limited to, the implied warranties of merchantability and
+//  fitness for a particular purpose are disclaimed. In no event shall the copyright holder or
+//  contributors be liable for any direct, indirect, incidental, special, exemplary, or
+//  consequential damages (including, but not limited to, procurement of substitute goods or
+//  services; loss of use, data, or profits; or business interruption) however caused and on any
+//  theory of liability, whether in contract, strict liability, or tort (including negligence or
+//  otherwise) arising in any way out of the use of this software, even if advised of the 
+//  possibility of such damage. See the GNU Affero General Public License for more details.
+
+//  You should have received a copy of the GNU Affero General Public License along with this
+//  program. If not, see <http://www.gnu.org/licenses/agpl-3.0.en.html>.
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 #include <cstring>
 #include <string>
 #include <fstream>
@@ -10,7 +32,8 @@
 #include <unistd.h>     // parameters
 
 #define CFG_ENGINE_NCRITERIA 22
-#define EXEC_DEBUG true
+//#define EXEC_DEBUG true
+//#define DETERMINISTIC true
 
 typedef uint16_t                                operands_t;
 
@@ -37,41 +60,41 @@ enum MatchSimpFunction {FNCTR_SIMP_NOP, FNCTR_SIMP_EQU, FNCTR_SIMP_NEQ, FNCTR_SI
 enum MatchModeType {MODE_STRICT_MATCH, MODE_FULL_ITERATION};
 
 const uint32_t WEIGHTS[CFG_ENGINE_NCRITERIA] = {
-    0, 0, 512, 524288, 256, 262144, 65536, 64, 1, 128, 131072, 16, 16384, 2, 4, 4096, 2048, 32768,
-    32, 0, 8192, 8
+    0, 0, 0, 512, 524288, 65536, 64, 128, 131072, 16, 16384, 2, 4, 4096, 2048, 32768, 32, 8192, 8,
+    1, 262144, 256
 };
 
 const MatchStructureType STRUCT_TYPE[CFG_ENGINE_NCRITERIA] = {
-    STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_PAIR, STRCT_PAIR, STRCT_SIMPLE,
-    STRCT_SIMPLE, STRCT_PAIR, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE,
-    STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE,
-    STRCT_SIMPLE, STRCT_SIMPLE
+    STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE,
+    STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE,
+    STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_SIMPLE, STRCT_PAIR, STRCT_PAIR,
+    STRCT_PAIR
 };
 
 const MatchPairFunction FUNCT_PAIR[CFG_ENGINE_NCRITERIA] = {
-   FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_AND, FNCTR_PAIR_AND,
-   FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_AND, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP,
-   FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP,
-   FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP
+    FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP,
+    FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP,
+    FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP, FNCTR_PAIR_NOP,
+    FNCTR_PAIR_NOP, FNCTR_PAIR_AND, FNCTR_PAIR_AND, FNCTR_PAIR_AND
 };
 
 const MatchSimpFunction FUNCT_A[CFG_ENGINE_NCRITERIA] = {
-    FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_GEQ, FNCTR_SIMP_GEQ,
-    FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_GEQ, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU,
     FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU,
-    FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU
+    FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU,
+    FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU, FNCTR_SIMP_EQU,
+    FNCTR_SIMP_EQU, FNCTR_SIMP_GEQ, FNCTR_SIMP_GEQ, FNCTR_SIMP_GEQ
 };
 
 const MatchSimpFunction FUNCT_B[CFG_ENGINE_NCRITERIA] = {
-    FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_LEQ, FNCTR_SIMP_LEQ,
-    FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_LEQ, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP,
     FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP,
-    FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP
+    FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP,
+    FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP, FNCTR_SIMP_NOP,
+    FNCTR_SIMP_NOP, FNCTR_SIMP_LEQ, FNCTR_SIMP_LEQ, FNCTR_SIMP_LEQ
 };
 
 const bool WILDCARD_EN[CFG_ENGINE_NCRITERIA] = {
-    false, false, true, true, true, true, true, true, true, true, true, true, true, true, true,
-    true, true, true, true, false, true, true
+    false, false, false, true, true, true, true, true, true, true, true, true, true, true, true,
+    true, true, true, true, true, true, true
 };
 
 struct edge_s {
@@ -203,9 +226,13 @@ void compute(const uint16_t* query, const uint16_t level, uint16_t pointer, cons
 {
     uint32_t aux_interim;
     bool wildcard;
+    bool match;
+
+    bool has_match = false;
+    uint16_t wildcard_pointer;
     do
     {
-        bool match =  matcher(STRUCT_TYPE[level], FUNCT_A[level], FUNCT_B[level], FUNCT_PAIR[level],
+        match =  matcher(STRUCT_TYPE[level], FUNCT_A[level], FUNCT_B[level], FUNCT_PAIR[level],
             WILDCARD_EN[level], *query, 
             the_memory[level][pointer].operand_a,
             the_memory[level][pointer].operand_b,
@@ -213,6 +240,16 @@ void compute(const uint16_t* query, const uint16_t level, uint16_t pointer, cons
 
         if (!match)
             continue;
+
+        #ifdef DETERMINISTIC
+        if (wildcard)
+        {
+            wildcard_pointer = pointer;
+            has_match = true;
+            match = false;
+            continue;
+        }
+        #endif
 
         // weight
         if (wildcard)
@@ -249,7 +286,18 @@ void compute(const uint16_t* query, const uint16_t level, uint16_t pointer, cons
             #endif
             compute(query+1, level+1, the_memory[level][pointer].pointer, aux_interim, result);
         }
+    #ifdef DETERMINISTIC
+    } while(!the_memory[level][pointer++].last & !match);
+    if (has_match && level == CFG_ENGINE_NCRITERIA - 1)
+    {
+        result->weight = interim;
+        result->pointer = the_memory[level][wildcard_pointer].pointer;
+    }
+    else if (has_match)
+        compute(query+1, level+1, the_memory[level][wildcard_pointer].pointer, interim, result);
+    #else
     } while(!the_memory[level][pointer++].last);
+    #endif
 }
 
 int main(int argc, char** argv)
@@ -346,8 +394,9 @@ int main(int argc, char** argv)
             file_nfadata.read(reinterpret_cast<char *>(&raw_edge), sizeof(raw_edge));
             num_edges = raw_edge;
             the_memory[level] = (edge_s*) malloc(num_edges * sizeof(edge_s));
-            // std::cout << " level=" << level << " edges=" << num_edges << std::endl;
-
+            #ifdef EXEC_DEBUG
+            std::cout << " level=" << level << " edges=" << num_edges << std::endl;
+            #endif
             for (uint32_t i=0; i<num_edges; i++)
             {
                 file_nfadata.read(reinterpret_cast<char *>(&raw_edge), sizeof(raw_edge));

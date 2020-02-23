@@ -1,10 +1,30 @@
-// This is a generated file. Use and modify at your own risk.
-//////////////////////////////////////////////////////////////////////////////// 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//  ERBium - Business Rule Engine Hardware Accelerator
+//  Copyright (C) 2020 Fabio Maschi - Systems Group, ETH Zurich
+
+//  This program is free software: you can redistribute it and/or modify it under the terms of the
+//  GNU Affero General Public License as published by the Free Software Foundation, either version 3
+//  of the License, or (at your option) any later version.
+
+//  This software is provided by the copyright holders and contributors "AS IS" and any express or
+//  implied warranties, including, but not limited to, the implied warranties of merchantability and
+//  fitness for a particular purpose are disclaimed. In no event shall the copyright holder or
+//  contributors be liable for any direct, indirect, incidental, special, exemplary, or
+//  consequential damages (including, but not limited to, procurement of substitute goods or
+//  services; loss of use, data, or profits; or business interruption) however caused and on any
+//  theory of liability, whether in contract, strict liability, or tort (including negligence or
+//  otherwise) arising in any way out of the use of this software, even if advised of the 
+//  possibility of such damage. See the GNU Affero General Public License for more details.
+
+//  You should have received a copy of the GNU Affero General Public License along with this
+//  program. If not, see <http://www.gnu.org/licenses/agpl-3.0.en.html>.
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // default_nettype of none prevents implicit wire declaration.
 `default_nettype none
 `timescale 1 ns / 1 ps
 // Top level of the kernel. Do not modify module name, parameters or ports.
-module ederah #(
+module erbium #(
   parameter integer C_S_AXI_CONTROL_ADDR_WIDTH = 12 ,
   parameter integer C_S_AXI_CONTROL_DATA_WIDTH = 32 ,
   parameter integer C_M00_AXI_ADDR_WIDTH       = 64 ,
@@ -16,33 +36,6 @@ module ederah #(
   input  wire                                    ap_rst_n             ,
   input  wire                                    ap_clk_2             ,
   input  wire                                    ap_rst_n_2           ,
-
-  //  Note: A minimum subset of AXI4 memory mapped signals are declared.  AXI
-  // signals omitted from these interfaces are automatically inferred with the
-  // optimal values for Xilinx SDx systems.  This allows Xilinx AXI4 Interconnects
-  // within the system to be optimized by removing logic for AXI4 protocol
-  // features that are not necessary. When adapting AXI4 masters within the RTL
-  // kernel that have signals not declared below, it is suitable to add the
-  // signals to the declarations below to connect them to the AXI4 Master.
-  // 
-  // List of ommited signals - effect
-  // -------------------------------
-  // ID - Transaction ID are used for multithreading and out of order
-  // transactions.  This increases complexity. This saves logic and increases Fmax
-  // in the system when ommited.
-  // SIZE - Default value is log2(data width in bytes). Needed for subsize bursts.
-  // This saves logic and increases Fmax in the system when ommited.
-  // BURST - Default value (0b01) is incremental.  Wrap and fixed bursts are not
-  // recommended. This saves logic and increases Fmax in the system when ommited.
-  // LOCK - Not supported in AXI4
-  // CACHE - Default value (0b0011) allows modifiable transactions. No benefit to
-  // changing this.
-  // PROT - Has no effect in SDx systems.
-  // QOS - Has no effect in SDx systems.
-  // REGION - Has no effect in SDx systems.
-  // USER - Has no effect in SDx systems.
-  // RESP - Not useful in most SDx systems.
-  // 
   // AXI4 master interface m00_axi
   output wire                                    m00_axi_awvalid      ,
   input  wire                                    m00_axi_awready      ,
@@ -84,14 +77,9 @@ module ederah #(
   output wire                                    interrupt            
 );
 
-///////////////////////////////////////////////////////////////////////////////
-// Local Parameters
-///////////////////////////////////////////////////////////////////////////////
-
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 // Wires and Variables
-///////////////////////////////////////////////////////////////////////////////
-(* DONT_TOUCH = "yes" *)
+////////////////////////////////////////////////////////////////////////////////////////////////////
 reg                                 areset                         = 1'b0;
 wire                                ap_start                      ;
 wire                                ap_idle                       ;
@@ -106,16 +94,16 @@ wire [64-1:0]                       queries_ptr                   ;
 wire [64-1:0]                       results_ptr                   ;
 wire [64-1:0]                       axi00_ptr3                    ;
 //
-reg                                ap_start_dlay                 ;
-reg [32-1:0]                       nfadata_cls_dlay              ;
-reg [32-1:0]                       queries_cls_dlay              ;
-reg [32-1:0]                       results_cls_dlay              ;
-reg [32-1:0]                       scalar03_dlay                 ;
-reg [64-1:0]                       nfa_hash_dlay                 ;
-reg [64-1:0]                       nfadata_ptr_dlay              ;
-reg [64-1:0]                       queries_ptr_dlay              ;
-reg [64-1:0]                       results_ptr_dlay              ;
-reg [64-1:0]                       axi00_ptr3_dlay               ;
+reg                                 ap_start_dlay                 ;
+reg [32-1:0]                        nfadata_cls_dlay              ;
+reg [32-1:0]                        queries_cls_dlay              ;
+reg [32-1:0]                        results_cls_dlay              ;
+reg [32-1:0]                        scalar03_dlay                 ;
+reg [64-1:0]                        nfa_hash_dlay                 ;
+reg [64-1:0]                        nfadata_ptr_dlay              ;
+reg [64-1:0]                        queries_ptr_dlay              ;
+reg [64-1:0]                        results_ptr_dlay              ;
+reg [64-1:0]                        axi00_ptr3_dlay               ;
 
 // Register and invert reset signal.
 always @(posedge ap_clk) begin
@@ -132,13 +120,12 @@ always @(posedge ap_clk) begin
   axi00_ptr3_dlay  <= axi00_ptr3;
 end
 
-///////////////////////////////////////////////////////////////////////////////
-// Begin control interface RTL.  Modifying not recommended.
-///////////////////////////////////////////////////////////////////////////////
-
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Begin control interface RTL
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // AXI4-Lite slave interface
-ederah_control_s_axi #(
+erbium_control_s_axi #(
   .C_ADDR_WIDTH ( C_S_AXI_CONTROL_ADDR_WIDTH ),
   .C_DATA_WIDTH ( C_S_AXI_CONTROL_DATA_WIDTH )
 )
@@ -178,16 +165,15 @@ inst_control_s_axi (
   .axi00_ptr3  ( axi00_ptr3            )
 );
 
-///////////////////////////////////////////////////////////////////////////////
-// Add kernel logic here.  Modify/remove example code as necessary.
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// ERBIUM KERNEL
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Example RTL block.  Remove to insert custom logic.
-ederah_kernel #(
+erbium_kernel #(
   .C_M00_AXI_ADDR_WIDTH ( C_M00_AXI_ADDR_WIDTH ),
   .C_M00_AXI_DATA_WIDTH ( C_M00_AXI_DATA_WIDTH )
 )
-inst_ederah (
+inst_erbium (
   .data_clk        ( ap_clk          ),
   .data_rst_n      ( ap_rst_n        ),
   .kernel_clk      ( ap_clk_2        ),

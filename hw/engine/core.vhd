@@ -1,21 +1,31 @@
 ----------------------------------------------------------------------------------------------------
--- project : 
---  author : 
---    date : 
---    file : core.vhd
---  design : 
-----------------------------------------------------------------------------------------------------
--- Description : 
-----------------------------------------------------------------------------------------------------
--- $Log$
+--  ERBium - Business Rule Engine Hardware Accelerator
+--  Copyright (C) 2020 Fabio Maschi - Systems Group, ETH Zurich
+
+--  This program is free software: you can redistribute it and/or modify it under the terms of the
+--  GNU Affero General Public License as published by the Free Software Foundation, either version 3
+--  of the License, or (at your option) any later version.
+
+--  This software is provided by the copyright holders and contributors "AS IS" and any express or
+--  implied warranties, including, but not limited to, the implied warranties of merchantability and
+--  fitness for a particular purpose are disclaimed. In no event shall the copyright holder or
+--  contributors be liable for any direct, indirect, incidental, special, exemplary, or
+--  consequential damages (including, but not limited to, procurement of substitute goods or
+--  services; loss of use, data, or profits; or business interruption) however caused and on any
+--  theory of liability, whether in contract, strict liability, or tort (including negligence or
+--  otherwise) arising in any way out of the use of this software, even if advised of the 
+--  possibility of such damage. See the GNU Affero General Public License for more details.
+
+--  You should have received a copy of the GNU Affero General Public License along with this
+--  program. If not, see <http://www.gnu.org/licenses/agpl-3.0.en.html>.
 ----------------------------------------------------------------------------------------------------
 
 library ieee;
 use ieee.std_logic_1164.all;
 
-library bre;
-use bre.engine_pkg.all;
-use bre.core_pkg.all;
+library erbium;
+use erbium.engine_pkg.all;
+use erbium.core_pkg.all;
 
 library tools;
 use tools.std_pkg.all;
@@ -86,8 +96,8 @@ begin
 
     v.read_en := '0';
     if query_empty_i = '0' and 
-            (query_r.first = '1' or 
-                    (fetch_r.buffer_rd_en = '1' and prev_data_i.query_id /= query_r.query.query_id)) then
+          (query_r.first = '1' or 
+            (fetch_r.buffer_rd_en = '1' and prev_data_i.query_id /= query_r.query.query_id)) then
         v.read_en := '1';
         v.query   := query_i;
         v.first   := '0';
@@ -205,7 +215,7 @@ begin
 end process;
 
 ----------------------------------------------------------------------------------------------------
--- MEMORY DELAY (3 CYCLES)                                                                        --
+-- MEMORY DELAY (G_MEM_RD_LATENCY CYCLES)                                                                        --
 ----------------------------------------------------------------------------------------------------
 
 mem_comb: process(mem_r, fetch_r.mem_rd_en, mem_edge_i.last, sig_exe_branch)
@@ -341,7 +351,9 @@ gen_mode_strict_match : if G_MATCH_MODE = MODE_STRICT_MATCH generate
     -- if non-mandatory: to only two (wildcard and strict match)
     --    sig_exe_match_wildcard for mandatory is always '0'
     -- also, if mem operand is bigger than query, stop scanning transitions (values are sorted)
-    sig_exe_branch <= (sig_exe_match_result or sig_exe_match_stopscan) and mem_r.valid and not sig_exe_match_wildcard;
+    sig_exe_branch <= (sig_exe_match_result or sig_exe_match_stopscan)
+                        and mem_r.valid
+                        and not sig_exe_match_wildcard;
 
 end generate;
 
@@ -352,39 +364,10 @@ gen_mode_full_iteration : if G_MATCH_MODE = MODE_FULL_ITERATION generate
 
 end generate;
 
-----------------------------------------------------------------------------------------------------
--- FAILURE CHECKS                                                                                 --
-----------------------------------------------------------------------------------------------------
-
--- -- synthesis translate_off 
--- p_assert : process (clk_i) is
--- begin
---     if rising_edge(clk_i) then
---         if mem_r.valid = '1' then -- fetch_r.buffer_rd_en = '0' and query_r.read_en = '0' and
---             if query_i.query_id /= fetch_r.query_id then
---                 report "ASSERT FAILURE - QUERY AND EDGE ARE NOT SYNCHRONISED! " severity failure;
---             end if;
---         end if;
---     end if;
--- end process p_assert;
--- -- synthesis translate_on
-
--- counter_queries: simple_counter generic map
--- (
---     G_WIDTH   => CFG_DBG_COUNTERS_WIDTH
--- )
--- port map
--- (
---     clk_i     => clk_i,
---     rst_i     => rst_i,
---     enable_i  => query_r.read_en,
---     counter_o => sig_queries_in
--- );
-
 end architecture behavioural;
 
 ----------------------------------------------------------------------------------------------------
--- FETCH                                                                                          --
+-- SIGNALS BEHAVIOUR                                                                              --
 ----------------------------------------------------------------------------------------------------
 --  state | v_branch | v_empty | n_full | v_buff | v_mem | v_flow | addr
 --   BUF  |     0         0        0    |   1    |   1   |  MEM   | POINTER

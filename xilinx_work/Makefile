@@ -1,5 +1,26 @@
-.PHONY: help
+####################################################################################################
+##  ERBium - Business Rule Engine Hardware Accelerator
+##  Copyright (C) 2020 Fabio Maschi - Systems Group, ETH Zurich
 
+##  This program is free software: you can redistribute it and/or modify it under the terms of the
+##  GNU Affero General Public License as published by the Free Software Foundation, either version 3
+##  of the License, or (at your option) any later version.
+
+##  This software is provided by the copyright holders and contributors "AS IS" and any express or
+##  implied warranties, including, but not limited to, the implied warranties of merchantability and
+##  fitness for a particular purpose are disclaimed. In no event shall the copyright holder or
+##  contributors be liable for any direct, indirect, incidental, special, exemplary, or
+##  consequential damages (including, but not limited to, procurement of substitute goods or
+##  services; loss of use, data, or profits; or business interruption) however caused and on any
+##  theory of liability, whether in contract, strict liability, or tort (including negligence or
+##  otherwise) arising in any way out of the use of this software, even if advised of the 
+##  possibility of such damage. See the GNU Affero General Public License for more details.
+
+##  You should have received a copy of the GNU Affero General Public License along with this
+##  program. If not, see <http://www.gnu.org/licenses/agpl-3.0.en.html>.
+####################################################################################################
+
+.PHONY: help
 help::
 	$(ECHO) "Makefile Usage:"
 	$(ECHO) "  make all"
@@ -20,7 +41,7 @@ help::
 	$(ECHO) "  make compile"
 	$(ECHO) "      Command to compile host kernel only."
 	$(ECHO) ""
-	$(ECHO) "  make aws_build"
+	$(ECHO) "  make aws_build EMAIL=your.email@for_notification_when.done"
 	$(ECHO) "      Command to build AWS xclbin application on AWS Cloud."
 	$(ECHO) ""
 	$(ECHO) "  options:"
@@ -88,12 +109,12 @@ ifneq ($(TARGET), hw)
 	CLFLAGS += -g
 endif
 
-EXECUTABLE = ederah_$(XL_SHELL)
+EXECUTABLE = erbium_$(XL_SHELL)
 EMCONFIG_DIR = $(TEMP_DIR)
 EMU_DIR = $(TEMP_DIR)/data/emulation
 
-BINARY_CONTAINERS += $(BUILD_DIR)/ederah.xclbin
-BINARY_CONTAINER_ederah_OBJS += $(TEMP_DIR)/ederah.xo
+BINARY_CONTAINERS += $(BUILD_DIR)/erbium.xclbin
+BINARY_CONTAINER_erbium_OBJS += $(TEMP_DIR)/erbium.xo
 
 CP = cp -rf
 
@@ -144,18 +165,18 @@ compile: $(EXECUTABLE)
 run:
 ifeq ($(HOST_ARCH), x86)
 	mkdir -p $(DATA_OUTPUT_PATH)
-	./$(EXECUTABLE) -b $(BUILD_DIR)/ederah.xclbin -n $(NFA_DATA_FILE) -w $(WORKLOAD_FILE) -r $(RESULT_FILE) -o $(BENCHMARK_FILE) -f $(FIRST_BATCH_SIZE) -m $(MAX_BATCH_SIZE) -i $(ITERATIONS) -k $(KERNELS_TO_RUN)
+	./$(EXECUTABLE) -b $(BUILD_DIR)/erbium.xclbin -n $(NFA_DATA_FILE) -w $(WORKLOAD_FILE) -r $(RESULT_FILE) -o $(BENCHMARK_FILE) -f $(FIRST_BATCH_SIZE) -m $(MAX_BATCH_SIZE) -i $(ITERATIONS) -k $(KERNELS_TO_RUN)
 endif
 
 # Building bitsream
-$(BUILD_DIR)/ederah.xclbin: $(BINARY_CONTAINER_ederah_OBJS)
+$(BUILD_DIR)/erbium.xclbin: $(BINARY_CONTAINER_erbium_OBJS)
 	mkdir -p $(BUILD_DIR)
-	$(VPP) $(CLFLAGS) --temp_dir $(BUILD_DIR) -l $(LDCLFLAGS) --jobs $(shell grep -c ^processor /proc/cpuinfo) --optimize 3 --nk ederah:$(KERNELS) -o'$@' $(+)
+	$(VPP) $(CLFLAGS) --temp_dir $(BUILD_DIR) -l $(LDCLFLAGS) --jobs $(shell grep -c ^processor /proc/cpuinfo) --optimize 3 --nk erbium:$(KERNELS) -o'$@' $(+)
 
 # Building kernel
-$(TEMP_DIR)/ederah.xo: ../hw/$(XL_SHELL)/kernel.xml ../hw/$(XL_SHELL)/package_kernel.tcl gen_xo.tcl ../hw/tools/*.vhd ../hw/engine/*.vhd ../hw/$(XL_SHELL)/*.sv ../hw/$(XL_SHELL)/*.v ../hw/custom/cfg_engines_${ENGINES}.vhd ../hw/custom/cfg_criteria_${HEURISTIC}.vhd
+$(TEMP_DIR)/erbium.xo: ../hw/$(XL_SHELL)/kernel.xml ../hw/$(XL_SHELL)/package_kernel.tcl gen_xo.tcl ../hw/tools/*.vhd ../hw/engine/*.vhd ../hw/$(XL_SHELL)/*.sv ../hw/$(XL_SHELL)/*.v ../hw/custom/cfg_engines_${ENGINES}.vhd ../hw/custom/cfg_criteria_${HEURISTIC}.vhd
 	mkdir -p $(TEMP_DIR)
-	$(VIVADO) -mode batch -nojournal -nolog -source gen_xo.tcl -tclargs $(TEMP_DIR)/ederah.xo ederah $(TARGET) $(XSA) $(XL_SHELL) $(ENGINES) $(HEURISTIC)
+	$(VIVADO) -mode batch -nojournal -nolog -source gen_xo.tcl -tclargs $(TEMP_DIR)/erbium.xo erbium $(TARGET) $(XSA) $(XL_SHELL) $(ENGINES) $(HEURISTIC)
 
 # Building Host
 $(EXECUTABLE): check-xrt $(HOST_SRCS) $(HOST_HDRS)
@@ -169,7 +190,7 @@ check: all
 ifeq ($(TARGET),$(filter $(TARGET),hw_emu))
 ifeq ($(HOST_ARCH), x86)
 	$(CP) $(EMCONFIG_DIR)/emconfig.json .
-	XCL_EMULATION_MODE=$(TARGET) ./$(EXECUTABLE) -b $(BUILD_DIR)/ederah.xclbin -n $(NFA_DATA_FILE) -w $(WORKLOAD_FILE) -r $(RESULT_FILE) -o $(BENCHMARK_FILE) -f $(FIRST_BATCH_SIZE) -m $(MAX_BATCH_SIZE) -i $(ITERATIONS) -k $(KERNELS_TO_RUN)
+	XCL_EMULATION_MODE=$(TARGET) ./$(EXECUTABLE) -b $(BUILD_DIR)/erbium.xclbin -n $(NFA_DATA_FILE) -w $(WORKLOAD_FILE) -r $(RESULT_FILE) -o $(BENCHMARK_FILE) -f $(FIRST_BATCH_SIZE) -m $(MAX_BATCH_SIZE) -i $(ITERATIONS) -k $(KERNELS_TO_RUN)
 endif
 endif
 ifneq ($(TARGET),$(findstring $(TARGET), hw hw_emu))
@@ -180,13 +201,17 @@ endif
 # 	perf_analyze profile -i profile_summary.csv -f html
 # endif
 
-
+.PHONY: aws_build
 aws_build: #check-aws_repo
 	mkdir -p _aws
 	(cd _aws && ../$(COMMON_REPO)/utility/aws/run_aws.py ../$(BINARY_CONTAINERS))
 	-$(RMDIR) _aws/to_aws
-	wait_for_afi.py --afi $(call GetFromJson,$(shell find _aws/ -name '*_afi_id.txt' | tail -1),FpgaImageId) --notify --email maschif@ethz.ch
-	
+	wait_for_afi.py --afi $(call GetFromJson,$(shell find _aws/ -name '*_afi_id.txt' | tail -1),FpgaImageId) --notify --email $(EMAIL)
+
+.PHONY: aws_copy
+aws_copy:
+	#scp -rpq -i ../keys/fpga_aws.pem ../sw/build-* centos@$(AWS_VM_IP):/home/centos/erbium
+	scp -rqp -i ../keys/fpga_aws.pem $(BUILD_DIR)/erbium.awsxclbin centos@$(AWS_VM_IP):/home/centos/erbium/erbium_$(HEURISTIC).$(ENGINES)e_$(shell printf "%X" $(KERNELS))k.awsxclbin
 
 # Cleaning stuff
 clean:

@@ -1,11 +1,33 @@
+----------------------------------------------------------------------------------------------------
+--  ERBium - Business Rule Engine Hardware Accelerator
+--  Copyright (C) 2020 Fabio Maschi - Systems Group, ETH Zurich
+
+--  This program is free software: you can redistribute it and/or modify it under the terms of the
+--  GNU Affero General Public License as published by the Free Software Foundation, either version 3
+--  of the License, or (at your option) any later version.
+
+--  This software is provided by the copyright holders and contributors "AS IS" and any express or
+--  implied warranties, including, but not limited to, the implied warranties of merchantability and
+--  fitness for a particular purpose are disclaimed. In no event shall the copyright holder or
+--  contributors be liable for any direct, indirect, incidental, special, exemplary, or
+--  consequential damages (including, but not limited to, procurement of substitute goods or
+--  services; loss of use, data, or profits; or business interruption) however caused and on any
+--  theory of liability, whether in contract, strict liability, or tort (including negligence or
+--  otherwise) arising in any way out of the use of this software, even if advised of the 
+--  possibility of such damage. See the GNU Affero General Public License for more details.
+
+--  You should have received a copy of the GNU Affero General Public License along with this
+--  program. If not, see <http://www.gnu.org/licenses/agpl-3.0.en.html>.
+----------------------------------------------------------------------------------------------------
+
 library ieee;
 use ieee.numeric_std.all;
 use ieee.std_logic_1164.all;
 
-library bre;
-use bre.engine_pkg.all;
-use bre.core_pkg.all;
-USE bre.cfg_criteria.all;
+library erbium;
+use erbium.engine_pkg.all;
+use erbium.core_pkg.all;
+USE erbium.cfg_criteria.all;
 
 library tools;
 use tools.std_pkg.all;
@@ -114,7 +136,7 @@ architecture behavioural of engine is
 begin
 
 ----------------------------------------------------------------------------------------------------
--- NFA-BRE ENGINE TOP LEVEL                                                                       --
+-- ERBIUM CORE TOP                                                                                --
 ----------------------------------------------------------------------------------------------------
 
 gen_dopio: for D in 0 to CFG_ENGINE_DOPIO_CORES - 1 generate
@@ -219,7 +241,8 @@ gen_dopio: for D in 0 to CFG_ENGINE_DOPIO_CORES - 1 generate
         result_valid_o  => resred_valid(D)
     );
 
-    prev_idle(D) <= query_last_i & (pe_idle(D)(0 to CFG_ENGINE_NCRITERIA - 2) and not next_write(D)(0 to CFG_ENGINE_NCRITERIA - 2));
+    prev_idle(D) <= query_last_i & (pe_idle(D)(0 to CFG_ENGINE_NCRITERIA - 2)
+                                    and not next_write(D)(0 to CFG_ENGINE_NCRITERIA - 2));
 
     sig_cores_idle(D) <= v_and(pe_idle(D)) and not v_or(next_write(D)) and query_last_i;
 
@@ -233,7 +256,7 @@ gen_dopio: for D in 0 to CFG_ENGINE_DOPIO_CORES - 1 generate
 
     -- ORIGIN LOOK-UP
     gen_lookup : if CFG_FIRST_CRITERION_LOOKUP generate
-        sig_origin_node(D).pointer  <= (CFG_MEM_ADDR_WIDTH - 1 downto CFG_CRITERION_VALUE_WIDTH => '0') & query(D)(0).operand;
+        sig_origin_node(D).pointer <= (CFG_MEM_ADDR_WIDTH - 1 downto CFG_CRITERION_VALUE_WIDTH => '0') & query(D)(0).operand;
     end generate gen_lookup;
 
     gen_lookup_n : if not CFG_FIRST_CRITERION_LOOKUP generate

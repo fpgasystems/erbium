@@ -1,3 +1,25 @@
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//  ERBium - Business Rule Engine Hardware Accelerator
+//  Copyright (C) 2020 Fabio Maschi - Systems Group, ETH Zurich
+
+//  This program is free software: you can redistribute it and/or modify it under the terms of the
+//  GNU Affero General Public License as published by the Free Software Foundation, either version 3
+//  of the License, or (at your option) any later version.
+
+//  This software is provided by the copyright holders and contributors "AS IS" and any express or
+//  implied warranties, including, but not limited to, the implied warranties of merchantability and
+//  fitness for a particular purpose are disclaimed. In no event shall the copyright holder or
+//  contributors be liable for any direct, indirect, incidental, special, exemplary, or
+//  consequential damages (including, but not limited to, procurement of substitute goods or
+//  services; loss of use, data, or profits; or business interruption) however caused and on any
+//  theory of liability, whether in contract, strict liability, or tort (including negligence or
+//  otherwise) arising in any way out of the use of this software, even if advised of the 
+//  possibility of such damage. See the GNU Affero General Public License for more details.
+
+//  You should have received a copy of the GNU Affero General Public License along with this
+//  program. If not, see <http://www.gnu.org/licenses/agpl-3.0.en.html>.
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 #include <string>
 #include <exception>
 #include <iostream>     // std::cout
@@ -27,7 +49,7 @@ int main(int argc, char** argv)
     std::string ruletype_file = "../data/mct_ruleTypeDefinition_MCT_v1.xml";
 
     int opt;
-    while ((opt = getopt(argc, argv, "d:r:zs:t:h")) != -1) {
+    while ((opt = getopt(argc, argv, "d:r:s:t:h")) != -1) {
         switch (opt) {
         case 'd':
             dest_folder = optarg;
@@ -41,18 +63,13 @@ int main(int argc, char** argv)
         case 's':
             sorting_option = static_cast<SortOption>(atoi(optarg));
             break;
-        case 'z':
-            dest_folder = "build-zrh/";
-            rules_file = "../data/mct_rules-zrh.csv";
-            break;
         case 'h':
         default: /* '?' */
             std::cerr << "Usage: " << argv[0] << "\n"
                       << "\t-d  destination folder\n"
                       << "\t-r  rules file\n"
                       << "\t-s  sorting: 0=None 1=H1_Asc 2=H1_Desc 4=H2_Asc 5=H2_Desc\n"
-                      << "\t-r  ruletype file\n"
-                      << "\t-z  [ZRH workload]\n"
+                      << "\t-t  ruletype file\n"
                       << "\t-h  help\n";
             exit(EXIT_FAILURE);
         }
@@ -78,7 +95,7 @@ int main(int argc, char** argv)
     std::cout << "# LOAD" << std::endl;
     auto start = std::chrono::high_resolution_clock::now();
     
-    nfa_bre::rulePack_s the_rulePack;
+    erbium::rulePack_s the_rulePack;
     the_rulePack.load_ruleType(ruletype_file);
     the_rulePack.load_rules(rules_file);
 
@@ -94,18 +111,18 @@ int main(int argc, char** argv)
     std::cout << "# DICTIONNARY" << std::endl;
     start = std::chrono::high_resolution_clock::now();
     
-    nfa_bre::Dictionnary the_dictionnary(the_rulePack);
+    erbium::Dictionnary the_dictionnary(the_rulePack);
 
     switch (sorting_option)
     {
         case SortOption::H1_Ascending:
             std::cout << "H1_Ascending sort" << std::endl;
-            the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Ascending);
+            the_dictionnary.sort_by_n_of_values(erbium::SortOrder::Ascending);
             break;
 
         case SortOption::H1_Descending:
             std::cout << "H1_Descending sort" << std::endl;
-            the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending);
+            the_dictionnary.sort_by_n_of_values(erbium::SortOrder::Descending);
             break;
 
         case SortOption::H2_Ascending:
@@ -120,7 +137,7 @@ int main(int argc, char** argv)
             arbitrary[19] = the_rulePack.m_ruleType.get_criterion_id("MCT_PRD");
             arbitrary[20] = the_rulePack.m_ruleType.get_criterion_id("OUT_FLT_RG");
             arbitrary[21] = the_rulePack.m_ruleType.get_criterion_id("IN_FLT_RG");
-            the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Ascending, &arbitrary);
+            the_dictionnary.sort_by_n_of_values(erbium::SortOrder::Ascending, &arbitrary);
         }
             break;
 
@@ -136,7 +153,7 @@ int main(int argc, char** argv)
             arbitrary[19] = the_rulePack.m_ruleType.get_criterion_id("MCT_PRD");
             arbitrary[20] = the_rulePack.m_ruleType.get_criterion_id("OUT_FLT_RG");
             arbitrary[21] = the_rulePack.m_ruleType.get_criterion_id("IN_FLT_RG");
-            the_dictionnary.sort_by_n_of_values(nfa_bre::SortOrder::Descending, &arbitrary);
+            the_dictionnary.sort_by_n_of_values(erbium::SortOrder::Descending, &arbitrary);
         }
             break;
 
@@ -156,11 +173,11 @@ int main(int argc, char** argv)
     // SANDBOX
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    std::cout.fill(' ');
+    /*std::cout.fill(' ');
     std::cout << ". Experiments on " << rules_file << " (r=" << the_rulePack.m_rules.size() << "):" << std::endl;
 
     start = std::chrono::high_resolution_clock::now();
-    nfa_bre::GraphHandler ticaTRE(&the_rulePack, &the_dictionnary);
+    erbium::GraphHandler ticaTRE(&the_rulePack, &the_dictionnary);
     ticaTRE.consolidate_graph();
     finish = std::chrono::high_resolution_clock::now();
     elapsed = finish - start;
@@ -169,7 +186,7 @@ int main(int argc, char** argv)
               << ", t= " << std::setw(9) << ticaTRE.get_num_transitions()
               << " (" << elapsed.count() << ")" << std::endl;
 
-    nfa_bre::GraphHandler ticaDFA(&the_rulePack, &the_dictionnary);
+    erbium::GraphHandler ticaDFA(&the_rulePack, &the_dictionnary);
     start = std::chrono::high_resolution_clock::now();
     ticaDFA.make_deterministic();
     ticaDFA.consolidate_graph();
@@ -190,7 +207,7 @@ int main(int argc, char** argv)
               << ", t= " << std::setw(9) << ticaDFA.get_num_transitions()
               << " (" << elapsed.count() << ")" << std::endl;
 
-    nfa_bre::GraphHandler ticaNFA(&the_rulePack, &the_dictionnary);
+    erbium::GraphHandler ticaNFA(&the_rulePack, &the_dictionnary);
     start = std::chrono::high_resolution_clock::now();
     ticaNFA.suffix_reduction();
     ticaNFA.consolidate_graph();
@@ -201,7 +218,7 @@ int main(int argc, char** argv)
               << ", t= " << std::setw(9) << ticaNFA.get_num_transitions()
               << " (" << elapsed.count() << ")" << std::endl;
 
-    return 0;
+    return 0;*/
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // GRAPH                                                                                      //
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -209,7 +226,7 @@ int main(int argc, char** argv)
     std::cout << "# GRAPH" << std::endl;
     start = std::chrono::high_resolution_clock::now();
     
-    nfa_bre::GraphHandler the_tree(&the_rulePack, &the_dictionnary);
+    erbium::GraphHandler the_tree(&the_rulePack, &the_dictionnary);
     the_tree.consolidate_graph();
 
     finish = std::chrono::high_resolution_clock::now();
@@ -226,11 +243,11 @@ int main(int argc, char** argv)
 
     std::cout << "# DFA" << std::endl;
 
-    nfa_bre::GraphHandler the_dfa(&the_rulePack, &the_dictionnary);
+    erbium::GraphHandler the_dfa(&the_rulePack, &the_dictionnary);
     start = std::chrono::high_resolution_clock::now();
 
-    the_dfa.make_deterministic();
-    the_dfa.suffix_reduction();
+    /*the_dfa.make_deterministic();
+    the_dfa.suffix_reduction();*/
     the_dfa.consolidate_graph();
 
     finish = std::chrono::high_resolution_clock::now();
@@ -247,7 +264,7 @@ int main(int argc, char** argv)
 
     std::cout << "# NFA" << std::endl;
     
-    nfa_bre::GraphHandler the_nfa(&the_rulePack, &the_dictionnary);
+    erbium::GraphHandler the_nfa(&the_rulePack, &the_dictionnary);
     start = std::chrono::high_resolution_clock::now();
 
     the_nfa.suffix_reduction();
@@ -276,7 +293,7 @@ int main(int argc, char** argv)
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::cout << "# EXPORT CORE PARAMETERS" << std::endl;
-    nfa_bre::RuleParser::export_vhdl_parameters(
+    erbium::RuleParser::export_vhdl_parameters(
                 dest_folder + "cfg_criteria_" + SortOptionTag[sorting_option] + ".vhd",
                 the_rulePack,
                 &the_dictionnary,
@@ -300,26 +317,26 @@ int main(int argc, char** argv)
 
     // const uint CFG_ENGINE_NCRITERIA       = the_rulePack.m_ruleType.m_criterionDefinition.size();
     // const uint CFG_EDGE_BUFFERS_DEPTH     = 5;
-    // const uint CFG_EDGE_BRAM_DEPTH        = (1 << (nfa_bre::CFG_MEM_ADDR_WIDTH + 1)) - 1;
-    // const uint BRAM_USED_BITS             = nfa_bre::CFG_WEIGHT_WIDTH + nfa_bre::CFG_MEM_ADDR_WIDTH + 2*nfa_bre::CFG_ENGINE_CRITERION_WIDTH + 1;
+    // const uint CFG_EDGE_BRAM_DEPTH        = (1 << (erbium::CFG_MEM_ADDR_WIDTH + 1)) - 1;
+    // const uint BRAM_USED_BITS             = erbium::CFG_WEIGHT_WIDTH + erbium::CFG_MEM_ADDR_WIDTH + 2*erbium::CFG_ENGINE_CRITERION_WIDTH + 1;
     // const uint CFG_EDGE_BRAM_WIDTH        = 1 << ((uint)ceil(log2(BRAM_USED_BITS)));
 
     // std::cout << "constant CFG_ENGINE_NCRITERIA         : integer := " << CFG_ENGINE_NCRITERIA << "; -- Number of criteria\n";
-    // std::cout << "constant CFG_ENGINE_CRITERION_WIDTH   : integer := " << nfa_bre::CFG_ENGINE_CRITERION_WIDTH << "; -- Number of bits of each criterion value\n";
-    // std::cout << "constant CFG_WEIGHT_WIDTH             : integer := " << nfa_bre::CFG_WEIGHT_WIDTH << "; -- integer from 0 to 2^CFG_WEIGHT_WIDTH-1\n";
+    // std::cout << "constant CFG_ENGINE_CRITERION_WIDTH   : integer := " << erbium::CFG_ENGINE_CRITERION_WIDTH << "; -- Number of bits of each criterion value\n";
+    // std::cout << "constant CFG_WEIGHT_WIDTH             : integer := " << erbium::CFG_WEIGHT_WIDTH << "; -- integer from 0 to 2^CFG_WEIGHT_WIDTH-1\n";
     // std::cout << "--\n";
-    // std::cout << "constant CFG_MEM_ADDR_WIDTH           : integer := " << nfa_bre::CFG_MEM_ADDR_WIDTH << ";\n";
+    // std::cout << "constant CFG_MEM_ADDR_WIDTH           : integer := " << erbium::CFG_MEM_ADDR_WIDTH << ";\n";
     // std::cout << "--\n";
     // std::cout << "constant CFG_EDGE_BUFFERS_DEPTH       : integer := " << CFG_EDGE_BUFFERS_DEPTH << ";\n";
     // std::cout << "constant CFG_EDGE_BRAM_DEPTH          : integer := " << CFG_EDGE_BRAM_DEPTH << ";\n";
     // std::cout << "constant CFG_EDGE_BRAM_WIDTH          : integer := " << CFG_EDGE_BRAM_WIDTH << ";\n";
     // std::cout << "BRAM_USED_BITS                        : integer := " << BRAM_USED_BITS << ";\n";
 
-    if (ceil(log2(n_bram_edges_max)) > nfa_bre::CFG_MEM_ADDR_WIDTH)
+    if (ceil(log2(n_bram_edges_max)) > erbium::CFG_MEM_ADDR_WIDTH)
     {
         std::cout << "[!] Required address space for " << n_bram_edges_max << " transitions is ";
         std::cout << ceil(log2(n_bram_edges_max)) << " bits (CFG_MEM_ADDR_WIDTH = ";
-        std::cout << nfa_bre::CFG_MEM_ADDR_WIDTH << " bits;\n";
+        std::cout << erbium::CFG_MEM_ADDR_WIDTH << " bits;\n";
     }
 
     start = std::chrono::high_resolution_clock::now();
@@ -338,7 +355,7 @@ int main(int argc, char** argv)
     std::cout << "# WORKLOAD DUMP" << std::endl;
     start = std::chrono::high_resolution_clock::now();
 
-    nfa_bre::RuleParser::export_benchmark_workload(dest_folder, the_rulePack, &the_dictionnary);
+    erbium::RuleParser::export_benchmark_workload(dest_folder, the_rulePack, &the_dictionnary);
 
     finish = std::chrono::high_resolution_clock::now();
     elapsed = finish - start;
@@ -349,4 +366,4 @@ int main(int argc, char** argv)
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     return (1 ? EXIT_SUCCESS : EXIT_FAILURE);
-}
+} // end of main

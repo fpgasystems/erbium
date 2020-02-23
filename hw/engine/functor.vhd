@@ -1,30 +1,32 @@
-----------------------------------------------------------------------------------
--- Institution: Systems Group, ETH Zurich 
--- PhD Researcher: Fabio Maschi
--- 
--- Create Date: 20.02.2019 15:47:34
--- Design Name: 
--- Module Name: functor - behavioural
--- Project Name: NFA-BRE
--- Target Devices: 
--- Tool Versions: 
--- Description: 
--- 
--- Dependencies: 
--- 
--- Revision:
--- Revision 0.01 - File Created
--- Additional Comments:
--- 
-----------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
+--  ERBium - Business Rule Engine Hardware Accelerator
+--  Copyright (C) 2020 Fabio Maschi - Systems Group, ETH Zurich
+
+--  This program is free software: you can redistribute it and/or modify it under the terms of the
+--  GNU Affero General Public License as published by the Free Software Foundation, either version 3
+--  of the License, or (at your option) any later version.
+
+--  This software is provided by the copyright holders and contributors "AS IS" and any express or
+--  implied warranties, including, but not limited to, the implied warranties of merchantability and
+--  fitness for a particular purpose are disclaimed. In no event shall the copyright holder or
+--  contributors be liable for any direct, indirect, incidental, special, exemplary, or
+--  consequential damages (including, but not limited to, procurement of substitute goods or
+--  services; loss of use, data, or profits; or business interruption) however caused and on any
+--  theory of liability, whether in contract, strict liability, or tort (including negligence or
+--  otherwise) arising in any way out of the use of this software, even if advised of the 
+--  possibility of such damage. See the GNU Affero General Public License for more details.
+
+--  You should have received a copy of the GNU Affero General Public License along with this
+--  program. If not, see <http://www.gnu.org/licenses/agpl-3.0.en.html>.
+----------------------------------------------------------------------------------------------------
 
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library bre;
-use bre.engine_pkg.all;
-use bre.core_pkg.all;
+library erbium;
+use erbium.engine_pkg.all;
+use erbium.core_pkg.all;
 
 library tools;
 use tools.std_pkg.all;

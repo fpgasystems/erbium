@@ -1,6 +1,4 @@
 // This is a generated file. Use and modify at your own risk.
-////////////////////////////////////////////////////////////////////////////////
-
 // default_nettype of none prevents implicit wire declaration.
 `default_nettype none
 
@@ -79,7 +77,5 @@ always @(posedge clk) begin
   end
 end
 
-
 endmodule : xdma_counter
 `default_nettype wire
-

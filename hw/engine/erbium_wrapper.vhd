@@ -1,10 +1,23 @@
 ----------------------------------------------------------------------------------------------------
---                                                                                                --
---                                                                                                --
---                                                                                                --
---                                                                                                --
---                                                                                                --
---                                                                                                --
+--  ERBium - Business Rule Engine Hardware Accelerator
+--  Copyright (C) 2020 Fabio Maschi - Systems Group, ETH Zurich
+
+--  This program is free software: you can redistribute it and/or modify it under the terms of the
+--  GNU Affero General Public License as published by the Free Software Foundation, either version 3
+--  of the License, or (at your option) any later version.
+
+--  This software is provided by the copyright holders and contributors "AS IS" and any express or
+--  implied warranties, including, but not limited to, the implied warranties of merchantability and
+--  fitness for a particular purpose are disclaimed. In no event shall the copyright holder or
+--  contributors be liable for any direct, indirect, incidental, special, exemplary, or
+--  consequential damages (including, but not limited to, procurement of substitute goods or
+--  services; loss of use, data, or profits; or business interruption) however caused and on any
+--  theory of liability, whether in contract, strict liability, or tort (including negligence or
+--  otherwise) arising in any way out of the use of this software, even if advised of the 
+--  possibility of such damage. See the GNU Affero General Public License for more details.
+
+--  You should have received a copy of the GNU Affero General Public License along with this
+--  program. If not, see <http://www.gnu.org/licenses/agpl-3.0.en.html>.
 ----------------------------------------------------------------------------------------------------
 
 library ieee;
@@ -14,14 +27,14 @@ use ieee.std_logic_unsigned.all;
 library tools;
 use tools.std_pkg.all;
 
-library bre;
-use bre.engine_pkg.all;
-use bre.core_pkg.all;
+library erbium;
+use erbium.engine_pkg.all;
+use erbium.core_pkg.all;
 
-entity ederah_wrapper is
+entity erbium_wrapper is
     generic (
         G_DATA_BUS_WIDTH : integer := 512;
-        G_INOUT_LATENCY  : integer := 2
+        G_INOUT_LATENCY  : integer := 2 -- NOT AUTOMATIC, TODO
     );
     port (
         clk_i        :  in std_logic;
@@ -38,9 +51,9 @@ entity ederah_wrapper is
         wr_last_o    : out std_logic;
         wr_ready_i   :  in std_logic
     );
-end ederah_wrapper;
+end erbium_wrapper;
 
-architecture rtl of ederah_wrapper is
+architecture rtl of erbium_wrapper is
     constant CFG_RD_TYPE_NFA      : std_logic := '0'; -- related to rd_stype_i
     constant CFG_RD_TYPE_QUERY    : std_logic := '1'; -- related to rd_stype_i
     constant C_QUERY_PARTITIONS   : integer := G_DATA_BUS_WIDTH / CFG_RAW_QUERY_WIDTH;
@@ -50,10 +63,10 @@ architecture rtl of ederah_wrapper is
     type result_value_array is array (CFG_ENGINES_NUMBER - 1 downto 0) of std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
     type query_value_array is array (CFG_ENGINES_NUMBER - 1 downto 0) of std_logic_vector(C_QUERYARRAY_WIDTH - 1 downto 0);
     --
-    signal sig_query_id         : std_logic_vector(CFG_QUERY_ID_WIDTH - 1 downto 0);
-    signal sig_query_ready      : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
-    signal sig_query_wr         : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
-    signal sig_query_serialised : std_logic_vector(C_QUERYARRAY_WIDTH - 1 downto 0);
+    signal sig_query_id           : std_logic_vector(CFG_QUERY_ID_WIDTH - 1 downto 0);
+    signal sig_query_ready        : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
+    signal sig_query_wr           : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
+    signal sig_query_serialised   : std_logic_vector(C_QUERYARRAY_WIDTH - 1 downto 0);
     --
     signal sig_fifo_query_ready   : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
     signal sig_fifo_query_valid   : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
@@ -65,10 +78,11 @@ architecture rtl of ederah_wrapper is
     signal sig_fifo_result_last   : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
     signal sig_fifo_result_value  : result_value_array;
     --
-    signal sig_result_ready   : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
-    signal sig_result_last    : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
-    signal sig_result_valid   : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
-    signal sig_result_value   : result_value_array;
+    signal sig_result_ready       : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
+    signal sig_result_last        : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
+    signal sig_result_valid       : std_logic_vector(CFG_ENGINES_NUMBER - 1 downto 0);
+    signal sig_result_value       : result_value_array;
+    signal sig_result_temp        : std_logic_vector(CFG_RAW_RESULTS_WIDTH - 1 downto 0);
     --
     type flow_ctrl_type is (FLW_CTRL_WAIT, FLW_CTRL_READ, FLW_CTRL_WRITE, FLW_CTRL_DLAY);
     --
@@ -109,9 +123,10 @@ architecture rtl of ederah_wrapper is
     -- IN/OUT REGISTER WRAPPER (REDUCE ROUTING TIMES)
     type inout_wrapper_type is record
         -- nfa to mem
-        mem_data   : std_logic_vector(CFG_EDGE_BRAM_WIDTH - 1 downto 0);
-        mem_wren   : std_logic_vector(CFG_ENGINE_NCRITERIA - 1 downto 0);
-        mem_addr   : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        mem_data        : std_logic_vector(CFG_EDGE_BRAM_WIDTH - 1 downto 0);
+        mem_wren        : std_logic_vector(CFG_ENGINE_NCRITERIA - 1 downto 0);
+        mem_addr        : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        engine_rst      : std_logic;
     end record;
     type inout_wrapper_array is array (G_INOUT_LATENCY - 1 downto 0) of inout_wrapper_type;
 
@@ -130,7 +145,7 @@ architecture rtl of ederah_wrapper is
         result_valid    : std_logic;
         result_last     : std_logic;
     end record;
-    signal dopio_r, dopio_rin   : dopio_reg_type;
+    signal dopio_r, dopio_rin : dopio_reg_type;
 
 begin
 
@@ -364,7 +379,10 @@ wr_data_o  <= result_r.value;
 wr_valid_o <= result_r.valid;
 wr_last_o  <= result_r.last;
 
-result_comb : process(result_r, wr_ready_i, dopio_r.result_value, dopio_r.result_valid, dopio_r.result_last)
+sig_result_temp <= (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
+
+result_comb : process(result_r, wr_ready_i, dopio_r.result_value, dopio_r.result_valid,
+    dopio_r.result_last)
     variable v : result_reg_type;
 begin
     v := result_r;
@@ -379,109 +397,9 @@ begin
             if dopio_r.result_valid = '1' then
 
                 v.slice := result_r.slice + 1;
-                --v.value := insert_into_vector(v.value, val, result_r.slice * CFG_RAW_RESULTS_WIDTH);
-
-                -- this is ugly, but it's a Xilinx problem
-                -- https://forums.xilinx.com/t5/Synthesis/Vivado2013-2-Synth-8-27-complex-assignment-not-supported/td-p/345805
-                case result_r.slice is
-                  when  0 =>
-                        v.value(CFG_RAW_RESULTS_WIDTH - 1 downto  0)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when  1 =>
-                        v.value(( 1 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  1 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when  2 =>
-                        v.value(( 2 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  2 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when  3 =>
-                        v.value(( 3 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  3 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when  4 =>
-                        v.value(( 4 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  4 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when  5 =>
-                        v.value(( 5 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  5 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when  6 =>
-                        v.value(( 6 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  6 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when  7 =>
-                        v.value(( 7 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  7 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when  8 =>
-                        v.value(( 8 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  8 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when  9 =>
-                        v.value(( 9 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto  9 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when 10 =>
-                        v.value((10 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 10 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when 11 =>
-                        v.value((11 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 11 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when 12 =>
-                        v.value((12 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 12 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when 13 =>
-                        v.value((13 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 13 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when 14 =>
-                        v.value((14 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 14 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when 15 =>
-                        v.value((15 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 15 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when 16 =>
-                        v.value((16 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 16 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when 17 =>
-                        v.value((17 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 17 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when 18 =>
-                        v.value((18 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 18 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when 19 =>
-                        v.value((19 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 19 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when 20 =>
-                        v.value((20 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 20 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when 21 =>
-                        v.value((21 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 21 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when 22 =>
-                        v.value((22 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 22 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when 23 =>
-                        v.value((23 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 23 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when 24 =>
-                        v.value((24 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 24 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when 25 =>
-                        v.value((25 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 25 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when 26 =>
-                        v.value((26 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 26 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when 27 =>
-                        v.value((27 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 27 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when 28 =>
-                        v.value((28 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 28 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when 29 =>
-                        v.value((29 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 29 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when 30 =>
-                        v.value((30 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 30 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when 31 =>
-                        v.value((31 + 1) * CFG_RAW_RESULTS_WIDTH - 1 downto 31 * CFG_RAW_RESULTS_WIDTH)
-                            := (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
-                  when others =>
-                end case;
+                v.value := insert_into_vector(v.value,
+                    sig_result_temp,
+                    result_r.slice * CFG_RAW_RESULTS_WIDTH);
 
                 if v.slice = C_RESULTS_PARTITIONS or dopio_r.result_last = '1' then
                     v.ready := '0';
@@ -566,8 +484,9 @@ begin
         if (sig_result_valid(dopio_r.reslt_flow_ctrl) = '1') then
             v.result_value := sig_result_value(dopio_r.reslt_flow_ctrl);
             v.result_valid := sig_result_valid(dopio_r.reslt_flow_ctrl) and result_r.ready;
-            v.result_last  := (not v_or((power_of_two(dopio_r.reslt_flow_ctrl, CFG_ENGINES_NUMBER) and sig_result_last)
-                               xor dopio_r.core_running)) and sig_result_last(dopio_r.reslt_flow_ctrl);
+            v.result_last  := (not v_or((power_of_two(dopio_r.reslt_flow_ctrl, CFG_ENGINES_NUMBER)
+                               and sig_result_last) xor dopio_r.core_running))
+                               and sig_result_last(dopio_r.reslt_flow_ctrl);
         else
             v.result_valid := '0';
             v.result_last  := '0';
@@ -592,14 +511,14 @@ begin
 end process;
 
 ----------------------------------------------------------------------------------------------------
--- NFA-BRE ENGINE TOP                                                                             --
+-- ERBIUM ENGINE TOP                                                                              --
 ----------------------------------------------------------------------------------------------------
 gen_engines: for D in 0 to CFG_ENGINES_NUMBER - 1 generate
 
     mct_engine_top: engine port map 
     (
         clk_i           => clk_i,
-        rst_i           => nfa_r.engine_rst,
+        rst_i           => io_r.engine_rst,
         --
         query_i         => deserialise_query_array(sig_fifo_query_value(D)),
         query_last_i    => sig_fifo_query_last(D),
@@ -694,6 +613,7 @@ begin
     v(1).mem_data := nfa_r.mem_data;
     v(1).mem_wren := nfa_r.mem_wren;
     v(1).mem_addr := nfa_r.mem_addr;
+    v(1).engine_rst := nfa_r.engine_rst;
 
     inout_rin <= v;
 
@@ -706,6 +626,8 @@ begin
             -- default rst
             inout_r(0).mem_wren <= (others => '0');
             inout_r(1).mem_wren <= (others => '0');
+            inout_r(0).engine_rst <= '0';
+            inout_r(1).engine_rst <= '0';
         else
             inout_r <= inout_rin;
         end if;

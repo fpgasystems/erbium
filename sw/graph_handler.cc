@@ -1,3 +1,25 @@
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//  ERBium - Business Rule Engine Hardware Accelerator
+//  Copyright (C) 2020 Fabio Maschi - Systems Group, ETH Zurich
+
+//  This program is free software: you can redistribute it and/or modify it under the terms of the
+//  GNU Affero General Public License as published by the Free Software Foundation, either version 3
+//  of the License, or (at your option) any later version.
+
+//  This software is provided by the copyright holders and contributors "AS IS" and any express or
+//  implied warranties, including, but not limited to, the implied warranties of merchantability and
+//  fitness for a particular purpose are disclaimed. In no event shall the copyright holder or
+//  contributors be liable for any direct, indirect, incidental, special, exemplary, or
+//  consequential damages (including, but not limited to, procurement of substitute goods or
+//  services; loss of use, data, or profits; or business interruption) however caused and on any
+//  theory of liability, whether in contract, strict liability, or tort (including negligence or
+//  otherwise) arising in any way out of the use of this software, even if advised of the 
+//  possibility of such damage. See the GNU Affero General Public License for more details.
+
+//  You should have received a copy of the GNU Affero General Public License along with this
+//  program. If not, see <http://www.gnu.org/licenses/agpl-3.0.en.html>.
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 #include "graph_handler.h"
 #include "dictionnary.h"
 #include "rule_parser.h"
@@ -8,7 +30,7 @@
 #include <omp.h>                    // openmp
 #include <iterator>
 
-namespace nfa_bre {
+namespace erbium {
 
 GraphHandler::GraphHandler(const rulePack_s* rulepack, const Dictionnary* dic)
 {
@@ -212,11 +234,11 @@ void GraphHandler::make_deterministic()
         for (auto& the_wildcard : m_vertexes[level.first][dic.begin()->second])
         {
             // for each of its parent -- N.B.: at this point it **should** be only one though...
-            auto list_parents = m_graph[the_wildcard].parents;
+            const auto list_parents = m_graph[the_wildcard].parents;
             for (auto& the_parent : list_parents)
             {
                 // for each other children
-                auto list_child = m_graph[the_parent].children;
+                const auto list_child = m_graph[the_parent].children;
                 for (auto& the_child : list_child)
                 {
                     if (the_child == the_wildcard)
@@ -260,13 +282,13 @@ void GraphHandler::dfa_merge_paths(const vertex_id_t& orgi_state, const vertex_i
 
     bool existing_edge;
     // iterates all outgoing transition of origin state
-    auto list = m_graph[orgi_state].children;
+    const auto list = m_graph[orgi_state].children;
     for (auto& orgi_children : list)
     {
         existing_edge = false;
         
         // check for same-value out. transitions
-        auto child_list = m_graph[dest_state].children;
+        const auto child_list = m_graph[dest_state].children;
         for (auto& dest_children : child_list)
         {
             if (m_graph[orgi_children].label == m_graph[dest_children].label)
@@ -314,7 +336,7 @@ void GraphHandler::dfa_append_path(const vertex_id_t& orgi_children, const verte
         return;
     }
 
-    auto list = m_graph[orgi_children].children;
+    const auto list = m_graph[orgi_children].children;
     for (auto& grand_children : list)
         dfa_append_path(grand_children, neo_child);
 }
@@ -476,7 +498,7 @@ void GraphHandler::export_memory(const std::string& filename)
             break;  // skip content
 
         mem_int = edges_per_level[level.first];
-        outfile.write((char*)&mem_int, sizeof(level.first+1));
+        outfile.write((char*)&mem_int, sizeof(mem_int));
 
         dic = m_dic->get_criterion_dic_by_level(level.first+1);
         criterion_def = &(*std::next(m_rulePack->m_ruleType.m_criterionDefinition.begin(),
@@ -527,4 +549,4 @@ void GraphHandler::dump_binary_padding(std::fstream* outfile, const size_t& slic
         outfile->write((char*)&mem_int, sizeof(mem_int));
 }
 
-} // namespace nfa_bre
+} // namespace erbium

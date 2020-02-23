@@ -1,27 +1,30 @@
--------------------------------------------------------------------------------
--- File Downloaded from http://www.nandland.com
---
--- Description: Creates a Synchronous FIFO made out of registers.
---              Generic: G_DEPTH sets the depth of the FIFO created.
---
---              Total FIFO register usage will be width * depth
---              Note that this fifo should not be used to cross clock domains.
---              (Read and write clocks NEED TO BE the same clock domain)
---
---              FIFO Full Flag will assert as soon as last word is written.
---              FIFO Empty Flag will assert as soon as last word is read.
---
---              FIFO is 100% synthesizable.  It uses assert statements which do
---              not synthesize, but will cause your simulation to crash if you
---              are doing something you shouldn't be doing (reading from an
---              empty FIFO or writing to a full FIFO).
--------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------
+--  ERBium - Business Rule Engine Hardware Accelerator
+--  Copyright (C) 2020 Fabio Maschi - Systems Group, ETH Zurich
+
+--  This program is free software: you can redistribute it and/or modify it under the terms of the
+--  GNU Affero General Public License as published by the Free Software Foundation, either version 3
+--  of the License, or (at your option) any later version.
+
+--  This software is provided by the copyright holders and contributors "AS IS" and any express or
+--  implied warranties, including, but not limited to, the implied warranties of merchantability and
+--  fitness for a particular purpose are disclaimed. In no event shall the copyright holder or
+--  contributors be liable for any direct, indirect, incidental, special, exemplary, or
+--  consequential damages (including, but not limited to, procurement of substitute goods or
+--  services; loss of use, data, or profits; or business interruption) however caused and on any
+--  theory of liability, whether in contract, strict liability, or tort (including negligence or
+--  otherwise) arising in any way out of the use of this software, even if advised of the 
+--  possibility of such damage. See the GNU Affero General Public License for more details.
+
+--  You should have received a copy of the GNU Affero General Public License along with this
+--  program. If not, see <http://www.gnu.org/licenses/agpl-3.0.en.html>.
+----------------------------------------------------------------------------------------------------
  
 library ieee;
 use ieee.std_logic_1164.all;
 
-library bre;
-use bre.core_pkg.all;
+library erbium;
+use erbium.core_pkg.all;
 
 entity buffer_query is
     generic (

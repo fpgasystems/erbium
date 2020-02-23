@@ -1,3 +1,25 @@
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//  ERBium - Business Rule Engine Hardware Accelerator
+//  Copyright (C) 2020 Fabio Maschi - Systems Group, ETH Zurich
+
+//  This program is free software: you can redistribute it and/or modify it under the terms of the
+//  GNU Affero General Public License as published by the Free Software Foundation, either version 3
+//  of the License, or (at your option) any later version.
+
+//  This software is provided by the copyright holders and contributors "AS IS" and any express or
+//  implied warranties, including, but not limited to, the implied warranties of merchantability and
+//  fitness for a particular purpose are disclaimed. In no event shall the copyright holder or
+//  contributors be liable for any direct, indirect, incidental, special, exemplary, or
+//  consequential damages (including, but not limited to, procurement of substitute goods or
+//  services; loss of use, data, or profits; or business interruption) however caused and on any
+//  theory of liability, whether in contract, strict liability, or tort (including negligence or
+//  otherwise) arising in any way out of the use of this software, even if advised of the 
+//  possibility of such damage. See the GNU Affero General Public License for more details.
+
+//  You should have received a copy of the GNU Affero General Public License along with this
+//  program. If not, see <http://www.gnu.org/licenses/agpl-3.0.en.html>.
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 module InputChannel #(
   // Set to the address width of the interface
   parameter integer C_M_AXI_ADDR_WIDTH  = 64,
@@ -59,9 +81,9 @@ module InputChannel #(
   output wire                          m_axis_ttype
 );
 
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 // Local Parameters
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 localparam integer LP_DW_BYTES             = C_M_AXI_DATA_WIDTH/8;
 localparam integer LP_AXI_BURST_LEN        = 4096/LP_DW_BYTES < 256 ? 4096/LP_DW_BYTES : 256;
 localparam integer LP_LOG_BURST_LEN        = $clog2(LP_AXI_BURST_LEN);
@@ -74,9 +96,9 @@ localparam [1:0] IDLE           = 2'b00,
                  WAIT_ALL_EDGES = 2'b10,
                  READ_QUERY     = 2'b11;
 
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 // Variables
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 // AXI4 master interface (read only)
 wire                          nfa_m_axi_arvalid;
 wire                          nfa_m_axi_arready;
@@ -131,9 +153,9 @@ wire                          nfa_reload;
 reg [C_XFER_SIZE_WIDTH-1:6]   nfa_xfer_size_in_bytes_dlay;
 reg [C_XFER_SIZE_WIDTH-1:6]   query_xfer_size_in_bytes_dlay;
 
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 // AXI Read Address Channel
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // register IO
 always@(posedge data_clk) begin
@@ -165,10 +187,10 @@ end
 
 always@(*) begin
     case (reader_state)
-      IDLE           : nxt_reader_state = (ctrl_start) ? ((nfa_reload) ? READ_NFA : WAIT_ALL_EDGES) : IDLE;
-      READ_NFA       : nxt_reader_state = (nfa_read_done_dataclk)   ? WAIT_ALL_EDGES : READ_NFA;
+      IDLE           : nxt_reader_state = (ctrl_start) ? ((nfa_reload) ? READ_NFA       : WAIT_ALL_EDGES) : IDLE;
+      READ_NFA       : nxt_reader_state = (nfa_read_done_dataclk)      ? WAIT_ALL_EDGES : READ_NFA;
       WAIT_ALL_EDGES : nxt_reader_state = READ_QUERY;
-      READ_QUERY     : nxt_reader_state = (query_read_done_dataclk) ? IDLE           : READ_QUERY;
+      READ_QUERY     : nxt_reader_state = (query_read_done_dataclk)    ? IDLE           : READ_QUERY;
       default        : nxt_reader_state = IDLE;
     endcase
 end
@@ -180,9 +202,9 @@ assign nfa_start    = (reader_state == IDLE)           && (nxt_reader_state == R
 assign query_start  = (reader_state == WAIT_ALL_EDGES) && (nxt_reader_state == READ_QUERY);
 
 // RD TX
-assign m_axi_arvalid = (reader_state == READ_NFA)? nfa_m_axi_arvalid : (reader_state == READ_QUERY) ? query_m_axi_arvalid : 1'b0;
-assign m_axi_araddr  = (reader_state == READ_NFA)? nfa_m_axi_araddr  : (reader_state == READ_QUERY) ? query_m_axi_araddr  : 0;
-assign m_axi_arlen   = (reader_state == READ_NFA)? nfa_m_axi_arlen   : (reader_state == READ_QUERY) ? query_m_axi_arlen   : 0;
+assign m_axi_arvalid = (reader_state == READ_NFA) ? nfa_m_axi_arvalid : (reader_state == READ_QUERY) ? query_m_axi_arvalid : 1'b0;
+assign m_axi_araddr  = (reader_state == READ_NFA) ? nfa_m_axi_araddr  : (reader_state == READ_QUERY) ? query_m_axi_araddr  : 0;
+assign m_axi_arlen   = (reader_state == READ_NFA) ? nfa_m_axi_arlen   : (reader_state == READ_QUERY) ? query_m_axi_arlen   : 0;
 
 assign query_m_axi_arready  = (reader_state == READ_QUERY) && m_axi_arready;
 assign nfa_m_axi_arready    = (reader_state == READ_NFA)   && m_axi_arready;
@@ -326,7 +348,5 @@ inst_query_read_done_dataclk (
    .src_clk     (m_axis_aclk),
    .src_pulse   (query_read_done)
 );
-
-
 
 endmodule

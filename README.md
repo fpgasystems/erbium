@@ -20,8 +20,8 @@ Two files are required;
  - Rule structure file, formatted as `data/demo_ruletype.csv`.
 
 ```
-	cd sw
-	make <demo|benchmarks>
+cd sw
+make <demo|benchmarks>
 ```
 
 For advanced compilation, check file `sw/erbium.cc` and read all parameters.
@@ -31,23 +31,23 @@ For advanced compilation, check file `sw/erbium.cc` and read all parameters.
 ## Hardware Compilation ##
 
 ```
-    cd xilinx_work
-    make <all|build|compile|check> TARGET=<sw_emu|hw_emu|hw> DEVICE=<FPGA Platform>
+cd xilinx_work
+make <all|build|compile|check> TARGET=<sw_emu|hw_emu|hw> DEVICE=<FPGA Platform>
 ```
 
 ## AWS F1 Generation ##
 You first need to setup the environment and install the AWS F1 shell. More information [here](https://github.com/aws/aws-fpga/tree/master/Vitis).
 ```
- 	cd ..
-	git clone https://github.com/aws/aws-fpga.git $AWS_FPGA_REPO_DIR  
-    $ cd $AWS_FPGA_REPO_DIR                                         
-    $ source vitis_setup.sh
+cd ..
+git clone https://github.com/aws/aws-fpga.git $AWS_FPGA_REPO_DIR  
+cd $AWS_FPGA_REPO_DIR                                         
+source vitis_setup.sh
 ```
 
 The following script will take care of generating the bitstream, the AFI and waiting script
 ```
-	cd erbium/xilinx_work
-	make aws_build TAREGT=hw DEVICE=$AWS_PLATFORM EMAIL=<your.email@for_nofication_when.done>
+cd erbium/xilinx_work
+make aws_build TAREGT=hw DEVICE=$AWS_PLATFORM EMAIL=<your.email@for_nofication_when.done>
 ```
 
 ## Execution ##

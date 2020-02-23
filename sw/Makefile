@@ -1,7 +1,7 @@
 # from https://gist.github.com/maxtruxa/4b3929e118914ccef057f8a05c614b0f
 
 # output binary
-BIN := abr-parser
+BIN := erbium
 
 # source files
 SRCS := $(shell find . -name "*.cc")
@@ -57,6 +57,11 @@ demo: all
 	mkdir -p build-demo02
 	./$(BIN) -d build-demo01 -r ../data/demo_01.csv -s 0 -t ../data/demo_ruletype.xml
 	./$(BIN) -d build-demo02 -r ../data/demo_02.csv -s 0 -t ../data/demo_ruletype.xml
+
+.PHONY: sample
+sample: all
+	mkdir -p build-$(AIRPORT)
+	./$(BIN) -d build-$(AIRPORT) -r ../data/mct_rules-$(AIRPORT).csv -s 4 >> build-$(AIRPORT)/log.txt
 
 .PHONY: benchmarks
 benchmarks: all

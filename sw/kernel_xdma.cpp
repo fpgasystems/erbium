@@ -262,7 +262,7 @@ int main(int argc, char** argv)
     //Creating Kernel objects
     std::vector<kernel_pkg_s> krnls(n_kernels);
     for (int i = 0; i < n_kernels; i++) {
-        OCL_CHECK(err, krnls[i].krnl = cl::Kernel(program, "ederah", &err));
+        OCL_CHECK(err, krnls[i].krnl = cl::Kernel(program, "erbium", &err));
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -385,17 +385,6 @@ int main(int argc, char** argv)
 
             the_auxq += krnls[kid].queries_size / sizeof(operands_t);
             the_auxr += krnls[kid].results_size / sizeof(uint16_t);
-
-            // kernel arguments
-            krnls[kid].krnl.setArg(0, nfadata_cls);
-            krnls[kid].krnl.setArg(1, krnls[kid].queries_cls);
-            krnls[kid].krnl.setArg(2, krnls[kid].results_cls);
-            krnls[kid].krnl.setArg(3, (has_statistics) ? 1 : 0);
-            krnls[kid].krnl.setArg(4, nfa_hash);
-            krnls[kid].krnl.setArg(5, buffer_nfadata);
-            krnls[kid].krnl.setArg(6, krnls[kid].buffer_queries);
-            krnls[kid].krnl.setArg(7, krnls[kid].buffer_results);
-            krnls[kid].krnl.setArg(8, krnls[kid].buffer_results);
         }
 
         for (uint32_t i = 0; i < iterations; i++)

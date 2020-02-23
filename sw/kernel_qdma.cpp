@@ -296,7 +296,7 @@ int main(int argc, char** argv)
     //Creating Kernel objects
     std::vector<kernel_pkg_s> krnls(n_kernels);
     for (int i = 0; i < n_kernels; i++) {
-        auto krnl_name_full = "ederah:{ederah_" + std::to_string(i + 1) + "}";
+        auto krnl_name_full = "erbium:{erbium_" + std::to_string(i + 1) + "}";
         OCL_CHECK(err, krnls[i].krnl = cl::Kernel(program, krnl_name_full.c_str(), &err));
         sprintf(krnls[i].tag_nfa, "tag_nfa_%da", i);
         sprintf(krnls[i].tag_query, "tag_query_%da", i);

@@ -34,7 +34,7 @@
 #include "graph_handler.h"
 
 enum SortOption { None, H1_Ascending, H1_Descending, H2_Ascending, H2_Descending };
-std::string SortOptionTag[] = {"hRand", "h1Asc", "h1Des", "h2Asc", "h2Desc"};
+std::string SortOptionTag[] = {"hRand", "h1Asc", "h1Des", "h2Asc", "h2Des"};
 
 int main(int argc, char** argv)
 {

@@ -241,22 +241,22 @@ int main(int argc, char** argv)
     // DFA                                                                                        //
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    std::cout << "# DFA" << std::endl;
-
-    erbium::GraphHandler the_dfa(&the_rulePack, &the_dictionnary);
-    start = std::chrono::high_resolution_clock::now();
-
-    /*the_dfa.make_deterministic();
-    the_dfa.suffix_reduction();*/
-    the_dfa.consolidate_graph();
-
-    finish = std::chrono::high_resolution_clock::now();
-    elapsed = finish - start;
-
-    // Stats
-    std::cout << "number of states: " << the_dfa.get_num_states() << std::endl;
-    std::cout << "number of transitions: " << the_dfa.get_num_transitions() << std::endl;
-    std::cout << "# DFA COMPLETED in " << elapsed.count() << " s\n";
+    // std::cout << "# DFA" << std::endl;
+    // 
+    // erbium::GraphHandler the_dfa(&the_rulePack, &the_dictionnary);
+    // start = std::chrono::high_resolution_clock::now();
+    //
+    // /*the_dfa.make_deterministic();
+    // the_dfa.suffix_reduction();*/
+    // the_dfa.consolidate_graph();
+    //
+    // finish = std::chrono::high_resolution_clock::now();
+    // elapsed = finish - start;
+    //
+    // // Stats
+    // std::cout << "number of states: " << the_dfa.get_num_states() << std::endl;
+    // std::cout << "number of transitions: " << the_dfa.get_num_transitions() << std::endl;
+    // std::cout << "# DFA COMPLETED in " << elapsed.count() << " s\n";
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // NFA                                                                                        //
@@ -306,7 +306,7 @@ int main(int argc, char** argv)
     std::cout << "# EXPORT GRAPHVIZ DOT FILE" << std::endl;
 
     the_tree.export_graphviz(dest_folder + "graphviz_tree.dot");
-    the_dfa.export_graphviz(dest_folder + "graphviz_dfa.dot");
+    //the_dfa.export_graphviz(dest_folder + "graphviz_dfa.dot");
     the_nfa.export_graphviz(dest_folder + "graphviz_nfa.dot");
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -341,7 +341,7 @@ int main(int argc, char** argv)
 
     start = std::chrono::high_resolution_clock::now();
 
-    the_dfa.export_memory(dest_folder + "mem_dfa_edges.bin");
+    //the_dfa.export_memory(dest_folder + "mem_dfa_edges.bin");
     the_nfa.export_memory(dest_folder + "mem_nfa_edges.bin");
 
     finish = std::chrono::high_resolution_clock::now();

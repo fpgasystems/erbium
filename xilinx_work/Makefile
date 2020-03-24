@@ -204,7 +204,7 @@ endif
 .PHONY: aws_build
 aws_build: #check-aws_repo
 	mkdir -p _aws
-	(cd _aws && ../$(COMMON_REPO)/utility/aws/run_aws.py ../$(BINARY_CONTAINERS))
+	(cd _aws && ./aws_create_afi.py ../$(BINARY_CONTAINERS))
 	-$(RMDIR) _aws/to_aws
 	wait_for_afi.py --afi $(call GetFromJson,$(shell find _aws/ -name '*_afi_id.txt' | tail -1),FpgaImageId) --notify --email $(EMAIL)
 

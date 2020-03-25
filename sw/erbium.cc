@@ -343,8 +343,10 @@ int main(int argc, char** argv)
 
     //the_dfa.export_memory(dest_folder + "mem_dfa_edges.bin");
     the_nfa.export_memory(dest_folder + "mem_nfa_edges.bin");
-
     finish = std::chrono::high_resolution_clock::now();
+
+    //std::cout << "DFA hash: " << the_dfa.get_graph_hash() << std::endl;
+    std::cout << "NFA hash: " << the_nfa.get_graph_hash() << std::endl;
 
     elapsed = finish - start;
     std::cout << "# MEMORY DUMP COMPLETED in " << elapsed.count() << " s\n";

@@ -52,13 +52,13 @@ LD := g++
 TAR := tar
 
 # C++ flags
-CXXFLAGS :=
+CXXFLAGS := -O3
 # C/C++ flags
-CPPFLAGS := -g -Wall -pedantic -fopenmp
+CPPFLAGS := -g -Wall -pedantic -fopenmp -O3
 # linker flags
 LDFLAGS := -fopenmp
 # flags required for dependency generation; passed to compilers
-DEPFLAGS = -I /usr/lib/boost/boost_1_70_0/ -MT $@ -MD -MP -MF $(DEPDIR)/$*.Td
+DEPFLAGS = -MT $@ -MD -MP -MF $(DEPDIR)/$*.Td
 
 # compile C++ source files
 COMPILE.cc = $(CXX) $(DEPFLAGS) $(CXXFLAGS) $(CPPFLAGS) -c -o $@

@@ -131,47 +131,6 @@ bool load_nfa_from_file(const char* file_name,
     }
 }
 
-bool load_queries_from_file(const char* file_name,
-    std::vector<operands_t, aligned_allocator<operands_t>>** queries_data,
-    uint32_t* queries_size, uint32_t* results_size, uint32_t* restats_size, uint32_t* num_queries)
-{
-    std::ifstream file(file_name, std::ios::in | std::ios::binary);
-    if(file.is_open())
-    {
-        file.seekg(0, std::ios::end);
-        uint32_t raw_size = ((uint32_t)file.tellg()) - 4 * sizeof(*queries_size);
-
-        file.seekg(0, std::ios::beg);
-        file.read(reinterpret_cast<char *>(queries_size), sizeof(*queries_size));
-        file.read(reinterpret_cast<char *>(results_size), sizeof(*results_size));
-        file.read(reinterpret_cast<char *>(restats_size), sizeof(*restats_size));
-        file.read(reinterpret_cast<char *>(num_queries),  sizeof(*num_queries));
-
-        if (*queries_size != raw_size)
-        {
-            printf("[!] Corrupted queries file!\n[!]  Expected: %u bytes\n[!]  Got: %u bytes\n",
-                *queries_size, raw_size);
-            fflush(stdout);
-            return false;
-        }
-
-        char* file_buffer = new char[raw_size];
-        file.read(file_buffer, raw_size);
-
-        *queries_data = new std::vector<operands_t, aligned_allocator<operands_t>>(raw_size);
-        memcpy((*queries_data)->data(), file_buffer, raw_size);
-
-        file.close();
-        delete [] file_buffer;
-        return true;
-    }
-    else
-    {
-        printf("[!] Failed to open QUERIES .bin file\n"); fflush(stdout);
-        return false;
-    }
-}
-
 bool load_workload_from_file(const char* fullpath_workload, uint32_t* benchmark_size, char** workload_buff,
     uint32_t* query_size)
 {
@@ -212,7 +171,6 @@ int main(int argc, char** argv)
     ////////////////////////////////////////////////////////////////////////////////////////////////
     printf(">> Parameters\n"); fflush(stdout);
 
-    bool has_statistics = false;
     char* fullpath_bitstream = NULL;
     char* fullpath_workload = NULL;
     char* fullpath_nfadata = NULL;
@@ -224,7 +182,7 @@ int main(int argc, char** argv)
     uint16_t n_kernels = 1;
     
     char opt;
-    while ((opt = getopt(argc, argv, "b:f:hi:k:m:n:o:r:sw:")) != -1) {
+    while ((opt = getopt(argc, argv, "b:f:hi:k:m:n:o:r:w:")) != -1) {
         switch (opt) {
         case 'b':
             fullpath_bitstream = (char*) malloc(strlen(optarg)+1);
@@ -246,9 +204,6 @@ int main(int argc, char** argv)
             fullpath_benchmark = (char*) malloc(strlen(optarg)+1);
             strcpy(fullpath_benchmark, optarg);
             break;
-        case 's':
-            has_statistics = true;
-            break;
         case 'm':
             max_batch_size = atoi(optarg);
             break;
@@ -269,7 +224,6 @@ int main(int argc, char** argv)
                       << "\t-w  fullpath_workload\n"
                       << "\t-r  result_data_file\n"
                       << "\t-o  benchmark_out_file\n"
-                      << "\t-s  statistics\n"
                       << "\t-f  first_batch_size\n"
                       << "\t-m  max_batch_size\n"
                       << "\t-i  iterations\n"
@@ -284,7 +238,6 @@ int main(int argc, char** argv)
     std::cout << "-w fullpath_workload: "  << fullpath_workload  << std::endl;
     std::cout << "-r result_data_file: "   << fullpath_results   << std::endl;
     std::cout << "-o benchmark_out_file: " << fullpath_benchmark << std::endl;
-    std::cout << "-s statistics: " << ((has_statistics) ? "yes" : "no") << std::endl;
     std::cout << "-f first_batch_size: "   << min_batch_size     << std::endl;
     std::cout << "-m max_batch_size: "     << max_batch_size     << std::endl;
     std::cout << "-i iterations: "         << iterations         << std::endl;
@@ -405,11 +358,11 @@ int main(int argc, char** argv)
     int kid = 0;
     for (kid = 0; kid < n_kernels; kid++)
     {
-        krnls[kid].krnl.setArg(0, sizeof(cl_uint), &d_empty); // TODO: remove them
-        krnls[kid].krnl.setArg(1, sizeof(cl_uint), &d_empty);
-        krnls[kid].krnl.setArg(2, sizeof(cl_uint), &d_empty);
-        krnls[kid].krnl.setArg(3, sizeof(cl_uint), &d_empty);
-        krnls[kid].krnl.setArg(4, sizeof(cl_uint), &nfa_hash);
+        krnls[kid].krnl.setArg(0, sizeof(cl_uint), &d_empty); // not in use
+        krnls[kid].krnl.setArg(1, sizeof(cl_uint), &d_empty); // not in use
+        krnls[kid].krnl.setArg(2, sizeof(cl_uint), &d_empty); // not in use
+        krnls[kid].krnl.setArg(3, sizeof(cl_uint), &d_empty); // not in use
+        krnls[kid].krnl.setArg(4, sizeof(cl_uint), &nfa_hash); // hash to detect a diff. NFA version
     }
 
     for (uint32_t bsize = min_batch_size; bsize < max_batch_size; bsize = bsize << 1)
@@ -439,7 +392,7 @@ int main(int argc, char** argv)
             }
 
             krnls[kid].queries_size = krnls[kid].num_queries * query_size;
-            krnls[kid].results_size = krnls[kid].num_queries * sizeof(operands_t) * ((has_statistics) ? 4 : 1);
+            krnls[kid].results_size = krnls[kid].num_queries * sizeof(operands_t);
             krnls[kid].results_size = (krnls[kid].results_size / C_CACHELINE_SIZE + ((krnls[kid].results_size % C_CACHELINE_SIZE) ? 1 : 0)) * C_CACHELINE_SIZE; // gets full liness
 
             krnls[kid].offset_queries = the_auxq;
@@ -536,6 +489,7 @@ int main(int argc, char** argv)
                 exit(EXIT_FAILURE);
             }
             queue.finish();
+
             ////////////////////////////////////////////////////////////////////////////////////////
             // TIMING REPORT                                                                      //
             ////////////////////////////////////////////////////////////////////////////////////////
@@ -555,23 +509,10 @@ int main(int argc, char** argv)
         // RESULTS                                                                                //
         ////////////////////////////////////////////////////////////////////////////////////////////
 
-        if (has_statistics)
-        {
-            file_results << "query_id,content_id,clock_cycles,higher_weight,lower_weight\n";
-            for (size_t i = 0; i < bsize*4; i=i+4)
-            {
-                file_results << gabarito[i/4] << ",";
-                file_results << (results->data())[i+3] << "," << (results->data())[i+2] << ",";
-                file_results << (results->data())[i+1] << "," << (results->data())[i] << std::endl;
-            }
-        }
-        else
-        {
-            file_results << "query_id,content_id\n";
-            for (size_t i = 0; i < bsize; ++i)
-                file_results << gabarito[i] << "," << (results->data())[i] << std::endl;
-        }
-        printf("\n\n");
+        file_results << "query_id,content_id\n";
+        for (size_t i = 0; i < bsize; ++i)
+            file_results << gabarito[i] << "," << (results->data())[i] << std::endl;
+        std::cout << std::endl << std::endl;
 
         delete queries_data;
         delete results;

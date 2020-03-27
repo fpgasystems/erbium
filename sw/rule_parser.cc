@@ -323,10 +323,10 @@ void RuleParser::export_vhdl_parameters(
         the_level++;
     }
     outfile << "    constant CFG_CORE_PARAM_ARRAY : CORE_PARAM_ARRAY := (\n";
-    for (the_level = 0; the_level < rulepack.m_ruleType.m_criterionDefinition.size()-1; the_level++)
+    for (the_level = 0; the_level < rulepack.m_ruleType.m_criterionDefinition.size(); the_level++)
     {
         outfile << "        CORE_PARAM_" << the_level;
-        if (the_level != rulepack.m_ruleType.m_criterionDefinition.size())
+        if (the_level != rulepack.m_ruleType.m_criterionDefinition.size()-1)
             outfile << ",\n";
         else
             outfile << "\n    );";

@@ -381,8 +381,7 @@ wr_last_o  <= result_r.last;
 
 sig_result_temp <= (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
 
-result_comb : process(result_r, wr_ready_i, dopio_r.result_value, dopio_r.result_valid,
-    dopio_r.result_last)
+result_comb : process(result_r, wr_ready_i, sig_result_temp, dopio_r.result_valid, dopio_r.result_last)
     variable v : result_reg_type;
 begin
     v := result_r;

@@ -455,7 +455,7 @@ end process;
 -- DOPIO ENGINE                                                                                   --
 ----------------------------------------------------------------------------------------------------
 
-dopio_comb: process(dopio_r, query_r.wr_en, result_r.ready, sig_result_last, sig_result_valid
+dopio_comb: process(dopio_r, query_r.wr_en, result_r.ready, sig_result_last, sig_result_valid,
     sig_result_value)
     variable v : dopio_reg_type;
 begin

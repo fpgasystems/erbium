@@ -22,87 +22,95 @@
 
 // default_nettype of none prevents implicit wire declaration.
 `default_nettype none
-module erbium_kernel #(
-  parameter integer C_M00_AXI_ADDR_WIDTH = 64 ,
-  parameter integer C_M00_AXI_DATA_WIDTH = 512
+`timescale 1 ns / 1 ps 
+
+module erbium_kernel #( 
+  parameter integer  C_M_AXI_GMEM_ID_WIDTH   = 1,
+  parameter integer  C_M_AXI_GMEM_ADDR_WIDTH = 64,
+  parameter integer  C_M_AXI_GMEM_DATA_WIDTH = 512
 )
 (
   // System Signals
-  input  wire                              data_clk       ,
-  input  wire                              data_rst_n     ,
-  input  wire                              kernel_clk     ,
-  input  wire                              kernel_rst_n   ,
-  // AXI4 master interface m00_axi
-  output wire                              m00_axi_awvalid,
-  input  wire                              m00_axi_awready,
-  output wire [C_M00_AXI_ADDR_WIDTH-1:0]   m00_axi_awaddr ,
-  output wire [8-1:0]                      m00_axi_awlen  ,
-  output wire                              m00_axi_wvalid ,
-  input  wire                              m00_axi_wready ,
-  output wire [C_M00_AXI_DATA_WIDTH-1:0]   m00_axi_wdata  ,
-  output wire [C_M00_AXI_DATA_WIDTH/8-1:0] m00_axi_wstrb  ,
-  output wire                              m00_axi_wlast  ,
-  input  wire                              m00_axi_bvalid ,
-  output wire                              m00_axi_bready ,
-  output wire                              m00_axi_arvalid,
-  input  wire                              m00_axi_arready,
-  output wire [C_M00_AXI_ADDR_WIDTH-1:0]   m00_axi_araddr ,
-  output wire [8-1:0]                      m00_axi_arlen  ,
-  input  wire                              m00_axi_rvalid ,
-  output wire                              m00_axi_rready ,
-  input  wire [C_M00_AXI_DATA_WIDTH-1:0]   m00_axi_rdata  ,
-  input  wire                              m00_axi_rlast  ,
-  // SDx Control Signals
-  input  wire                              ap_start       ,
-  output wire                              ap_idle        ,
-  output wire                              ap_done        ,
-  input  wire [32-1:0]                     nfadata_cls    ,
-  input  wire [32-1:0]                     queries_cls    ,
-  input  wire [32-1:0]                     results_cls    ,
-  input  wire [32-1:0]                     scalar03       , // not used
-  input  wire [64-1:0]                     nfa_hash       ,
-  input  wire [64-1:0]                     nfadata_ptr    ,
-  input  wire [64-1:0]                     queries_ptr    ,
-  input  wire [64-1:0]                     results_ptr    ,
-  input  wire [64-1:0]                     axi00_ptr3       // not used
+  input  wire                                  data_clk           ,
+  input  wire                                  data_rst_n         ,
+  input  wire                                  kernel_clk         ,
+  input  wire                                  kernel_rst_n       ,
+  // AXI4 master interface
+  output wire                                  m_axi_gmem_awvalid ,
+  input  wire                                  m_axi_gmem_awready ,
+  output wire [C_M_AXI_GMEM_ADDR_WIDTH-1:0]    m_axi_gmem_awaddr  ,
+  output wire [7:0]                            m_axi_gmem_awlen   ,
+  output wire [2:0]                            m_axi_gmem_awsize  ,
+  output wire                                  m_axi_gmem_wvalid  ,
+  input  wire                                  m_axi_gmem_wready  ,
+  output wire [C_M_AXI_GMEM_DATA_WIDTH-1:0]    m_axi_gmem_wdata   ,
+  output wire [C_M_AXI_GMEM_DATA_WIDTH/8-1:0]  m_axi_gmem_wstrb   ,
+  output wire                                  m_axi_gmem_wlast   ,
+  output wire                                  m_axi_gmem_arvalid ,
+  input  wire                                  m_axi_gmem_arready ,
+  output wire [C_M_AXI_GMEM_ADDR_WIDTH-1:0]    m_axi_gmem_araddr  ,
+  output wire [C_M_AXI_GMEM_ID_WIDTH-1:0]      m_axi_gmem_arid    ,
+  output wire [7:0]                            m_axi_gmem_arlen   ,
+  output wire [2:0]                            m_axi_gmem_arsize  ,
+  input  wire                                  m_axi_gmem_rvalid  ,
+  output wire                                  m_axi_gmem_rready  ,
+  input  wire [C_M_AXI_GMEM_DATA_WIDTH - 1:0]  m_axi_gmem_rdata   ,
+  input  wire                                  m_axi_gmem_rlast   ,
+  input  wire [C_M_AXI_GMEM_ID_WIDTH - 1:0]    m_axi_gmem_rid     ,
+  input  wire [1:0]                            m_axi_gmem_rresp   ,
+  input  wire                                  m_axi_gmem_bvalid  ,
+  output wire                                  m_axi_gmem_bready  ,
+  input  wire [1:0]                            m_axi_gmem_bresp   ,
+  input  wire [C_M_AXI_GMEM_ID_WIDTH - 1:0]    m_axi_gmem_bid     , // not in use
+  // control and user signals
+  input  wire                                  ap_start           ,
+  output wire                                  ap_done            ,
+  output wire                                  ap_ready           ,
+  output wire                                  ap_idle            ,
+  input  wire [31:0]                           nfadata_cls        ,
+  input  wire [31:0]                           queries_cls        ,
+  input  wire [31:0]                           results_cls        ,
+  input  wire [63:0]                           nfa_hash           ,
+  input  wire [63:0]                           nfadata_ptr        ,
+  input  wire [63:0]                           queries_ptr        ,
+  input  wire [63:0]                           results_ptr
 );
-
-
-timeunit 1ps;
-timeprecision 1ps;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Local Parameters                                                                               //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// Large enough for interesting traffic.
-localparam integer  LP_DEFAULT_LENGTH_IN_BYTES = 16384;
+localparam integer LP_DW_BYTES           = C_M_AXI_GMEM_DATA_WIDTH/8;
+localparam integer LP_AXI_BURST_LEN      = 4096/LP_DW_BYTES < 256 ? 4096/LP_DW_BYTES : 256;
+localparam integer LP_LOG_BURST_LEN      = $clog2(LP_AXI_BURST_LEN);
+localparam integer LP_WR_FIFO_DEPTH      = LP_AXI_BURST_LEN;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Wires and Variables                                                                            //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-logic                           ap_start_r                     = 1'b0;
-logic                           ap_idle_r                      = 1'b1;
-logic                           ap_start_pulse                ;
-logic                           ap_done_i                     ;
-logic                           ap_done_r                      = 1'b0;
-logic [32-1:0]                  ctrl_xfer_size_in_bytes        = LP_DEFAULT_LENGTH_IN_BYTES;
-logic [32-1:0]                  ctrl_constant                  = 32'd1;
+logic ap_start_pulse        ;
+logic ap_start_r     = 1'b0 ;
+logic ap_done_r      = 1'b0 ;
+logic ap_idle_r      = 1'b1 ;
+logic write_done            ;
+logic read_done             ;
 
-reg [32-1:0]                    queries_cls_dlay;
-reg [32-1:0]                    nfadata_cls_dlay;
+logic [31:0]  queries_cls_dlay;
+logic [31:0]  nfadata_cls_dlay;
 
-wire                            wr_tvalid;
-wire                            wr_tready;
-wire [C_M00_AXI_DATA_WIDTH-1:0] wr_tdata;
+// AXI-Stream kernel communication
+logic                                krnl_rd_valid;
+logic                                krnl_rd_type;
+logic                                krnl_rd_last;
+logic                                krnl_rd_ready;
+logic [C_M_AXI_GMEM_DATA_WIDTH-1:0]  krnl_rd_data;
+logic                                krnl_wr_valid;
+logic                                krnl_wr_ready_n;
+logic [C_M_AXI_GMEM_DATA_WIDTH-1:0]  krnl_wr_data;
 
-wire                            rd_tvalid;
-wire                            rd_ttype;
-wire                            rd_tlast;
-wire                            rd_tready;
-wire [C_M00_AXI_DATA_WIDTH-1:0] rd_tdata;
-
-logic                           write_done;
-logic                           read_done;
+// From AsyncFIFO to AXI Write
+logic                                wr_fifo_tvalid_n;
+logic                                wr_fifo_tready; 
+logic [C_M_AXI_GMEM_DATA_WIDTH-1:0]  wr_fifo_tdata;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Begin RTL                                                                                      //
@@ -114,7 +122,6 @@ end
 
 assign ap_start_pulse = ap_start & ~ap_start_r;
 
-// ap_idle is asserted when done is asserted, it is de-asserted when ap_start_pulse is asserted
 always @(posedge data_clk) begin
   if (!data_rst_n) begin
     ap_idle_r <= 1'b1;
@@ -122,15 +129,13 @@ always @(posedge data_clk) begin
   end
   else begin
     ap_idle_r <= ap_done ? 1'b1 : ap_start_pulse ? 1'b0 : ap_idle;
-    ap_done_r <= (ap_start_pulse | ap_done) ? 1'b0 : ap_done_r | ap_done_i;
+    ap_done_r <= (ap_start_pulse | ap_done) ? 1'b0 : ap_done_r | write_done;
   end
 end
 
-assign ap_idle = ap_idle_r;
-assign ap_done = ap_done_r;
-
-assign ap_done_i = write_done;
-
+assign ap_done  = ap_done_r;
+assign ap_ready = ap_done_r;
+assign ap_idle  = ap_idle_r;
 
 always @(posedge data_clk) begin
   queries_cls_dlay <= queries_cls;
@@ -141,39 +146,45 @@ end
 // Input Channel                                                                                  //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// AXI4 Read Master, output format is an AXI4-Stream master, one stream per thread.
+// AXI4 Read Master, output format is an AXI4-Stream master
 InputChannel #(
-  .C_M_AXI_ADDR_WIDTH       ( C_M00_AXI_ADDR_WIDTH ),
-  .C_M_AXI_DATA_WIDTH       ( C_M00_AXI_DATA_WIDTH ),
-  .C_XFER_SIZE_WIDTH        (                   32 ),
-  .C_MAX_OUTSTANDING        (                   16 ),
-  .C_INCLUDE_QUERY_FIFO     (                    1 )
+  .C_M_AXI_ID_WIDTH    ( C_M_AXI_GMEM_ID_WIDTH   ),
+  .C_M_AXI_ADDR_WIDTH  ( C_M_AXI_GMEM_ADDR_WIDTH ),
+  .C_M_AXI_DATA_WIDTH  ( C_M_AXI_GMEM_DATA_WIDTH ),
+  .C_LENGTH_WIDTH      ( 32                      )
 )
 inst_InputChannel (
-  .data_clk                 ( data_clk             ),
-  .data_rst_n               ( data_rst_n           ),
-  .ctrl_start               ( ap_start_pulse       ),
-  .ctrl_done                ( read_done            ),
-  .nfa_hash                 ( nfa_hash             ),
-  .nfadata_ptr              ( nfadata_ptr          ),
-  .nfa_xfer_size_in_bytes   ( (nfadata_cls_dlay << 6) ),
-  .queries_ptr              ( queries_ptr          ),
-  .query_xfer_size_in_bytes ( (queries_cls_dlay << 6) ),
-  .m_axi_arvalid            ( m00_axi_arvalid      ),
-  .m_axi_arready            ( m00_axi_arready      ),
-  .m_axi_araddr             ( m00_axi_araddr       ),
-  .m_axi_arlen              ( m00_axi_arlen        ),
-  .m_axi_rvalid             ( m00_axi_rvalid       ),
-  .m_axi_rready             ( m00_axi_rready       ),
-  .m_axi_rdata              ( m00_axi_rdata        ),
-  .m_axi_rlast              ( m00_axi_rlast        ),
-  .m_axis_aclk              ( kernel_clk           ),
-  .m_axis_areset_n          ( kernel_rst_n         ),
-  .m_axis_tvalid            ( rd_tvalid            ),
-  .m_axis_tready            ( rd_tready            ),
-  .m_axis_tlast             ( rd_tlast             ),
-  .m_axis_tdata             ( rd_tdata             ),
-  .m_axis_ttype             ( rd_ttype             )
+  .data_clk            ( data_clk           ),
+  .data_rst_n          ( data_rst_n         ),
+  .ctrl_start          ( ap_start_pulse     ),
+  .ctrl_done           ( read_done          ), // not in use
+  //
+  .nfa_hash            ( nfa_hash           ),
+  .nfadata_ptr         ( nfadata_ptr        ),
+  .nfadata_cls         ( nfadata_cls_dlay   ),
+  .queries_ptr         ( queries_ptr        ),
+  .queries_cls         ( queries_cls_dlay   ),
+  // AXI4 shell communication
+  .m_axi_arvalid       ( m_axi_gmem_arvalid ),
+  .m_axi_arready       ( m_axi_gmem_arready ),
+  .m_axi_araddr        ( m_axi_gmem_araddr  ),
+  .m_axi_arid          ( m_axi_gmem_arid    ),
+  .m_axi_arlen         ( m_axi_gmem_arlen   ),
+  .m_axi_arsize        ( m_axi_gmem_arsize  ),
+  .m_axi_rvalid        ( m_axi_gmem_rvalid  ),
+  .m_axi_rready        ( m_axi_gmem_rready  ),
+  .m_axi_rdata         ( m_axi_gmem_rdata   ),
+  .m_axi_rlast         ( m_axi_gmem_rlast   ),
+  .m_axi_rid           ( m_axi_gmem_rid     ),
+  .m_axi_rresp         ( m_axi_gmem_rresp   ),
+  // AXI-Stream kernel communication
+  .m_axis_aclk         ( kernel_clk         ),
+  .m_axis_areset_n     ( kernel_rst_n       ),
+  .m_axis_tvalid       ( krnl_rd_valid      ),
+  .m_axis_tready       ( krnl_rd_ready      ),
+  .m_axis_tlast        ( krnl_rd_last       ),
+  .m_axis_tdata        ( krnl_rd_data       ),
+  .m_axis_ttype        ( krnl_rd_type       )
 );
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -181,59 +192,106 @@ inst_InputChannel (
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 erbium_wrapper #(
-  .G_DATA_BUS_WIDTH         ( C_M00_AXI_DATA_WIDTH )
+  .G_DATA_BUS_WIDTH    ( C_M_AXI_GMEM_DATA_WIDTH )
 )
 inst_wrapper (
-  .clk_i                    ( kernel_clk           ),
-  .rst_i                    ( kernel_rst_n         ),
+  .clk_i               ( kernel_clk       ),
+  .rst_i               ( kernel_rst_n     ),
   // input
-  .rd_data_i                ( rd_tdata             ),
-  .rd_valid_i               ( rd_tvalid            ),
-  .rd_last_i                ( rd_tlast             ),
-  .rd_stype_i               ( rd_ttype             ),
-  .rd_ready_o               ( rd_tready            ),
+  .rd_data_i           ( krnl_rd_data     ),
+  .rd_valid_i          ( krnl_rd_valid    ),
+  .rd_last_i           ( krnl_rd_last     ),
+  .rd_stype_i          ( krnl_rd_type     ),
+  .rd_ready_o          ( krnl_rd_ready    ),
   // output
-  .wr_data_o                ( wr_tdata             ),
-  .wr_valid_o               ( wr_tvalid            ),
-  .wr_last_o                (                      ),
-  .wr_ready_i               ( wr_tready            )
+  .wr_data_o           ( krnl_wr_data     ),
+  .wr_valid_o          ( krnl_wr_valid    ),
+  .wr_last_o           (                  ),
+  .wr_ready_i          ( ~krnl_wr_ready_n )
 );
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Output Channel                                                                                 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// FIFO for CDC
+xpm_fifo_async # (
+  .FIFO_MEMORY_TYPE     ( "auto"                   ),
+  .ECC_MODE             ( "no_ecc"                 ),
+  .RELATED_CLOCKS       ( 0                        ),
+  .FIFO_WRITE_DEPTH     ( LP_WR_FIFO_DEPTH         ),
+  .WRITE_DATA_WIDTH     ( C_M_AXI_GMEM_DATA_WIDTH  ),
+  .WR_DATA_COUNT_WIDTH  ( $clog2(LP_WR_FIFO_DEPTH) ),
+  .PROG_FULL_THRESH     ( 10                       ),
+  .FULL_RESET_VALUE     ( 1                        ),
+  .READ_MODE            ( "fwft"                   ),
+  .FIFO_READ_LATENCY    ( 1                        ),
+  .READ_DATA_WIDTH      ( C_M_AXI_GMEM_DATA_WIDTH  ),
+  .RD_DATA_COUNT_WIDTH  ( $clog2(LP_WR_FIFO_DEPTH) ),
+  .PROG_EMPTY_THRESH    ( 10                       ),
+  .DOUT_RESET_VALUE     ( "0"                      ),
+  .CDC_SYNC_STAGES      ( 3                        ),
+  .WAKEUP_TIME          ( 0                        )
+
+) inst_wr_xpm_fifo_async (
+  .rst                  ( ~kernel_rst_n    ),
+  .wr_clk               ( kernel_clk       ),
+  .wr_en                ( krnl_wr_valid    ),
+  .din                  ( krnl_wr_data     ),
+  .full                 ( krnl_wr_ready_n  ),
+  .overflow             (                  ),
+  .wr_rst_busy          (                  ),
+  .rd_clk               ( data_clk         ),
+  .rd_en                ( wr_fifo_tready   ),
+  .dout                 ( wr_fifo_tdata    ),
+  .empty                ( wr_fifo_tvalid_n ),
+  .underflow            (                  ),
+  .rd_rst_busy          (                  ),
+  .prog_full            (                  ),
+  .wr_data_count        (                  ),
+  .prog_empty           (                  ),
+  .rd_data_count        (                  ),
+  .sleep                ( 1'b0             ),
+  .injectsbiterr        ( 1'b0             ),
+  .injectdbiterr        ( 1'b0             ),
+  .sbiterr              (                  ),
+  .dbiterr              (                  )
+);
+
 // AXI4 Write Master
-xdma_axi_write_master #(
-  .C_M_AXI_ADDR_WIDTH      ( C_M00_AXI_ADDR_WIDTH    ),
-  .C_M_AXI_DATA_WIDTH      ( C_M00_AXI_DATA_WIDTH    ),
-  .C_XFER_SIZE_WIDTH       (                   32    ),
-  .C_MAX_OUTSTANDING       (                   16    ),
-  .C_INCLUDE_DATA_FIFO     (                    1    )
+xdma_axi_write_master #( 
+  .C_ADDR_WIDTH       ( C_M_AXI_GMEM_ADDR_WIDTH ),
+  .C_DATA_WIDTH       ( C_M_AXI_GMEM_DATA_WIDTH ),
+  .C_MAX_LENGTH_WIDTH ( 32                      ),
+  .C_BURST_LEN        ( LP_AXI_BURST_LEN        ),
+  .C_LOG_BURST_LEN    ( LP_LOG_BURST_LEN        )
 )
-inst_axi_write_master (
-  .aclk                    ( data_clk                ),
-  .areset                  ( ~data_rst_n             ),
-  .ctrl_start              ( ap_start_pulse          ),
-  .ctrl_done               ( write_done              ),
-  .ctrl_addr_offset        ( results_ptr             ),
-  .ctrl_xfer_size_in_bytes ( {(results_cls << 6)}    ),
-  .m_axi_awvalid           ( m00_axi_awvalid         ),
-  .m_axi_awready           ( m00_axi_awready         ),
-  .m_axi_awaddr            ( m00_axi_awaddr          ),
-  .m_axi_awlen             ( m00_axi_awlen           ),
-  .m_axi_wvalid            ( m00_axi_wvalid          ),
-  .m_axi_wready            ( m00_axi_wready          ),
-  .m_axi_wdata             ( m00_axi_wdata           ),
-  .m_axi_wstrb             ( m00_axi_wstrb           ),
-  .m_axi_wlast             ( m00_axi_wlast           ),
-  .m_axi_bvalid            ( m00_axi_bvalid          ),
-  .m_axi_bready            ( m00_axi_bready          ),
-  .s_axis_aclk             ( kernel_clk              ),
-  .s_axis_areset           ( ~kernel_rst_n           ),
-  .s_axis_tvalid           ( wr_tvalid               ),
-  .s_axis_tready           ( wr_tready               ),
-  .s_axis_tdata            ( wr_tdata                )
+inst_axi_write_master ( 
+  .aclk        ( data_clk           ),
+  .areset      ( ~data_rst_n        ),
+
+  .ctrl_start  ( ap_start_pulse     ),
+  .ctrl_offset ( results_ptr        ),
+  .ctrl_length ( results_cls        ),
+  .ctrl_done   ( write_done         ),
+
+  .s_tvalid    ( ~wr_fifo_tvalid_n  ),
+  .s_tready    ( wr_fifo_tready     ),
+  .s_tdata     ( wr_fifo_tdata      ),
+
+  .awvalid     ( m_axi_gmem_awvalid ),
+  .awready     ( m_axi_gmem_awready ),
+  .awaddr      ( m_axi_gmem_awaddr  ),
+  .awlen       ( m_axi_gmem_awlen   ),
+  .awsize      ( m_axi_gmem_awsize  ),
+  .wvalid      ( m_axi_gmem_wvalid  ),
+  .wready      ( m_axi_gmem_wready  ),
+  .wdata       ( m_axi_gmem_wdata   ),
+  .wstrb       ( m_axi_gmem_wstrb   ),
+  .wlast       ( m_axi_gmem_wlast   ),
+  .bvalid      ( m_axi_gmem_bvalid  ),
+  .bready      ( m_axi_gmem_bready  ),
+  .bresp       ( m_axi_gmem_bresp   )
 );
 
 endmodule : erbium_kernel

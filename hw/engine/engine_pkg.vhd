@@ -34,7 +34,7 @@ package engine_pkg is
     constant CFG_ENGINES_NUMBER           : integer := THE_CFG_ENGINES_NUMBER; -- Number of engines per bitstrea
     constant CFG_ENGINE_NCRITERIA         : integer := 22; -- Number of criteria
     constant CFG_CRITERION_VALUE_WIDTH    : integer := 13; -- Number of bits of each criterion value
-    constant CFG_WEIGHT_WIDTH             : integer := 20; -- integer from 0 to 2^CFG_WEIGHT_WIDTH-1
+    constant CFG_WEIGHT_WIDTH             : integer := 31; -- integer from 0 to 2^CFG_WEIGHT_WIDTH-1
     constant CFG_QUERY_ID_WIDTH           : integer :=  8; -- Used only internally
     constant CFG_FIRST_CRITERION_LOOKUP   : boolean := true; -- lookup table of first criterion
     --
@@ -60,8 +60,7 @@ package engine_pkg is
     subtype RNG_BRAM_EDGE_STORE_OPERAND_A is natural range CFG_CRITERION_VALUE_WIDTH - 1 downto 0;
     subtype RNG_BRAM_EDGE_STORE_OPERAND_B is natural range CFG_CRITERION_VALUE_WIDTH * 2 - 1 downto CFG_CRITERION_VALUE_WIDTH;
     subtype RNG_BRAM_EDGE_STORE_POINTER   is natural range CFG_CRITERION_VALUE_WIDTH * 2 + CFG_MEM_ADDR_WIDTH - 1 downto CFG_CRITERION_VALUE_WIDTH * 2;
-    subtype RNG_BRAM_EDGE_STORE_WEIGHT    is natural range CFG_CRITERION_VALUE_WIDTH * 2 + CFG_MEM_ADDR_WIDTH + CFG_WEIGHT_WIDTH - 1 downto CFG_CRITERION_VALUE_WIDTH * 2 + CFG_MEM_ADDR_WIDTH; -- not used
-    subtype RNG_BRAM_EDGE_STORE_LAST      is natural range CFG_CRITERION_VALUE_WIDTH * 2 + CFG_MEM_ADDR_WIDTH + CFG_WEIGHT_WIDTH downto CFG_CRITERION_VALUE_WIDTH * 2 + CFG_MEM_ADDR_WIDTH + CFG_WEIGHT_WIDTH;
+    subtype RNG_BRAM_EDGE_STORE_LAST      is natural range CFG_CRITERION_VALUE_WIDTH * 2 + CFG_MEM_ADDR_WIDTH downto CFG_CRITERION_VALUE_WIDTH * 2 + CFG_MEM_ADDR_WIDTH;
 
 end engine_pkg;
 

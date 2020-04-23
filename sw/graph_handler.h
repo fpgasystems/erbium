@@ -76,10 +76,10 @@ class GraphHandler {
     void dfa_merge_paths(const vertex_id_t& orgi_state, const vertex_id_t& dest_state);
     void dfa_append_path(const vertex_id_t& orgi_state, const vertex_id_t& dest_state);
 
-    void dump_binary_state(std::fstream* outfile,
-                           const vertex_id_t& vertex_id,
-                           dictionnary_t* dic,
-                           const criterionDefinition_s* criterion_def);
+    void dump_binary_transition(std::fstream* outfile,
+                                const vertex_id_t& vertex_id,
+                                dictionnary_t* dic,
+                                const criterionDefinition_s* criterion_def);
     void dump_binary_padding(std::fstream* outfile, const size_t& slices);
 };
 

@@ -488,7 +488,7 @@ void GraphHandler::export_memory(const std::string& filename)
     criterion_def = &(*std::next(m_rulePack->m_ruleType.m_criterionDefinition.begin(),
                                  m_dic->m_sorting_map[0]));
 
-    dump_binary_state(&outfile, 0, &dic, criterion_def);
+    dump_binary_transition(&outfile, 0, &dic, criterion_def);
     dump_binary_padding(&outfile, m_graph[0].children.size()+1);
 
     ////// AND THE REST OF CRITERIA
@@ -506,7 +506,7 @@ void GraphHandler::export_memory(const std::string& filename)
         for (auto& value : m_vertexes[level.first])
         {
             for (auto& vert : m_vertexes[level.first][value.first])
-                dump_binary_state(&outfile, vert, &dic, criterion_def);
+                dump_binary_transition(&outfile, vert, &dic, criterion_def);
         }
         dump_binary_padding(&outfile, edges_per_level[level.first]+1);
     }
@@ -514,10 +514,10 @@ void GraphHandler::export_memory(const std::string& filename)
     outfile.close();
 }
 
-void GraphHandler::dump_binary_state(std::fstream* outfile,
-                                     const vertex_id_t& vertex_id,
-                                     dictionnary_t* dic,
-                                     const criterionDefinition_s* criterion_def)
+void GraphHandler::dump_binary_transition(std::fstream* outfile,
+                                          const vertex_id_t& vertex_id,
+                                          dictionnary_t* dic,
+                                          const criterionDefinition_s* criterion_def)
 {
     size_t n_fanout = m_graph[vertex_id].children.size();
     size_t aux = 1;
@@ -530,7 +530,6 @@ void GraphHandler::dump_binary_state(std::fstream* outfile,
         RuleParser::parse_value(
                 m_graph[itr].label, (*dic)[m_graph[itr].label], &mem_opa, &mem_opb, criterion_def);
         mem_int = (uint64_t)(aux++ == n_fanout) << SHIFT_LAST;
-        mem_int |= (((uint64_t)m_graph[itr].weight) & MASK_WEIGHT) << SHIFT_WEIGHT;
         mem_int |= (((uint64_t)m_graph[itr].dump_pointer) & MASK_POINTER) << SHIFT_POINTER;
         mem_int |= (((uint64_t)mem_opb) & MASK_OPERAND_B) << SHIFT_OPERAND_B;
         mem_int |= (((uint64_t)mem_opa) & MASK_OPERAND_A) << SHIFT_OPERAND_A;

@@ -296,6 +296,7 @@ void RuleParser::export_vhdl_parameters(
                 match_mode = "MODE_FULL_ITERATION";
         }
         uint ram_depth = 1 << ((uint)ceil(log2(edges_per_level[the_level])));
+        ram_depth = (ram_depth < 32) ? 32 : ram_depth;
         // std::cout << "edges_per_level[" << the_level << "] = " << edges_per_level[the_level] << std::endl;
         sprintf(buffer, "    constant CORE_PARAM_%u : core_parameters_type := (\n"
                         "        G_RAM_DEPTH           => %u,\n"

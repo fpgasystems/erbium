@@ -318,12 +318,11 @@ int main(int argc, char** argv)
     // const uint CFG_ENGINE_NCRITERIA       = the_rulePack.m_ruleType.m_criterionDefinition.size();
     // const uint CFG_EDGE_BUFFERS_DEPTH     = 5;
     // const uint CFG_EDGE_BRAM_DEPTH        = (1 << (erbium::CFG_MEM_ADDR_WIDTH + 1)) - 1;
-    // const uint BRAM_USED_BITS             = erbium::CFG_WEIGHT_WIDTH + erbium::CFG_MEM_ADDR_WIDTH + 2*erbium::CFG_ENGINE_CRITERION_WIDTH + 1;
+    // const uint BRAM_USED_BITS             = erbium::CFG_MEM_ADDR_WIDTH + 2*erbium::CFG_ENGINE_CRITERION_WIDTH + 1;
     // const uint CFG_EDGE_BRAM_WIDTH        = 1 << ((uint)ceil(log2(BRAM_USED_BITS)));
 
     // std::cout << "constant CFG_ENGINE_NCRITERIA         : integer := " << CFG_ENGINE_NCRITERIA << "; -- Number of criteria\n";
     // std::cout << "constant CFG_ENGINE_CRITERION_WIDTH   : integer := " << erbium::CFG_ENGINE_CRITERION_WIDTH << "; -- Number of bits of each criterion value\n";
-    // std::cout << "constant CFG_WEIGHT_WIDTH             : integer := " << erbium::CFG_WEIGHT_WIDTH << "; -- integer from 0 to 2^CFG_WEIGHT_WIDTH-1\n";
     // std::cout << "--\n";
     // std::cout << "constant CFG_MEM_ADDR_WIDTH           : integer := " << erbium::CFG_MEM_ADDR_WIDTH << ";\n";
     // std::cout << "--\n";

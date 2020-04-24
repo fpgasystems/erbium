@@ -265,13 +265,13 @@ int main(int argc, char** argv)
                                         nfadata_size,
                                         nfa_data->data(),
                                         &err));
-    /*OCL_CHECK(err,
+    OCL_CHECK(err,
               err = queue.enqueueMigrateMemObjects({buffer_nfadata},
                                                    0,
                                                    NULL,
-                                                   &evtNFAdata));*/
+                                                   &evtNFAdata));
 
-    //queue.finish();
+    queue.finish();
 
     uint64_t nfadata_ns = get_duration_ns(evtNFAdata);
     std::cout << "> NFA size: " << nfadata_size << " bytes" << std::endl;
@@ -380,7 +380,7 @@ int main(int argc, char** argv)
             start = std::chrono::high_resolution_clock::now();
 
             // load data via PCIe to the FPGA on-board DDR
-            queue.enqueueMigrateMemObjects({buffer_nfadata, kernel.buffer_queries},
+            queue.enqueueMigrateMemObjects({kernel.buffer_queries},
                                            0 /* 0 means from host*/, NULL, &kernel.evtQueries);
 
             // kernel launch
@@ -394,7 +394,6 @@ int main(int argc, char** argv)
 
             queue.finish();
             finish = std::chrono::high_resolution_clock::now();
-            //queue.flush();
 
             /*for (size_t i = 0; i < bsize; ++i)
                 std::cout << gabarito[i] << "," << (results->data())[i] << std::endl;*/

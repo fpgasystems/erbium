@@ -100,7 +100,7 @@ benchmarks: all
 	./$(BIN) -d build-zrh_h2Des -r ../data/mct_rules-zrh.csv -s 4 >> build-zrh_h2Des/log.txt
 
 clean:
-	$(RM) -r $(OBJDIR) $(DEPDIR)
+	$(RM) -r $(OBJDIR) $(DEPDIR) $(BIN)
 
 cleanall: clean
 	$(RM) -r ./build-*

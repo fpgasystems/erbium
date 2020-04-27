@@ -211,11 +211,10 @@ ifeq ($(TARGET),$(filter $(TARGET),hw))
 		-m $(MAX_BATCH_SIZE) \
 		-i $(ITERATIONS) \
 		-k $(KERNELS_TO_RUN)
-endif # TARGET=hw
-ifeq ($(TARGET),$(filter $(TARGET),hw_emu))
+else ifeq ($(TARGET),$(filter $(TARGET),hw_emu))
 ifeq ($(EMU_MODE), gui)
 	sed -i 's/batch/gui/' xrt.ini
-ifeq ($(EMU_MODE), batch)
+else ifeq ($(EMU_MODE), batch)
 	sed -i 's/gui/batch/' xrt.ini
 endif # EMU_MODE
 	$(CP) $(EMCONFIG_DIR)/emconfig.json .
@@ -229,7 +228,7 @@ endif # EMU_MODE
 		-m $(MAX_BATCH_SIZE) \
 		-i $(ITERATIONS) \
 		-k $(KERNELS_TO_RUN)
-endif # TARGET=hw_emu
+endif # TARGET
 	make -C ../cpu run
 	diff -y --suppress-common-lines $(RESULT_FILE) ../cpu/benchmark/res*.csv
 endif # HOST_ARCH

@@ -57,7 +57,7 @@ COMMON_REPO = ../../Vitis_Accel_Examples
 PWD = $(shell readlink -f .)
 ABS_COMMON_REPO = $(shell readlink -f $(COMMON_REPO))
 
-TARGET := hw
+TARGET := hw_emu
 HOST_ARCH := x86
 SYSROOT := 
 DEVICE = xilinx_u250_qdma_201920_1
@@ -138,8 +138,8 @@ else
 endif
 DATA_OUTPUT_PATH := ./benchmark
 FIRST_BATCH_SIZE := 1
-MAX_BATCH_SIZE := 10000
-ITERATIONS := 101
+MAX_BATCH_SIZE := 129
+ITERATIONS := 1
 KERNELS_TO_RUN := 1
 KERNEL_CONFIG_TAG := $(ENGINES)e$(shell printf "%X" $(KERNELS_TO_RUN))k
 #
@@ -152,74 +152,71 @@ BENCHMARK_FILE := $(DATA_OUTPUT_PATH)/ben_$(FRIENDLY_DEVICE)_$(HEURISTIC)_$(KERN
 # datetime time
 # exec directory
 
-.PHONY: all clean cleanall emconfig
-all: check-devices $(EXECUTABLE) $(BINARY_CONTAINERS) emconfig
+.PHONY: all clean cleanall emconfig build compile run aws_build aws_copy
 
-.PHONY: build
-build: $(BINARY_CONTAINERS)
+# Build all generation files (for a given target)
+all: check-devices compile build emconfig
 
-.PHONY: compile
+# Compile CPU kernel
 compile: $(EXECUTABLE)
+$(EXECUTABLE): check-xrt $(HOST_SRCS) $(HOST_HDRS)
+	$(CXX) $(CXXFLAGS) $(HOST_SRCS) $(HOST_HDRS) -o '$@' $(LDFLAGS)
 
-.PHONE: run
-run:
-ifeq ($(HOST_ARCH), x86)
-	mkdir -p $(DATA_OUTPUT_PATH)
-	./$(EXECUTABLE) -b $(BUILD_DIR)/erbium.xclbin -n $(NFA_DATA_FILE) -w $(WORKLOAD_FILE) -r $(RESULT_FILE) -o $(BENCHMARK_FILE) -f $(FIRST_BATCH_SIZE) -m $(MAX_BATCH_SIZE) -i $(ITERATIONS) -k $(KERNELS_TO_RUN)
-endif
-
-# Building bitsream
+# Build FPGA bitstream
+build: $(BINARY_CONTAINERS)
 $(BUILD_DIR)/erbium.xclbin: $(BINARY_CONTAINER_erbium_OBJS)
 	mkdir -p $(BUILD_DIR)
 	$(VPP) $(CLFLAGS) --temp_dir $(BUILD_DIR) -l $(LDCLFLAGS) --jobs $(shell grep -c ^processor /proc/cpuinfo) --optimize 3 --nk erbium:$(KERNELS) -o'$@' $(+)
 
-# Building kernel
+# Build kernel
 $(TEMP_DIR)/erbium.xo: ../hw/$(XL_SHELL)/kernel.xml ../hw/$(XL_SHELL)/package_kernel.tcl gen_xo.tcl ../hw/tools/*.vhd ../hw/engine/*.vhd ../hw/$(XL_SHELL)/*.sv ../hw/$(XL_SHELL)/*.v ../hw/custom/cfg_engines_${ENGINES}.vhd ../hw/custom/cfg_criteria_${HEURISTIC}.vhd
 	mkdir -p $(TEMP_DIR)
 	$(VIVADO) -mode batch -nojournal -nolog -source gen_xo.tcl -tclargs $(TEMP_DIR)/erbium.xo erbium $(TARGET) $(XSA) $(XL_SHELL) $(ENGINES) $(HEURISTIC)
 
-# Building Host
-$(EXECUTABLE): check-xrt $(HOST_SRCS) $(HOST_HDRS)
-	$(CXX) $(CXXFLAGS) $(HOST_SRCS) $(HOST_HDRS) -o '$@' $(LDFLAGS)
-
-emconfig:$(EMCONFIG_DIR)/emconfig.json
+# HW Emulation config file
+emconfig: $(EMCONFIG_DIR)/emconfig.json
 $(EMCONFIG_DIR)/emconfig.json:
 	emconfigutil --platform $(DEVICE) --od $(EMCONFIG_DIR)
 
-check: all
+# Build everything and run 
+check: all run
+
+# Run without generation
+run:
+	mkdir -p $(DATA_OUTPUT_PATH)
+ifeq ($(TARGET),$(filter $(TARGET),hw))
+ifeq ($(HOST_ARCH), x86)
+	./$(EXECUTABLE) -b $(BUILD_DIR)/erbium.xclbin -n $(NFA_DATA_FILE) -w $(WORKLOAD_FILE) -r $(RESULT_FILE) -o $(BENCHMARK_FILE) -f $(FIRST_BATCH_SIZE) -m $(MAX_BATCH_SIZE) -i $(ITERATIONS) -k $(KERNELS_TO_RUN)
+endif
+endif
 ifeq ($(TARGET),$(filter $(TARGET),hw_emu))
 ifeq ($(HOST_ARCH), x86)
 	$(CP) $(EMCONFIG_DIR)/emconfig.json .
 	XCL_EMULATION_MODE=$(TARGET) ./$(EXECUTABLE) -b $(BUILD_DIR)/erbium.xclbin -n $(NFA_DATA_FILE) -w $(WORKLOAD_FILE) -r $(RESULT_FILE) -o $(BENCHMARK_FILE) -f $(FIRST_BATCH_SIZE) -m $(MAX_BATCH_SIZE) -i $(ITERATIONS) -k $(KERNELS_TO_RUN)
 endif
 endif
-ifneq ($(TARGET),$(findstring $(TARGET), hw hw_emu))
-$(warning WARNING: Application supports only hw hw_emu TARGET. Please use the target for running the application)
-endif
 
-# ifeq ($(HOST_ARCH), x86)
-# 	perf_analyze profile -i profile_summary.csv -f html
-# endif
-
-.PHONY: aws_build
-aws_build: #check-aws_repo
+# Build FPGA bitstream and trigger AWS AFI creation
+aws_build: build
 	mkdir -p _aws
-	(cd _aws && ./aws_create_afi.py ../$(BINARY_CONTAINERS))
+	-$(RMDIR) $(BUILD_DIR)/erbium.awsxclbin
 	-$(RMDIR) _aws/to_aws
-	wait_for_afi.py --afi $(call GetFromJson,$(shell find _aws/ -name '*_afi_id.txt' | tail -1),FpgaImageId) --notify --email $(EMAIL)
+	(cd _aws && ../aws_create_afi.py .$(BINARY_CONTAINERS))
+	wait_for_afi.py --afi $(call GetFromJson,$(shell find _aws/ -name '*_afi_id.txt' | sort -d | tail -1),FpgaImageId) --notify --email $(EMAIL)
 
-.PHONY: aws_copy
+# Copy locally generated bitstream to AWS instance
 aws_copy:
+	ssh -i ../keys/fpga_aws.pem centos@$(AWS_VM_IP) "mkdir -p /home/centos/gitlab/erbium/xilinx_work/$(BUILD_DIR)/"
 	#scp -rpq -i ../keys/fpga_aws.pem ../sw/build-* centos@$(AWS_VM_IP):/home/centos/erbium
-	scp -rqp -i ../keys/fpga_aws.pem $(BUILD_DIR)/erbium.awsxclbin centos@$(AWS_VM_IP):/home/centos/erbium/erbium_$(HEURISTIC).$(ENGINES)e_$(shell printf "%X" $(KERNELS))k.awsxclbin
+	scp -rqp -i ../keys/fpga_aws.pem $(BUILD_DIR)/erbium.awsxclbin centos@$(AWS_VM_IP):/home/centos/gitlab/erbium/xilinx_work/$(BUILD_DIR)/erbium.awsxclbin
 
 # Cleaning stuff
 clean:
 	-$(RMDIR) $(EXECUTABLE)
-	-$(RMDIR) profile_* TempConfig system_estimate.xtxt *.rpt *.csv 
+	-$(RMDIR) profile_* TempConfig system_estimate.xtxt *.rpt *.csv *xclbin.run_summary
 	-$(RMDIR) *v++* .Xil .run emconfig.json *.log *.jou *.str *.wcfg *.wdb *.protoinst
 
 cleanall: clean
-	-$(RMDIR) ./_xclbin.*
-	-$(RMDIR) _xo.* *xclbin.run_summary
-	-$(RMDIR) ./_xo-tmp_* ./packaged_kernel* 
+	-$(RMDIR) ./_xclbin.* ./_aws
+	-$(RMDIR) _xo.*
+	-$(RMDIR) ./_xo-tmp_* ./packaged_kernel*

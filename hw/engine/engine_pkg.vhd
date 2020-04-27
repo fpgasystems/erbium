@@ -32,13 +32,15 @@ package engine_pkg is
     -- MAIN PARAMETERS
     constant CFG_ENGINE_DOPIO_CORES       : integer :=  2; -- Number of cores per engine (1 or 2)
     constant CFG_ENGINES_NUMBER           : integer := THE_CFG_ENGINES_NUMBER; -- Number of engines per bitstrea
+
+    -- SW / HW CONSTRAINTS (must be consistent with sw/definitions.h)
     constant CFG_ENGINE_NCRITERIA         : integer := 22; -- Number of criteria
     constant CFG_CRITERION_VALUE_WIDTH    : integer := 13; -- Number of bits of each criterion value
     constant CFG_WEIGHT_WIDTH             : integer := 31; -- integer from 0 to 2^CFG_WEIGHT_WIDTH-1
     constant CFG_QUERY_ID_WIDTH           : integer :=  8; -- Used only internally
     constant CFG_FIRST_CRITERION_LOOKUP   : boolean := true; -- lookup table of first criterion
     --
-    constant CFG_MEM_ADDR_WIDTH           : integer := 16;
+    constant CFG_TRANSITION_POINTER_WIDTH : integer := 16; -- in bits
     --
     constant CFG_QUERY_BUFFER_DEPTH       : integer := CFG_ENGINE_NCRITERIA;
     --
@@ -50,17 +52,16 @@ package engine_pkg is
 
     --
     -- Number of bits for each criterion value coming from memory (top level)
-    constant CFG_RAW_QUERY_WIDTH          : integer := 16; -- bits
+    constant CFG_RAW_OPERAND_WIDTH        : integer := 16; -- bits (operand_t)
 
     -- Number of bits for each result value going back to the memory (wrapper level)
     constant CFG_RAW_RESULTS_WIDTH        : integer := 16; -- bits
-    constant CFG_RAW_RESULT_STATS_WIDTH   : integer := 64; -- bits (result value comprised)
 
     -- MEMORY DATA SLICE RANGES
     subtype RNG_BRAM_EDGE_STORE_OPERAND_A is natural range CFG_CRITERION_VALUE_WIDTH - 1 downto 0;
     subtype RNG_BRAM_EDGE_STORE_OPERAND_B is natural range CFG_CRITERION_VALUE_WIDTH * 2 - 1 downto CFG_CRITERION_VALUE_WIDTH;
-    subtype RNG_BRAM_EDGE_STORE_POINTER   is natural range CFG_CRITERION_VALUE_WIDTH * 2 + CFG_MEM_ADDR_WIDTH - 1 downto CFG_CRITERION_VALUE_WIDTH * 2;
-    subtype RNG_BRAM_EDGE_STORE_LAST      is natural range CFG_CRITERION_VALUE_WIDTH * 2 + CFG_MEM_ADDR_WIDTH downto CFG_CRITERION_VALUE_WIDTH * 2 + CFG_MEM_ADDR_WIDTH;
+    subtype RNG_BRAM_EDGE_STORE_POINTER   is natural range CFG_CRITERION_VALUE_WIDTH * 2 + CFG_TRANSITION_POINTER_WIDTH - 1 downto CFG_CRITERION_VALUE_WIDTH * 2;
+    subtype RNG_BRAM_EDGE_STORE_LAST      is natural range CFG_CRITERION_VALUE_WIDTH * 2 + CFG_TRANSITION_POINTER_WIDTH downto CFG_CRITERION_VALUE_WIDTH * 2 + CFG_TRANSITION_POINTER_WIDTH;
 
 end engine_pkg;
 

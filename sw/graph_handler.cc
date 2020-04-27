@@ -521,18 +521,23 @@ void GraphHandler::dump_binary_transition(std::fstream* outfile,
 {
     size_t n_fanout = m_graph[vertex_id].children.size();
     size_t aux = 1;
-    uint64_t mem_int;
-    operands_t mem_opa;
-    operands_t mem_opb;
+    transition_t mem_int;
+    operand_t mem_opa;
+    operand_t mem_opb;
 
     for (auto& itr : m_graph[vertex_id].children)
     {
         RuleParser::parse_value(
-                m_graph[itr].label, (*dic)[m_graph[itr].label], &mem_opa, &mem_opb, criterion_def);
-        mem_int = (uint64_t)(aux++ == n_fanout) << SHIFT_LAST;
-        mem_int |= (((uint64_t)m_graph[itr].dump_pointer) & MASK_POINTER) << SHIFT_POINTER;
-        mem_int |= (((uint64_t)mem_opb) & MASK_OPERAND_B) << SHIFT_OPERAND_B;
-        mem_int |= (((uint64_t)mem_opa) & MASK_OPERAND_A) << SHIFT_OPERAND_A;
+                m_graph[itr].label,
+                (*dic)[m_graph[itr].label],
+                &mem_opa,
+                &mem_opb,
+                criterion_def);
+
+        mem_int = (transition_t)(aux++ == n_fanout) << SHIFT_LAST;
+        mem_int |= (((transition_t)m_graph[itr].dump_pointer) & MASK_POINTER) << SHIFT_POINTER;
+        mem_int |= (((transition_t)mem_opb) & MASK_OPERANDS) << SHIFT_OPERAND_B;
+        mem_int |= (((transition_t)mem_opa) & MASK_OPERANDS) << SHIFT_OPERAND_A;
         // std::cout << mem_int << " p=" << m_graph[itr].dump_pointer << " a=" << mem_opa
         //           << " b=" << mem_opb << std::endl;
         outfile->write((char*)&mem_int, sizeof(mem_int));
@@ -541,7 +546,7 @@ void GraphHandler::dump_binary_transition(std::fstream* outfile,
 
 void GraphHandler::dump_binary_padding(std::fstream* outfile, const size_t& slices)
 {
-    uint64_t mem_int = 0;
+    transition_t mem_int = 0;
     size_t n_edges = slices % C_EDGES_PER_CACHE_LINE;
     n_edges = (n_edges == 0) ? 0 : C_EDGES_PER_CACHE_LINE - n_edges;
     for (size_t pad = n_edges; pad != 0; pad--)

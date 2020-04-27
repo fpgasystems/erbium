@@ -30,7 +30,16 @@
 
 const unsigned char C_CACHELINE_SIZE   = 64; // in bytes
 
-typedef uint16_t                                operands_t;
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// SW / HW CONSTRAINTS                                                                            //
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// raw criterion value (must be consistent with kernel_<shell>.cpp and engine_pkg.vhd)
+typedef uint16_t  operand_t;
+
+// raw cacheline size (must be consistent with kernel_<shell>.cpp and erbium_wrapper.vhd)
+const unsigned char C_CACHELINE_SIZE = 64; // in bytes
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //                                                                                                //
@@ -286,7 +295,7 @@ int main(int argc, char** argv)
     char* workload_buff;
     uint32_t benchmark_size; // in queries
     uint32_t query_size;     // in bytes with padding
-    std::vector<operands_t, aligned_allocator<operands_t>>* queries_data;
+    std::vector<operand_t, aligned_allocator<operand_t>>* queries_data;
     std::vector<uint16_t, aligned_allocator<uint16_t>>* results;
 
     if(!load_workload_from_file(fullpath_workload, &benchmark_size, &workload_buff, &query_size))
@@ -317,12 +326,12 @@ int main(int argc, char** argv)
     {
         kernel.num_queries = bsize;
         kernel.queries_size = kernel.num_queries * query_size;
-        kernel.results_size = kernel.num_queries * sizeof(operands_t);
+        kernel.results_size = kernel.num_queries * sizeof(operand_t);
         kernel.queries_cls  = kernel.queries_size / C_CACHELINE_SIZE;
         kernel.results_cls  = (kernel.results_size / C_CACHELINE_SIZE) + (((kernel.results_size % C_CACHELINE_SIZE)==0)?0:1);
 
         // batch workload
-        queries_data = new std::vector<operands_t, aligned_allocator<operands_t>>(kernel.queries_size);
+        queries_data = new std::vector<operand_t, aligned_allocator<operand_t>>(kernel.queries_size);
         results = new std::vector<uint16_t, aligned_allocator<uint16_t>>(kernel.results_size);
         gabarito = (uint32_t*) calloc(bsize, sizeof(*gabarito));
 
@@ -367,7 +376,7 @@ int main(int argc, char** argv)
             for (uint32_t k = 0; k < bsize; k++)
             {
                 memcpy(point, &(workload_buff[aux * query_size]), query_size);
-                for (uint32_t j = 0; j < query_size / sizeof(operands_t); j++)
+                for (uint32_t j = 0; j < query_size / sizeof(operand_t); j++)
                     point++;
                 gabarito[k] = aux;
                 aux = (aux + 1) % benchmark_size;

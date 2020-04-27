@@ -56,11 +56,11 @@ end erbium_wrapper;
 architecture rtl of erbium_wrapper is
     constant CFG_RD_TYPE_NFA      : std_logic := '0'; -- related to rd_stype_i
     constant CFG_RD_TYPE_QUERY    : std_logic := '1'; -- related to rd_stype_i
-    constant C_QUERY_PARTITIONS   : integer := G_DATA_BUS_WIDTH / CFG_RAW_QUERY_WIDTH;
+    constant C_QUERY_PARTITIONS   : integer := G_DATA_BUS_WIDTH / CFG_RAW_OPERAND_WIDTH;
     constant C_EDGES_PARTITIONS   : integer := G_DATA_BUS_WIDTH / CFG_EDGE_BRAM_WIDTH;
     constant C_RESULTS_PARTITIONS : integer := G_DATA_BUS_WIDTH / CFG_RAW_RESULTS_WIDTH;
     --
-    type result_value_array is array (CFG_ENGINES_NUMBER - 1 downto 0) of std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+    type result_value_array is array (CFG_ENGINES_NUMBER - 1 downto 0) of std_logic_vector(CFG_TRANSITION_POINTER_WIDTH - 1 downto 0);
     type query_value_array is array (CFG_ENGINES_NUMBER - 1 downto 0) of std_logic_vector(C_QUERYARRAY_WIDTH - 1 downto 0);
     --
     signal sig_query_id           : std_logic_vector(CFG_QUERY_ID_WIDTH - 1 downto 0);
@@ -99,9 +99,9 @@ architecture rtl of erbium_wrapper is
         flow_ctrl       : flow_ctrl_type;
         ready           : std_logic;
         cnt_criterium   : integer range 0 to CFG_ENGINE_NCRITERIA;
-        cnt_edge        : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        cnt_edge        : std_logic_vector(CFG_TRANSITION_POINTER_WIDTH - 1 downto 0);
         cnt_slice       : integer range 0 to C_EDGES_PARTITIONS;
-        mem_addr        : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        mem_addr        : std_logic_vector(CFG_TRANSITION_POINTER_WIDTH - 1 downto 0);
         mem_data        : std_logic_vector(CFG_EDGE_BRAM_WIDTH - 1 downto 0);
         mem_wren        : std_logic_vector(CFG_ENGINE_NCRITERIA - 1 downto 0);
         engine_rst      : std_logic;
@@ -125,7 +125,7 @@ architecture rtl of erbium_wrapper is
         -- nfa to mem
         mem_data        : std_logic_vector(CFG_EDGE_BRAM_WIDTH - 1 downto 0);
         mem_wren        : std_logic_vector(CFG_ENGINE_NCRITERIA - 1 downto 0);
-        mem_addr        : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        mem_addr        : std_logic_vector(CFG_TRANSITION_POINTER_WIDTH - 1 downto 0);
         engine_rst      : std_logic;
     end record;
     type inout_wrapper_array is array (G_INOUT_LATENCY - 1 downto 0) of inout_wrapper_type;
@@ -141,7 +141,7 @@ architecture rtl of erbium_wrapper is
         query_flow_ctrl : integer range 0 to CFG_ENGINES_NUMBER;
         reslt_flow_ctrl : integer range 0 to CFG_ENGINES_NUMBER;
         --
-        result_value    : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        result_value    : std_logic_vector(CFG_TRANSITION_POINTER_WIDTH - 1 downto 0);
         result_valid    : std_logic;
         result_last     : std_logic;
     end record;
@@ -198,9 +198,9 @@ begin
                         v.query_array(query_r.counter + idx).operand := 
                             rd_data_i
                             (
-                                (idx * CFG_RAW_QUERY_WIDTH) + CFG_CRITERION_VALUE_WIDTH - 1
+                                (idx * CFG_RAW_OPERAND_WIDTH) + CFG_CRITERION_VALUE_WIDTH - 1
                                 downto
-                                (idx * CFG_RAW_QUERY_WIDTH)
+                                (idx * CFG_RAW_OPERAND_WIDTH)
                             );
                         v.query_array(query_r.counter + idx).query_id := my_conv_integer(sig_query_id);
                     end loop;
@@ -211,9 +211,9 @@ begin
                         v.query_array(query_r.counter + idx).operand := 
                             rd_data_i
                             (
-                                (idx * CFG_RAW_QUERY_WIDTH) + CFG_CRITERION_VALUE_WIDTH - 1
+                                (idx * CFG_RAW_OPERAND_WIDTH) + CFG_CRITERION_VALUE_WIDTH - 1
                                 downto
-                                (idx * CFG_RAW_QUERY_WIDTH)
+                                (idx * CFG_RAW_OPERAND_WIDTH)
                             );
                         v.query_array(query_r.counter + idx).query_id := my_conv_integer(sig_query_id);
                     end loop;
@@ -301,7 +301,7 @@ begin
                 v.mem_wren  := (others => '0');
                 v.mem_addr  := (others => '0');
                 v.mem_data  := rd_data_i(2*CFG_EDGE_BRAM_WIDTH-1 downto CFG_EDGE_BRAM_WIDTH);
-                v.cnt_edge  := rd_data_i(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+                v.cnt_edge  := rd_data_i(CFG_TRANSITION_POINTER_WIDTH - 1 downto 0);
                 v.cnt_slice := 2;
 
                 if nfa_r.cnt_criterium = CFG_ENGINE_NCRITERIA then
@@ -373,13 +373,13 @@ end process;
 ----------------------------------------------------------------------------------------------------
 -- consume the outputed sig_result_value and fill in a cache line to write back on the wr_data_o bus
 -- A query result consists of the index of the content it points to. This result value occupies
--- CFG_MEM_ADDR_WIDTH bits (into a CFG_RAW_RESULTS_WIDTH bits field).
+-- CFG_TRANSITION_POINTER_WIDTH bits (into a CFG_RAW_RESULTS_WIDTH bits field).
 
 wr_data_o  <= result_r.value;
 wr_valid_o <= result_r.valid;
 wr_last_o  <= result_r.last;
 
-sig_result_temp <= (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_MEM_ADDR_WIDTH => '0') & dopio_r.result_value;
+sig_result_temp <= (CFG_RAW_RESULTS_WIDTH - 1 downto CFG_TRANSITION_POINTER_WIDTH => '0') & dopio_r.result_value;
 
 result_comb : process(result_r, wr_ready_i, sig_result_temp, dopio_r.result_valid, dopio_r.result_last)
     variable v : result_reg_type;
@@ -558,7 +558,7 @@ gen_engines: for D in 0 to CFG_ENGINES_NUMBER - 1 generate
 
     mct_engine_fifo_result : rxtx_fifo_multi generic map
     (
-        G_DATA_WIDTH    => CFG_MEM_ADDR_WIDTH,
+        G_DATA_WIDTH    => CFG_TRANSITION_POINTER_WIDTH,
         G_DEPTH         => CFG_ENGINES_NUMBER - 1
     )
     port map

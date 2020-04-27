@@ -30,49 +30,77 @@
 #include <vector>
 
 namespace erbium {
-
-const uint16_t C_CACHE_LINE_WIDTH = 64;
-const uint16_t C_EDGES_PER_CACHE_LINE = C_CACHE_LINE_WIDTH / sizeof(uint64_t);
-const uint16_t C_RAW_CRITERION_SIZE = sizeof(uint16_t);
-const uint16_t C_RAW_RESUTLS_SIZE = sizeof(uint16_t);
-const uint16_t C_RAW_RESULT_STATS_WIDTH = sizeof(uint64_t);
-
 // TODO a parameters struct and handle imports, exports, checks etc
-const uint16_t CFG_ENGINE_CRITERION_WIDTH = 13;
-const uint16_t CFG_WEIGHT_WIDTH           = 32;
-const uint16_t CFG_MEM_ADDR_WIDTH         = 16;  // ceil(log2(n_bram_edges_max));
 
-const uint64_t MASK_POINTER    = 0xFFFF; // depends on CFG_MEM_ADDR_WIDTH
-const uint64_t MASK_OPERAND_B  = 0x1FFF; // depends on CFG_ENGINE_CRITERION_WIDTH
-const uint64_t MASK_OPERAND_A  = 0x1FFF; // depends on CFG_ENGINE_CRITERION_WIDTH
-const uint64_t SHIFT_LAST      = CFG_MEM_ADDR_WIDTH+2*CFG_ENGINE_CRITERION_WIDTH;
-const uint64_t SHIFT_POINTER   = 2*CFG_ENGINE_CRITERION_WIDTH;
-const uint64_t SHIFT_OPERAND_B = CFG_ENGINE_CRITERION_WIDTH;
-const uint64_t SHIFT_OPERAND_A = 0;
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// SW / HW CONSTRAINTS                                                                            //
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// raw criterion value (must be consistent with kernel_<shell>.cpp and engine_pkg.vhd)
+typedef uint16_t  operand_t;
+
+// raw NFA transition (to be stored in ultraRam)
+typedef uint64_t  transition_t;
+
+
+// create binary masks for n-bit wise field
+constexpr transition_t generate_mask(int n)
+{
+    return n <= 1 ? 1 : (1 + (generate_mask(n-1) << 1));
+}
+
+// raw cacheline size (must be consistent with kernel_<shell>.cpp and erbium_wrapper.vhd)
+const unsigned char C_CACHELINE_SIZE = 64; // in bytes
+
+// used for determining zero-padding
+const uint16_t C_EDGES_PER_CACHE_LINE = C_CACHELINE_SIZE / sizeof(transition_t);
+
+// actual size of a criterion value (must be consistent with engine_pkg.vhd)
+const uint16_t CFG_CRITERION_VALUE_WIDTH = 13; // in bits
+
+// actual size of an address pointer (must be consistent with engine_pkg.vhd)
+const uint16_t CFG_TRANSITION_POINTER_WIDTH = 16; // in bits
+
+// maximum number of transitions able to stored in one memory unit
+const uint32_t CFG_MEM_MAX_DEPTH = (1 << (CFG_TRANSITION_POINTER_WIDTH + 1)) - 1;
+
+const transition_t MASK_POINTER  = generate_mask(CFG_TRANSITION_POINTER_WIDTH);
+const transition_t MASK_OPERANDS = generate_mask(CFG_CRITERION_VALUE_WIDTH);
+
+// shift constants to align fields to a transition memory line
+const char SHIFT_OPERAND_A = 0;
+const char SHIFT_OPERAND_B = CFG_CRITERION_VALUE_WIDTH + SHIFT_OPERAND_A;
+const char SHIFT_POINTER   = CFG_CRITERION_VALUE_WIDTH + SHIFT_OPERAND_B;
+const char SHIFT_LAST      = CFG_TRANSITION_POINTER_WIDTH + SHIFT_POINTER;
+
+
+// Static sanity checks
+static_assert(CFG_TRANSITION_POINTER_WIDTH + 2*CFG_CRITERION_VALUE_WIDTH + 1 <= sizeof(transition_t)*8,
+              "NFA Transition fields to be stored must fit into the memory line.");
+
+static_assert(CFG_CRITERION_VALUE_WIDTH <= sizeof(operand_t) * 8,
+              "Operand (criterion value) size must fit into operand_t type.");
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // TYPEDEF                                                                                        //
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// memory (change kernel.cpp as well)
-typedef uint16_t                                operands_t;
-
 // elements
 typedef uint16_t                                criterionid_t;
 typedef uint32_t                                weight_t;
-typedef uint16_t                                valueid_t;
 typedef uint32_t                                ruleid_t;
 
 // dictionnary
-typedef std::map<std::string, valueid_t>        dictionnary_t;
+typedef std::map<std::string, operand_t>       dictionnary_t;
 typedef std::map<criterionid_t, dictionnary_t>  dic_criteria_t;
 typedef std::vector<criterionid_t>              sorting_map_t;
 
 // graph
 struct vertex_info;
 typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::directedS, vertex_info> graph_t;
-typedef boost::graph_traits<graph_t>::vertex_descriptor                      vertex_id_t;
-typedef std::map<criterionid_t, std::map<valueid_t, std::set<vertex_id_t>>>  vertexes_t;
+typedef boost::graph_traits<graph_t>::vertex_descriptor                       vertex_id_t;
+typedef std::map<criterionid_t, std::map<operand_t, std::set<vertex_id_t>>>  vertexes_t;
 
 
 enum SortOrder { Ascending, Descending };

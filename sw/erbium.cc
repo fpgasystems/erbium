@@ -283,7 +283,7 @@ int main(int argc, char** argv)
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::cout << "# NFA FINAL STATS" << std::endl;
-    uint n_bram_edges_max = the_nfa.print_stats();
+    the_nfa.print_stats();
 
     std::cout << "total number of states: " << the_nfa.get_num_states() << std::endl;
     std::cout << "total number of transitions: " << the_nfa.get_num_transitions() << std::endl;
@@ -314,29 +314,6 @@ int main(int argc, char** argv)
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     std::cout << "# MEMORY DUMP" << std::endl;
-
-    // const uint CFG_ENGINE_NCRITERIA       = the_rulePack.m_ruleType.m_criterionDefinition.size();
-    // const uint CFG_EDGE_BUFFERS_DEPTH     = 5;
-    // const uint CFG_EDGE_BRAM_DEPTH        = (1 << (erbium::CFG_MEM_ADDR_WIDTH + 1)) - 1;
-    // const uint BRAM_USED_BITS             = erbium::CFG_MEM_ADDR_WIDTH + 2*erbium::CFG_ENGINE_CRITERION_WIDTH + 1;
-    // const uint CFG_EDGE_BRAM_WIDTH        = 1 << ((uint)ceil(log2(BRAM_USED_BITS)));
-
-    // std::cout << "constant CFG_ENGINE_NCRITERIA         : integer := " << CFG_ENGINE_NCRITERIA << "; -- Number of criteria\n";
-    // std::cout << "constant CFG_ENGINE_CRITERION_WIDTH   : integer := " << erbium::CFG_ENGINE_CRITERION_WIDTH << "; -- Number of bits of each criterion value\n";
-    // std::cout << "--\n";
-    // std::cout << "constant CFG_MEM_ADDR_WIDTH           : integer := " << erbium::CFG_MEM_ADDR_WIDTH << ";\n";
-    // std::cout << "--\n";
-    // std::cout << "constant CFG_EDGE_BUFFERS_DEPTH       : integer := " << CFG_EDGE_BUFFERS_DEPTH << ";\n";
-    // std::cout << "constant CFG_EDGE_BRAM_DEPTH          : integer := " << CFG_EDGE_BRAM_DEPTH << ";\n";
-    // std::cout << "constant CFG_EDGE_BRAM_WIDTH          : integer := " << CFG_EDGE_BRAM_WIDTH << ";\n";
-    // std::cout << "BRAM_USED_BITS                        : integer := " << BRAM_USED_BITS << ";\n";
-
-    if (ceil(log2(n_bram_edges_max)) > erbium::CFG_MEM_ADDR_WIDTH)
-    {
-        std::cout << "[!] Required address space for " << n_bram_edges_max << " transitions is ";
-        std::cout << ceil(log2(n_bram_edges_max)) << " bits (CFG_MEM_ADDR_WIDTH = ";
-        std::cout << erbium::CFG_MEM_ADDR_WIDTH << " bits;\n";
-    }
 
     start = std::chrono::high_resolution_clock::now();
 

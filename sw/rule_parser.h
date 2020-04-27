@@ -36,9 +36,9 @@ class RuleParser {
 
     // parse operand_a and operand_b according to the criterion
     static void parse_value(const std::string& value,
-                            const valueid_t& value_id,
-                            valueid_t* operand_a,
-                            valueid_t* operand_b,
+                            const operand_t& value_id,
+                            operand_t* operand_a,
+                            operand_t* operand_b,
                             const criterionDefinition_s* criterion_def);
 
     // export benchmark workload based on rules
@@ -55,10 +55,10 @@ class RuleParser {
 
     static uint16_t get_month_number(const std::string& month_code);
     static uint32_t full_rata_die_day(const uint16_t& d, uint16_t m, uint16_t y);
-    static valueid_t date_check(const uint16_t& d, uint16_t m, uint16_t y);
+    static operand_t date_check(const uint16_t& d, uint16_t m, uint16_t y);
 
-    static void parse_pairOfDates(const std::string& value, valueid_t* operand_a, valueid_t* operand_b);
-    static void parse_pairOfFlights(std::string value_raw, valueid_t* operand_a, valueid_t* operand_b);
+    static void parse_pairOfDates(const std::string& value, operand_t* operand_a, operand_t* operand_b);
+    static void parse_pairOfFlights(std::string value_raw, operand_t* operand_a, operand_t* operand_b);
 
     static std::fstream dump_csv_raw_workload(const std::string& filename, const rulePack_s& rulepack, const Dictionnary* dic);
 };

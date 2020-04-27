@@ -42,8 +42,8 @@ class Dictionnary
     dictionnary_t get_criterion_dic_by_level(const criterionid_t& level) const;
     int16_t get_level_by_criterion_id(const criterionid_t& criterion_id) const;
 
-    valueid_t get_valueid_by_sort(const criterionid_t& sort_id, const std::string& value) const;
-    valueid_t get_valueid_by_level(const criterionid_t& level, const std::string& value) const;
+    operand_t get_valueid_by_sort(const criterionid_t& sort_id, const std::string& value) const;
+    operand_t get_valueid_by_level(const criterionid_t& level, const std::string& value) const;
 
     void dump_dictionnary(const std::string& filename);
 

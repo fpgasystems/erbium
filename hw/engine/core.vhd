@@ -56,7 +56,7 @@ entity core is
         query_read_o    : out std_logic;
         -- MEMORY
         mem_edge_i      :  in edge_store_type;
-        mem_addr_o      : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        mem_addr_o      : out std_logic_vector(CFG_TRANSITION_POINTER_WIDTH - 1 downto 0);
         mem_en_o        : out std_logic;
         -- FIFO edge buffer to next level
         next_full_i     :  in std_logic;

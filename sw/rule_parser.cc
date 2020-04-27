@@ -30,9 +30,9 @@
 namespace erbium {
 
 void RuleParser::parse_value(const std::string& value_raw,
-                             const valueid_t& value_id,
-                             valueid_t* operand_a,
-                             valueid_t* operand_b,
+                             const operand_t& value_id,
+                             operand_t* operand_a,
+                             operand_t* operand_b,
                              const criterionDefinition_s* criterion_def)
 {
     if (!criterion_def->m_isPair)
@@ -92,7 +92,7 @@ uint32_t RuleParser::full_rata_die_day(const uint16_t& d, uint16_t m, uint16_t y
     return 365*y + y/4 - y/100 + y/400 + (153*m - 457)/5 + d - 306;
 }
 
-valueid_t RuleParser::date_check(const uint16_t& d, uint16_t m, uint16_t y)
+operand_t RuleParser::date_check(const uint16_t& d, uint16_t m, uint16_t y)
 {
     // Rata Die day one is 0001-01-01
 
@@ -111,7 +111,7 @@ valueid_t RuleParser::date_check(const uint16_t& d, uint16_t m, uint16_t y)
     // const uint32_t JANFIRST9999  = 3651695; // 1st Jan 9999 - infinity up
     const uint32_t JANFIRST1990  =  726468; // 1st Jan 1990 - infinity down
     const uint32_t JANFIRST2006  =  732312; // 1st Jan 2006 - start date
-    const uint32_t NOVNINETH2050 = JANFIRST2006 + (1 << CFG_ENGINE_CRITERION_WIDTH) - 2; // end date
+    const uint32_t NOVNINETH2050 = JANFIRST2006 + (1 << CFG_CRITERION_VALUE_WIDTH) - 2; // end date
     const uint32_t JANFIRST9999  = 3651695; // 1st Jan 9999 - infinity up
     // using 1st Jan 2006 as start day, the end day is:
     //   - 13 bits: 2 Jun 2028
@@ -140,7 +140,7 @@ valueid_t RuleParser::date_check(const uint16_t& d, uint16_t m, uint16_t y)
         return interim - JANFIRST2006 + 2;
 }
 
-void RuleParser::parse_pairOfDates(const std::string& value, valueid_t* operand_a, valueid_t* operand_b)
+void RuleParser::parse_pairOfDates(const std::string& value, operand_t* operand_a, operand_t* operand_b)
 {
     if (value.length() != 19)
     {
@@ -158,7 +158,7 @@ void RuleParser::parse_pairOfDates(const std::string& value, valueid_t* operand_
                             atoi(value.substr(15, 4).c_str()));
 }
 
-void RuleParser::parse_pairOfFlights(std::string value_raw, valueid_t* operand_a, valueid_t* operand_b)
+void RuleParser::parse_pairOfFlights(std::string value_raw, operand_t* operand_a, operand_t* operand_b)
 {
     std::replace(value_raw.begin(), value_raw.end(), '/', ' ');
     char* p_end;
@@ -173,9 +173,9 @@ void RuleParser::export_benchmark_workload(const std::string& path, const rulePa
     std::fstream benchfile(path + "benchmark.bin", std::ios::out | std::ios::trunc | std::ios::binary);
 
     // first data corresponds to query size + benchmark size
-    uint32_t query_size = rulepack.m_ruleType.m_criterionDefinition.size() * C_RAW_CRITERION_SIZE;
-    query_size = query_size / C_CACHE_LINE_WIDTH + ((query_size % C_CACHE_LINE_WIDTH) ? 1 : 0);
-    query_size = query_size * C_CACHE_LINE_WIDTH;
+    uint32_t query_size = rulepack.m_ruleType.m_criterionDefinition.size() * sizeof(operand_t);
+    query_size = query_size / C_CACHELINE_SIZE + ((query_size % C_CACHELINE_SIZE) ? 1 : 0);
+    query_size = query_size * C_CACHELINE_SIZE;
     uint32_t benchmark_size = rulepack.m_rules.size();
 
     benchfile.write(reinterpret_cast<char *>(&query_size), sizeof(query_size));
@@ -195,12 +195,12 @@ std::fstream RuleParser::dump_csv_raw_workload(const std::string& filename, cons
     std::fstream filecsv(filename + ".csv", std::ios::out | std::ios::trunc);
     std::fstream fileaux(filename + ".aux", std::ios::out | std::ios::in | std::ios::trunc | std::ios::binary);
 
-    const uint SLICES_PER_LINE = C_CACHE_LINE_WIDTH / C_RAW_CRITERION_SIZE;
+    const uint SLICES_PER_LINE = C_CACHELINE_SIZE / sizeof(operand_t);
     uint padding_slices = (rulepack.m_ruleType.m_criterionDefinition.size()) % SLICES_PER_LINE;
     padding_slices = (padding_slices == 0) ? 0 : SLICES_PER_LINE - padding_slices;
 
-    operands_t mem_opa;
-    operands_t mem_opb;
+    operand_t mem_opa;
+    operand_t mem_opb;
     const criterion_s* aux_criterion;
     const criterionDefinition_s* aux_definition;
 
@@ -232,7 +232,7 @@ std::fstream RuleParser::dump_csv_raw_workload(const std::string& filename, cons
                     &mem_opa,
                     &mem_opb,
                     aux_definition);
-            mem_opa = mem_opa & MASK_OPERAND_A;
+            mem_opa = mem_opa & MASK_OPERANDS;
             fileaux.write((char*)&mem_opa, sizeof(mem_opa));
             filecsv << "," << aux_criterion->m_value;
         }
@@ -296,7 +296,13 @@ void RuleParser::export_vhdl_parameters(
                 match_mode = "MODE_FULL_ITERATION";
         }
         uint ram_depth = 1 << ((uint)ceil(log2(edges_per_level[the_level])));
+
+        // arbitrary minimum value
         ram_depth = (ram_depth < 32) ? 32 : ram_depth;
+
+        // ensure that there are enough bits allocated to the addresses
+        assert(ram_depth <= CFG_MEM_MAX_DEPTH);
+
         // std::cout << "edges_per_level[" << the_level << "] = " << edges_per_level[the_level] << std::endl;
         sprintf(buffer, "    constant CORE_PARAM_%u : core_parameters_type := (\n"
                         "        G_RAM_DEPTH           => %u,\n"

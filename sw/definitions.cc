@@ -155,21 +155,6 @@ void erbium::rulePack_s::load_rules(const std::string& filename)
     int aux = row.m_data.size()-4;
     while(file >> row)
     {
-        // NOT PRODUCTION
-        // JUST TO FILTER WHILE IN DEV
-        //if (row.m_data[8] != "\"ZRH\"" && row.m_data[9] != "\"ZRH\"")
-        //    continue;
-        //if (row.m_data[8] != "\"CDG\"" && row.m_data[9] != "\"CDG\"")
-        //    continue;
-        //if (row.m_data[8] != "\"GRU\"" && row.m_data[9] != "\"GRU\"")
-        //    continue;
-        //if (row.m_data[8] != "\"ZRH\"" && row.m_data[9] != "\"ZRH\"" && row.m_data[8] != "\"CDG\"" && row.m_data[9] != "\"CDG\"" && row.m_data[8] != "\"GRU\"" && row.m_data[9] != "\"GRU\"")
-        //    continue;
-        //if (row.m_data[aux+3] != "\"35\"")
-        //    continue;
-        //if (row.m_data[8] != "\"FIR\"" && row.m_data[9] != "\"FIR\"" && row.m_data[8] != "\"IBT\"" && row.m_data[9] != "\"IBT\"")
-        //    continue;
-
         erbium::rule_s rl;
         rl.m_ruleId = std::stoi(row.m_data[0].substr(1));
         rl.m_weight = std::stoi(row.m_data[1]);

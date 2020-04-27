@@ -46,7 +46,7 @@ Dictionnary::Dictionnary(const rulePack_s& rulepack)
     }
 
     // content indexes
-    valueid_t key = 0;
+    operand_t key = 0;
     for (auto& value : m_dic_contents)
         value.second = key++;
 
@@ -59,7 +59,7 @@ Dictionnary::Dictionnary(const rulePack_s& rulepack)
     }
 
     // Put wildcard '*' codes as 0 or as LAST
-    valueid_t buff;
+    operand_t buff;
     for (auto& aux : rulepack.m_ruleType.m_criterionDefinition)
     {
         #ifdef WILDCARD_AS_LAST
@@ -160,7 +160,7 @@ int16_t Dictionnary::get_level_by_criterion_id(const criterionid_t& criterion_id
     return -1;
 }
 
-valueid_t Dictionnary::get_valueid_by_sort(const criterionid_t& sort_id, const std::string& value) const
+operand_t Dictionnary::get_valueid_by_sort(const criterionid_t& sort_id, const std::string& value) const
 {
     if (sort_id == m_dic_criteria.size())
         return m_dic_contents.at(value);
@@ -168,7 +168,7 @@ valueid_t Dictionnary::get_valueid_by_sort(const criterionid_t& sort_id, const s
         return m_dic_criteria.at(sort_id).at(value);
 }
 
-valueid_t Dictionnary::get_valueid_by_level(const criterionid_t& level, const std::string& value) const
+operand_t Dictionnary::get_valueid_by_level(const criterionid_t& level, const std::string& value) const
 {
     if (level == m_dic_criteria.size())
         return m_dic_contents.at(value);

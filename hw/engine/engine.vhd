@@ -47,12 +47,12 @@ entity engine is
         --
         mem_i             :  in std_logic_vector(CFG_EDGE_BRAM_WIDTH - 1 downto 0);
         mem_wren_i        :  in std_logic_vector(CFG_ENGINE_NCRITERIA - 1 downto 0);
-        mem_addr_i        :  in std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        mem_addr_i        :  in std_logic_vector(CFG_TRANSITION_POINTER_WIDTH - 1 downto 0);
         --
         result_ready_i    :  in std_logic;
         result_valid_o    : out std_logic;
         result_last_o     : out std_logic;
-        result_value_o    : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0)
+        result_value_o    : out std_logic_vector(CFG_TRANSITION_POINTER_WIDTH - 1 downto 0)
     );
 end engine;
 
@@ -62,7 +62,7 @@ architecture behavioural of engine is
     type edge_buffer_array  is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of edge_buffer_type;
     type edge_buffer_arrayp1 is array (CFG_ENGINE_NCRITERIA downto 0) of edge_buffer_type;
     type edge_store_array   is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of edge_store_type;
-    type mem_addr_array     is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+    type mem_addr_array     is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of std_logic_vector(CFG_TRANSITION_POINTER_WIDTH - 1 downto 0);
     type mem_data_array     is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of std_logic_vector(CFG_EDGE_BRAM_WIDTH - 1 downto 0);
     type query_buffer_array is array (CFG_ENGINE_NCRITERIA - 1 downto 0) of query_buffer_type;
     --
@@ -128,7 +128,7 @@ architecture behavioural of engine is
         -- nfa to mem
         mem_data   : std_logic_vector(CFG_EDGE_BRAM_WIDTH - 1 downto 0);
         mem_wren   : std_logic_vector(CFG_ENGINE_NCRITERIA - 1 downto 0);
-        mem_addr   : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        mem_addr   : std_logic_vector(CFG_TRANSITION_POINTER_WIDTH - 1 downto 0);
     end record;
     type inout_wrapper_array is array (G_INOUT_LATENCY - 1 downto 0) of inout_wrapper_type;
     signal inout_r, inout_rin : inout_wrapper_array;
@@ -256,7 +256,7 @@ gen_dopio: for D in 0 to CFG_ENGINE_DOPIO_CORES - 1 generate
 
     -- ORIGIN LOOK-UP
     gen_lookup : if CFG_FIRST_CRITERION_LOOKUP generate
-        sig_origin_node(D).pointer <= (CFG_MEM_ADDR_WIDTH - 1 downto CFG_CRITERION_VALUE_WIDTH => '0') & query(D)(0).operand;
+        sig_origin_node(D).pointer <= (CFG_TRANSITION_POINTER_WIDTH - 1 downto CFG_CRITERION_VALUE_WIDTH => '0') & query(D)(0).operand;
     end generate gen_lookup;
 
     gen_lookup_n : if not CFG_FIRST_CRITERION_LOOKUP generate

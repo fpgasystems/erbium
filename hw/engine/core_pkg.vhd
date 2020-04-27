@@ -55,12 +55,12 @@ package core_pkg is
     type edge_store_type is record
         operand_a       : std_logic_vector(CFG_CRITERION_VALUE_WIDTH - 1 downto 0);
         operand_b       : std_logic_vector(CFG_CRITERION_VALUE_WIDTH - 1 downto 0);
-        pointer         : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        pointer         : std_logic_vector(CFG_TRANSITION_POINTER_WIDTH - 1 downto 0);
         last            : std_logic;
     end record;
 
     type edge_buffer_type is record
-        pointer         : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        pointer         : std_logic_vector(CFG_TRANSITION_POINTER_WIDTH - 1 downto 0);
         query_id        : integer range 0 to 2**CFG_QUERY_ID_WIDTH - 1;
         weight          : std_logic_vector(CFG_WEIGHT_WIDTH - 1 downto 0);
         clock_cycles    : std_logic_vector(CFG_DBG_N_OF_CLK_CYCS_WIDTH - 1 downto 0);
@@ -82,7 +82,7 @@ package core_pkg is
     type fetch_out_type is record
         buffer_rd_en    : std_logic;
         mem_rd_en       : std_logic;
-        mem_addr        : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        mem_addr        : std_logic_vector(CFG_TRANSITION_POINTER_WIDTH - 1 downto 0);
         flow_ctrl       : core_flow_control;
         query_id        : integer range 0 to 2**CFG_QUERY_ID_WIDTH - 1;
         weight          : std_logic_vector(CFG_WEIGHT_WIDTH - 1 downto 0);
@@ -98,9 +98,9 @@ package core_pkg is
     end record;
 
     type mem_out_type is record
-        rd_addr         : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        rd_addr         : std_logic_vector(CFG_TRANSITION_POINTER_WIDTH - 1 downto 0);
         rd_en           : std_logic;
-        wr_addr         : std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        wr_addr         : std_logic_vector(CFG_TRANSITION_POINTER_WIDTH - 1 downto 0);
         wr_en           : std_logic;
         wr_data         : edge_store_type;
     end record;
@@ -179,7 +179,7 @@ package core_pkg is
             query_read_o    : out std_logic;
             -- MEMORY
             mem_edge_i      :  in edge_store_type;
-            mem_addr_o      : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+            mem_addr_o      : out std_logic_vector(CFG_TRANSITION_POINTER_WIDTH - 1 downto 0);
             mem_en_o        : out std_logic;
             -- FIFO edge buffer to next level
             next_full_i     :  in std_logic;
@@ -260,12 +260,12 @@ package core_pkg is
         --
         mem_i             :  in std_logic_vector(CFG_EDGE_BRAM_WIDTH - 1 downto 0);
         mem_wren_i        :  in std_logic_vector(CFG_ENGINE_NCRITERIA - 1 downto 0);
-        mem_addr_i        :  in std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0);
+        mem_addr_i        :  in std_logic_vector(CFG_TRANSITION_POINTER_WIDTH - 1 downto 0);
         --
         result_ready_i    :  in std_logic;
         result_valid_o    : out std_logic;
         result_last_o     : out std_logic;
-        result_value_o    : out std_logic_vector(CFG_MEM_ADDR_WIDTH - 1 downto 0)
+        result_value_o    : out std_logic_vector(CFG_TRANSITION_POINTER_WIDTH - 1 downto 0)
     );
     end component;
     

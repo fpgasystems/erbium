@@ -58,9 +58,9 @@ LD := g++
 TAR := tar
 
 # C++ flags
-CXXFLAGS := 
+CXXFLAGS :=
 # C/C++ flags
-CPPFLAGS := -g -Wall -pedantic -fopenmp
+CPPFLAGS := -g -Wall -pedantic -fopenmp -std=c++11
 # linker flags
 LDFLAGS := -fopenmp
 # flags required for dependency generation; passed to compilers
@@ -75,34 +75,42 @@ PRECOMPILE =
 # postcompile step
 POSTCOMPILE = mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d
 
+# EXEC
+HEURISTIC = h2Des
+TARGET = hw_emu
+DEVICE=$(AWS_PLATFORM)
+ifeq ($(TARGET),hw_emu)
+	DATA_INPUT_PATH ?= ../sw/build-zrh_$(HEURISTIC)
+else
+	DATA_INPUT_PATH ?= ../sw/build-mct_$(HEURISTIC)
+endif
+DATA_OUTPUT_PATH := ./benchmark
+FIRST_BATCH_SIZE := 1
+MAX_BATCH_SIZE := 100
+ITERATIONS := 10
+KERNELS_TO_RUN := 1
+KERNEL_CONFIG_TAG := $(ENGINES)e$(shell printf "%X" $(KERNELS_TO_RUN))k
+
+NFA_DATA_FILE := $(DATA_INPUT_PATH)/mem_nfa_edges.bin
+WORKLOAD_FILE := $(DATA_INPUT_PATH)/benchmark.bin
+RESULT_FILE := $(DATA_OUTPUT_PATH)/res_$(HEURISTIC)_$(KERNEL_CONFIG_TAG).csv
+BENCHMARK_FILE := $(DATA_OUTPUT_PATH)/ben_$(HEURISTIC)_$(KERNEL_CONFIG_TAG).csv
+
+.PHONY: all run clean
 all: $(BIN)
 
-dist: $(DISTFILES)
-	$(TAR) -cvzf $(DISTOUTPUT) $^
-
-.PHONY: clean
-clean:
-	$(RM) -r $(OBJDIR) $(DEPDIR)
-
-.PHONY: distclean
-distclean: clean
-	$(RM) $(BIN) $(DISTOUTPUT)
-
-.PHONY: install
-install:
-	@echo no install tasks configured
-
-.PHONY: uninstall
-uninstall:
-	@echo no uninstall tasks configured
-
-.PHONY: check
-check:
-	@echo no tests configured
-
-.PHONY: help
-help:
-	@echo available targets: all dist clean distclean install uninstall check
+run: $(BIN)
+	- rm -fr $(DATA_OUTPUT_PATH)
+	- mkdir $(DATA_OUTPUT_PATH)
+	./$(BIN) \
+		-n $(NFA_DATA_FILE) \
+		-w $(WORKLOAD_FILE) \
+		-r $(RESULT_FILE) \
+		-o $(BENCHMARK_FILE) \
+		-f $(FIRST_BATCH_SIZE) \
+		-m $(MAX_BATCH_SIZE) \
+		-i $(ITERATIONS) \
+		-k $(KERNELS_TO_RUN)
 
 $(BIN): $(OBJS)
 	$(LINK.o) $^
@@ -118,3 +126,8 @@ $(OBJDIR)/%.o: %.cc $(DEPDIR)/%.d
 $(DEPDIR)/%.d: ;
 
 -include $(DEPS)
+
+clean:
+	rm -fr $(BIN) $(DISTOUTPUT)
+	rm -fr $(OBJDIR) $(DEPDIR)
+	rm -fr $(DATA_OUTPUT_PATH)

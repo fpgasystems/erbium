@@ -13,7 +13,7 @@
 //  consequential damages (including, but not limited to, procurement of substitute goods or
 //  services; loss of use, data, or profits; or business interruption) however caused and on any
 //  theory of liability, whether in contract, strict liability, or tort (including negligence or
-//  otherwise) arising in any way out of the use of this software, even if advised of the 
+//  otherwise) arising in any way out of the use of this software, even if advised of the
 //  possibility of such damage. See the GNU Affero General Public License for more details.
 
 //  You should have received a copy of the GNU Affero General Public License along with this
@@ -31,28 +31,54 @@
 #include <stdlib.h>
 #include <unistd.h>     // parameters
 
-#define CFG_ENGINE_NCRITERIA 22
 //#define EXEC_DEBUG true
 //#define DETERMINISTIC true
+#define CFG_ENGINE_NCRITERIA 22
 
-typedef uint16_t                                operands_t;
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// SW / HW CONSTRAINTS                                                                            //
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
-const uint16_t C_CACHE_LINE_WIDTH = 64;
-const uint16_t C_EDGES_PER_CACHE_LINE = C_CACHE_LINE_WIDTH / sizeof(uint64_t);
-const uint16_t C_RAW_CRITERION_SIZE = sizeof(uint16_t);
-const uint16_t CFG_ENGINE_CRITERION_WIDTH = 13;
-const uint16_t CFG_WEIGHT_WIDTH           = 20;
-const uint16_t CFG_MEM_ADDR_WIDTH         = 16;  // ceil(log2(n_bram_edges_max));
+// raw criterion value (must be consistent with kernel_<shell>.cpp and engine_pkg.vhd)
+typedef uint16_t  operand_t;
 
-const uint64_t MASK_WEIGHT     = 0xFFFFF;
-const uint64_t MASK_POINTER    = 0xFFFF; // depends on CFG_MEM_ADDR_WIDTH
-const uint64_t MASK_OPERAND_B  = 0x1FFF; // depends on CFG_ENGINE_CRITERION_WIDTH
-const uint64_t MASK_OPERAND_A  = 0x1FFF; // depends on CFG_ENGINE_CRITERION_WIDTH
-const uint64_t SHIFT_LAST      = CFG_WEIGHT_WIDTH+CFG_MEM_ADDR_WIDTH+2*CFG_ENGINE_CRITERION_WIDTH;
-const uint64_t SHIFT_WEIGHT    = CFG_MEM_ADDR_WIDTH+2*CFG_ENGINE_CRITERION_WIDTH;
-const uint64_t SHIFT_POINTER   = 2*CFG_ENGINE_CRITERION_WIDTH;
-const uint64_t SHIFT_OPERAND_B = CFG_ENGINE_CRITERION_WIDTH;
-const uint64_t SHIFT_OPERAND_A = 0;
+// raw NFA transition (to be stored in ultraRam)
+typedef uint64_t  transition_t;
+
+
+// create binary masks for n-bit wise field
+constexpr transition_t generate_mask(int n)
+{
+    return n <= 1 ? 1 : (1 + (generate_mask(n-1) << 1));
+}
+
+// raw cacheline size (must be consistent with kernel_<shell>.cpp and erbium_wrapper.vhd)
+const unsigned char C_CACHELINE_SIZE = 64; // in bytes
+
+// used for determining zero-padding
+const uint16_t C_EDGES_PER_CACHE_LINE = C_CACHELINE_SIZE / sizeof(transition_t);
+
+// actual size of a criterion value (must be consistent with engine_pkg.vhd)
+const uint16_t CFG_CRITERION_VALUE_WIDTH = 13; // in bits
+
+// actual size of an address pointer (must be consistent with engine_pkg.vhd)
+const uint16_t CFG_TRANSITION_POINTER_WIDTH = 16; // in bits
+
+// maximum number of transitions able to stored in one memory unit
+const uint32_t CFG_MEM_MAX_DEPTH = (1 << (CFG_TRANSITION_POINTER_WIDTH + 1)) - 1;
+
+const transition_t MASK_POINTER  = generate_mask(CFG_TRANSITION_POINTER_WIDTH);
+const transition_t MASK_OPERANDS = generate_mask(CFG_CRITERION_VALUE_WIDTH);
+
+// shift constants to align fields to a transition memory line
+const char SHIFT_OPERAND_A = 0;
+const char SHIFT_OPERAND_B = CFG_CRITERION_VALUE_WIDTH + SHIFT_OPERAND_A;
+const char SHIFT_POINTER   = CFG_CRITERION_VALUE_WIDTH + SHIFT_OPERAND_B;
+const char SHIFT_LAST      = CFG_TRANSITION_POINTER_WIDTH + SHIFT_POINTER;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// CPU DEFINITIONS                                                                                //
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
 enum MatchStructureType {STRCT_SIMPLE, STRCT_PAIR};
 enum MatchPairFunction {FNCTR_PAIR_NOP, FNCTR_PAIR_AND, FNCTR_PAIR_OR, FNCTR_PAIR_XOR, FNCTR_PAIR_NAND, FNCTR_PAIR_NOR};
@@ -228,12 +254,14 @@ void compute(const uint16_t* query, const uint16_t level, uint16_t pointer, cons
     bool wildcard;
     bool match;
 
+    #ifdef DETERMINISTIC
     bool has_match = false;
     uint16_t wildcard_pointer;
+    #endif
     do
     {
         match =  matcher(STRUCT_TYPE[level], FUNCT_A[level], FUNCT_B[level], FUNCT_PAIR[level],
-            WILDCARD_EN[level], *query, 
+            WILDCARD_EN[level], *query,
             the_memory[level][pointer].operand_a,
             the_memory[level][pointer].operand_b,
             &wildcard);
@@ -318,7 +346,7 @@ int main(int argc, char** argv)
     uint16_t cores_number = 1;
 
     char opt;
-    while ((opt = getopt(argc, argv, "c:f:hi:m:n:o:r:w:")) != -1) {
+    while ((opt = getopt(argc, argv, "k:f:hi:m:n:o:r:w:")) != -1) {
         switch (opt) {
         case 'n':
             fullpath_nfadata = (char*) malloc(strlen(optarg)+1);
@@ -345,7 +373,7 @@ int main(int argc, char** argv)
         case 'i':
             iterations = atoi(optarg);
             break;
-        case 'c':
+        case 'k':
             cores_number = atoi(optarg);
             break;
         case 'h':
@@ -358,7 +386,7 @@ int main(int argc, char** argv)
                       << "\t-m  max_batch_size\n"
                       << "\t-f  first_batch_size\n"
                       << "\t-i  iterations\n"
-                      << "\t-c  cores_number\n"
+                      << "\t-k  cores_number\n"
                       << "\t-h  help\n";
             return EXIT_FAILURE;
         }
@@ -376,7 +404,7 @@ int main(int argc, char** argv)
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // NFA SETUP                                                                                  //
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    
+
     std::cout << "# NFA SETUP" << std::endl;
 
     std::ifstream file_nfadata(fullpath_nfadata, std::ios::in | std::ios::binary);
@@ -400,8 +428,8 @@ int main(int argc, char** argv)
             for (uint32_t i=0; i<num_edges; i++)
             {
                 file_nfadata.read(reinterpret_cast<char *>(&raw_edge), sizeof(raw_edge));
-                the_memory[level][i].operand_a = (raw_edge >> SHIFT_OPERAND_A) & MASK_OPERAND_A;
-                the_memory[level][i].operand_b = (raw_edge >> SHIFT_OPERAND_B) & MASK_OPERAND_B;
+                the_memory[level][i].operand_a = (raw_edge >> SHIFT_OPERAND_A) & MASK_OPERANDS;
+                the_memory[level][i].operand_b = (raw_edge >> SHIFT_OPERAND_B) & MASK_OPERANDS;
                 the_memory[level][i].pointer = (raw_edge >> SHIFT_POINTER) & MASK_POINTER;
                 the_memory[level][i].last = (raw_edge >> SHIFT_LAST) & 1;
                 #ifdef EXEC_DEBUG
@@ -472,9 +500,8 @@ int main(int argc, char** argv)
     std::ofstream file_benchmark(fullpath_benchmark);
     std::ofstream file_results(fullpath_results);
     file_benchmark << "batch_size,total_ns" << std::endl;
-    file_results << "query_id,content_id\n";
 
-    operands_t* the_queries;
+    operand_t* the_queries;
     uint32_t* gabarito;
     result_s* results;
     uint32_t aux = 0;
@@ -482,20 +509,20 @@ int main(int argc, char** argv)
     std::chrono::duration<double, std::nano> elapsed;
     for (uint32_t bsize = min_batch_size; bsize < max_batch_size; bsize = bsize << 1)
     {
-        the_queries = (operands_t*) malloc(bsize * CFG_ENGINE_NCRITERIA * sizeof(operands_t));
+        the_queries = (operand_t*) malloc(bsize * CFG_ENGINE_NCRITERIA * sizeof(operand_t));
         results = (result_s*) calloc(bsize, sizeof(*results));
         gabarito = (uint32_t*) calloc(bsize, sizeof(*gabarito));
-        
+
         printf("> # of queries: %9u\n", bsize);
         printf("> Queries size: %9u bytes\n", bsize * query_size);
-        printf("> Results size: %9u bytes\n", bsize * (uint)sizeof(operands_t));
+        printf("> Results size: %9u bytes\n", bsize * (uint)sizeof(operand_t));
 
         for (uint32_t i = 0; i < iterations; i++)
         {
             for (uint32_t k = 0; k < bsize; k++)
             {
                 memcpy(&the_queries[k*CFG_ENGINE_NCRITERIA], &(workload_buff[aux * query_size]),
-                    CFG_ENGINE_NCRITERIA * sizeof(operands_t));
+                    CFG_ENGINE_NCRITERIA * sizeof(operand_t));
                 gabarito[k] = aux;
                 aux = (aux + 1) % workload_size;
             }
@@ -528,13 +555,15 @@ int main(int argc, char** argv)
         // RESULTS                                                                                //
         ////////////////////////////////////////////////////////////////////////////////////////////
 
+        file_results << "query_id,content_id\n";
         for (uint vtc = 0; vtc < bsize; ++vtc)
             file_results << gabarito[vtc] << "," << results[vtc].pointer << std::endl;
+        std::cout << std::endl << std::endl;
 
         free(the_queries);
         free(results);
         free(gabarito);
-    }   
+    }
     delete [] workload_buff;
     file_benchmark.close();
     file_results.close();

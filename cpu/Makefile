@@ -78,7 +78,6 @@ POSTCOMPILE = mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d
 # EXEC
 HEURISTIC = h2Des
 TARGET = hw_emu
-DEVICE=$(AWS_PLATFORM)
 ifeq ($(TARGET),hw_emu)
 	DATA_INPUT_PATH ?= ../sw/build-zrh_$(HEURISTIC)
 else
@@ -86,8 +85,8 @@ else
 endif
 DATA_OUTPUT_PATH := ./benchmark
 FIRST_BATCH_SIZE := 1
-MAX_BATCH_SIZE := 100
-ITERATIONS := 10
+MAX_BATCH_SIZE := 129
+ITERATIONS := 1
 KERNELS_TO_RUN := 1
 KERNEL_CONFIG_TAG := $(ENGINES)e$(shell printf "%X" $(KERNELS_TO_RUN))k
 

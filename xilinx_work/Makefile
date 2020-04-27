@@ -62,7 +62,7 @@ ABS_COMMON_REPO = $(shell readlink -f $(COMMON_REPO))
 TARGET := hw_emu
 HOST_ARCH := x86
 SYSROOT := 
-DEVICE = xilinx_u250_qdma_201920_1
+DEVICE := xilinx_u250_qdma_201920_1
 KERNELS = 1# in dec
 ENGINES = 1# in hex
 HEURISTIC = h2Des
@@ -90,7 +90,7 @@ BUILD_DIR := ./_xclbin.$(TARGET).$(XSA).$(HEURISTIC).$(ENGINES)e_$(shell printf 
 VIVADO := $(XILINX_VIVADO)/bin/vivado
 
 # GUI or batch mode for hardware emulation
-EMU_MODE = batch
+EMU_MODE := batch
 
 # Erbium HDL sources
 HW_SRCS = ../hw/$(XL_SHELL)/kernel.xml ../hw/$(XL_SHELL)/package_kernel.tcl

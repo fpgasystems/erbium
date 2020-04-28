@@ -78,75 +78,51 @@ module InputChannel
     localparam LP_RD_MAX_OUTSTANDING = 3;
     localparam LP_RD_FIFO_DEPTH      = LP_AXI_BURST_LEN * (LP_RD_MAX_OUTSTANDING + 1);
 
-    localparam [1:0]
-        IDLE           = 2'b00,
-        READ_NFA       = 2'b01,
-        WAIT_ALL_EDGES = 2'b10,
-        READ_QUERY     = 2'b11;
-
+    localparam [2:0]
+        IDLE                 = 3'b000,
+        PREPARE_NFA          = 3'b001,
+        READ_NFA             = 3'b010,
+        DONE_NFA_WAIT_FIFO   = 3'b011,
+        PREPARE_QUERY        = 3'b100,
+        READ_QUERY           = 3'b101,
+        DONE_QUERY_WAIT_FIFO = 3'b110;
+        
     // Wires and Variables
-    logic [1:0]                     ctrl_state          ;
-    logic                           nfa_start           ;
-    logic                           nfa_done            ;
-    logic                           nfa_done_dataclk    ;
-    logic                           nfa_reload          ;
-    logic [63:0]                    last_nfa_hash       ;
-    logic [C_LENGTH_WIDTH-1:0]      nfa_cls_total       ;
-    logic [C_LENGTH_WIDTH-1:0]      nfa_cls_received    ;
-
-    logic                           nfa_m_axi_arvalid   ;
-    logic                           nfa_m_axi_arready   ;
-    logic [C_M_AXI_ADDR_WIDTH-1:0]  nfa_m_axi_araddr    ;
-    logic [7:0]                     nfa_m_axi_arlen     ;
-    logic [2:0]                     nfa_m_axi_arsize    ;
-    logic                           nfa_m_axi_rvalid    ;
-    logic                           nfa_m_axi_rready    ;
-    logic [C_M_AXI_DATA_WIDTH-1:0]  nfa_m_axi_rdata     ;
-    logic                           nfa_m_axi_rlast     ;
-    logic [1:0]                     nfa_m_axi_rresp     ;
-    logic                           nfa_axis_tvalid     ;
-    logic                           nfa_axis_tready_n   ;
-    logic [C_M_AXI_DATA_WIDTH-1:0]  nfa_axis_tdata      ;
-    logic                           nfa_fifo_full       ;
-    logic                           nfa_fifo_tvalid_n   ;
-    logic [C_M_AXI_DATA_WIDTH-1:0]  nfa_fifo_tdata      ;
-    logic                           nfa_fifo_tready     ;
-
-    logic                           query_start         ;
-    logic                           query_done          ;
-    logic                           query_done_dataclk  ;
-    logic [C_LENGTH_WIDTH-1:0]      query_cls_total     ;
-    logic [C_LENGTH_WIDTH-1:0]      query_cls_received  ;
-
-    logic                           query_m_axi_arvalid ;
-    logic                           query_m_axi_arready ;
-    logic [C_M_AXI_ADDR_WIDTH-1:0]  query_m_axi_araddr  ;
-    logic [7:0]                     query_m_axi_arlen   ;
-    logic [2:0]                     query_m_axi_arsize  ;
-    logic                           query_m_axi_rvalid  ;
-    logic                           query_m_axi_rready  ;
-    logic [C_M_AXI_DATA_WIDTH-1:0]  query_m_axi_rdata   ;
-    logic                           query_m_axi_rlast   ;
-    logic [1:0]                     query_m_axi_rresp   ;
-    logic                           query_axis_tvalid   ;
-    logic                           query_axis_tready_n ;
-    logic [C_M_AXI_DATA_WIDTH-1:0]  query_axis_tdata    ;
-    logic                           query_fifo_full     ;
-    logic                           query_fifo_tvalid_n ;
-    logic [C_M_AXI_DATA_WIDTH-1:0]  query_fifo_tdata    ;
-    logic                           query_fifo_tready   ;
-
+    logic [2:0]                     ctrl_state           ;
+    logic                           ctrl_done_r          ;
+    logic                           axim_start           ;
+    logic                           axim_done_pulse      ;
+    logic                           axim_done            ;
+    logic                           axim_done_axisclk    ;
+    logic [C_M_AXI_ADDR_WIDTH-1:0]  axim_offset          ;
+    logic [C_LENGTH_WIDTH-1:0]      axim_length          ;
+    logic [C_LENGTH_WIDTH-1:0]      axim_length_axisclk  ;
+    logic [C_LENGTH_WIDTH-1:0]      fifo_rd_count        ;
+    logic                           fifo_tvalid          ;
+    logic                           fifo_tready_n        ;
+    logic [C_M_AXI_DATA_WIDTH-1:0]  fifo_tdata           ;
+    logic                           fifo_full            ;
+    logic                           fifo_empty           ;
+    logic                           fifo_done            ;
+    logic                           fifo_done_dataclk    ;
+    logic                           m_axis_ttype_dataclk ;
+    logic [63:0]                    last_nfa_hash        ;
 
     ///////////////////////////////////////////////////////////////////////////
-    // State machine starting
-    //   - NFA loading into the core
-    //   - queries execution
+    // State machine for loading data into the core:
+    //   - NFA data at first iteration and at every nfa_hash change
+    //   - Queries
     ///////////////////////////////////////////////////////////////////////////
+
+    assign ctrl_done = ctrl_done_r;
 
     always @ (posedge data_clk) begin
 
         if (data_rst_n == 1'b0) begin
-            ctrl_state <= IDLE;
+            ctrl_done_r <= 1'b0;
+            ctrl_state  <= IDLE;
+            axim_start  <= 1'b0;
+            axim_done   <= 1'b0;
             last_nfa_hash <= 64'b0;
         end
         else begin
@@ -156,336 +132,240 @@ module InputChannel
                 default : begin
                     // Launch processing but reload NFA in case new
                     // NFA has been loaded
+                    ctrl_done_r <= 1'b0;
                     if (ctrl_start == 1'b1) begin
                         if (nfa_hash != last_nfa_hash) begin
                             last_nfa_hash <= nfa_hash;
-                            ctrl_state <= READ_NFA;
+                            ctrl_state  <= PREPARE_NFA;
                         end else begin
-                            ctrl_state <= WAIT_ALL_EDGES;
+                            ctrl_state <= PREPARE_QUERY;
                         end
                     end
                 end
+                // Prepare signals for loading NFA
+                PREPARE_NFA : begin
+                    axim_start  <= 1'b1;
+                    axim_offset <= nfadata_ptr;
+                    axim_length <= nfadata_cls;
+                    ctrl_state  <= READ_NFA;
+                    m_axis_ttype_dataclk <= 1'b0;
+                end
                 // Reload NFA into the core
                 READ_NFA : begin
-                    if (nfa_done_dataclk == 1'b1)
-                        ctrl_state <= WAIT_ALL_EDGES;
+                    axim_start <= 1'b0;
+                    if (axim_done_pulse == 1'b1) begin
+                        ctrl_state <= DONE_NFA_WAIT_FIFO;
+                        axim_done  <= 1'b1;
+                    end
                 end
-                // Tempo state
-                WAIT_ALL_EDGES : begin
-                    ctrl_state <= READ_QUERY;
+                // Wait for FIFO to be fully read
+                DONE_NFA_WAIT_FIFO : begin
+                    if (fifo_done_dataclk == 1'b1) begin
+                        ctrl_state <= PREPARE_QUERY;
+                        axim_done  <= 1'b0;
+                    end
+                end
+                // Prepare signals for loading queries
+                PREPARE_QUERY : begin
+                    axim_start  <= 1'b1;
+                    axim_offset <= queries_ptr;
+                    axim_length <= queries_cls;
+                    ctrl_state  <= READ_QUERY;
+                    m_axis_ttype_dataclk <= 1'b1;
                 end
                 // Read query and wait for processing completion
                 READ_QUERY : begin
-                    if (query_done_dataclk == 1'b1)
-                        ctrl_state <= IDLE;
+                    axim_start <= 1'b0;
+                    if (axim_done_pulse == 1'b1) begin
+                        ctrl_state <= DONE_QUERY_WAIT_FIFO;
+                        axim_done  <= 1'b1;
+                    end
+
+                end
+                // Wait for FIFO to be fully read
+                DONE_QUERY_WAIT_FIFO : begin
+                    if (fifo_done_dataclk == 1'b1) begin
+                        ctrl_state  <= IDLE;
+                        ctrl_done_r <= 1'b1;
+                        axim_done   <= 1'b0;
+                    end
                 end
             endcase
         end
     end
 
-    assign ctrl_done   = query_done;
-    assign nfa_start   = (ctrl_state == READ_NFA);
-    assign query_start = (ctrl_state == READ_QUERY);
-
-
     ///////////////////////////////////////////////////////////////////////////
     // AXI ADDRESS CHANNEL ID UPDATE
     ///////////////////////////////////////////////////////////////////////////
 
-    // WHY NOT INCREMENT IT?
     always @ (posedge data_clk) begin
         if (~data_rst_n) begin
             m_axi_arid <= {C_M_AXI_ID_WIDTH{1'b1}};
         end
-        else if (nfa_done_dataclk || query_done_dataclk) begin
+        else if (axim_done == 1'b1) begin
             m_axi_arid <= ~m_axi_arid;
         end
     end
 
     ///////////////////////////////////////////////////////////////////////////
-    // SHARE AXI4 READ MASTER TO TWO CHANNELS (NFA AND QUERY)
+    // DATA CHANNEL
     ///////////////////////////////////////////////////////////////////////////
 
-    // TX
-    assign m_axi_arvalid = (ctrl_state == READ_NFA) ? nfa_m_axi_arvalid : (ctrl_state == READ_QUERY) ? query_m_axi_arvalid : 0;
-    assign m_axi_araddr  = (ctrl_state == READ_NFA) ? nfa_m_axi_araddr  : (ctrl_state == READ_QUERY) ? query_m_axi_araddr  : 0;
-    assign m_axi_arlen   = (ctrl_state == READ_NFA) ? nfa_m_axi_arlen   : (ctrl_state == READ_QUERY) ? query_m_axi_arlen   : 0;
-    assign m_axi_arsize  = (ctrl_state == READ_NFA) ? nfa_m_axi_arsize  : (ctrl_state == READ_QUERY) ? query_m_axi_arsize  : 0;
-    assign m_axi_rready  = (ctrl_state == READ_NFA) ? nfa_m_axi_rready  : (ctrl_state == READ_QUERY) ? query_m_axi_rready  : 0;
+    // AXI4 Read Master
+    xdma_axi_read_master #(
+        .C_ADDR_WIDTH       ( C_M_AXI_ADDR_WIDTH    ),
+        .C_DATA_WIDTH       ( C_M_AXI_DATA_WIDTH    ),
+        .C_LENGTH_WIDTH     ( C_LENGTH_WIDTH        ),
+        .C_BURST_LEN        ( LP_AXI_BURST_LEN      ),
+        .C_LOG_BURST_LEN    ( LP_LOG_BURST_LEN      ),
+        .C_MAX_OUTSTANDING  ( LP_RD_MAX_OUTSTANDING )
+    ) xdma_axi_read_master_inst (
+        .aclk           ( data_clk        ),
+        .areset         ( ~data_rst_n     ),
+        .ctrl_start     ( axim_start      ),
+        .ctrl_done      ( axim_done_pulse ),
+        .ctrl_offset    ( axim_offset     ),
+        .ctrl_length    ( axim_length     ),
+        .ctrl_prog_full ( fifo_full       ),
+        .arvalid        ( m_axi_arvalid   ),
+        .arready        ( m_axi_arready   ),
+        .araddr         ( m_axi_araddr    ),
+        .arlen          ( m_axi_arlen     ),
+        .arsize         ( m_axi_arsize    ),
+        .rvalid         ( m_axi_rvalid    ),
+        .rready         ( m_axi_rready    ),
+        .rdata          ( m_axi_rdata     ),
+        .rlast          ( m_axi_rlast     ),
+        .rresp          ( m_axi_rresp     ),
 
-    // RX
-    //  WRONG OPERATOR: & to use instead of &&
-    assign nfa_m_axi_arready   = (ctrl_state == READ_NFA  ) & m_axi_arready;
-    assign nfa_m_axi_rvalid    = (ctrl_state == READ_NFA  ) & m_axi_rvalid;
-    assign nfa_m_axi_rdata     = m_axi_rdata;
-    assign nfa_m_axi_rlast     = m_axi_rlast;
-    assign nfa_m_axi_rresp     = m_axi_rresp;
-    //  WRONG OPERATOR: & to use instead of &&
-    assign query_m_axi_arready = (ctrl_state == READ_QUERY) & m_axi_arready;
-    assign query_m_axi_rvalid  = (ctrl_state == READ_QUERY) & m_axi_rvalid;
-    assign query_m_axi_rdata   = m_axi_rdata;
-    assign query_m_axi_rlast   = m_axi_rlast;
-    assign query_m_axi_rresp   = m_axi_rresp;
+        .m_tvalid       ( fifo_tvalid     ),
+        .m_tready       ( ~fifo_tready_n  ),
+        .m_tdata        ( fifo_tdata      )
+    );
 
-    // AXI stream to user core
-    assign m_axis_tvalid = (ctrl_state == READ_NFA) ? ~nfa_fifo_tvalid_n : (ctrl_state == READ_QUERY) ? ~query_fifo_tvalid_n : 1'b0;
-    assign m_axis_tdata  = (ctrl_state == READ_NFA) ? nfa_fifo_tdata     : query_fifo_tdata;
-    assign m_axis_tlast  = (ctrl_state == READ_NFA) ? nfa_done           : query_done;
-    assign m_axis_ttype  = (ctrl_state == READ_NFA) ? 1'b0               : 1'b1;
-
-    assign nfa_fifo_tready   = (ctrl_state == READ_NFA)   ? m_axis_tready : 1'b0;
-    assign query_fifo_tready = (ctrl_state == READ_QUERY) ? m_axis_tready : 1'b0;
-
+    // FIFO for CDC
+    xpm_fifo_async # (
+        .FIFO_MEMORY_TYPE     ( "auto"                     ),
+        .ECC_MODE             ( "no_ecc"                   ),
+        .RELATED_CLOCKS       ( 0                          ),
+        .FIFO_WRITE_DEPTH     ( LP_RD_FIFO_DEPTH           ),
+        .WRITE_DATA_WIDTH     ( C_M_AXI_DATA_WIDTH         ),
+        .WR_DATA_COUNT_WIDTH  ( $clog2(LP_RD_FIFO_DEPTH)+1 ),
+        .PROG_FULL_THRESH     ( LP_AXI_BURST_LEN-2         ),
+        .FULL_RESET_VALUE     ( 1                          ),
+        .READ_MODE            ( "fwft"                     ),
+        .FIFO_READ_LATENCY    ( 1                          ),
+        .READ_DATA_WIDTH      ( C_M_AXI_DATA_WIDTH         ),
+        .RD_DATA_COUNT_WIDTH  ( $clog2(LP_RD_FIFO_DEPTH)+1 ),
+        .PROG_EMPTY_THRESH    ( 10                         ),
+        .DOUT_RESET_VALUE     ( "0"                        ),
+        .CDC_SYNC_STAGES      ( 3                          ),
+        .WAKEUP_TIME          ( 0                          )
+    ) xpm_fifo_async_inst (
+        .rst           ( ~data_rst_n     ),
+        .wr_clk        ( data_clk        ),
+        .prog_full     ( fifo_full       ),
+        .wr_en         ( fifo_tvalid     ),
+        .din           ( fifo_tdata      ),
+        .full          ( fifo_tready_n   ),
+        .rd_clk        ( m_axis_aclk     ),
+        .rd_en         ( m_axis_tready   ),
+        .dout          ( m_axis_tdata    ),
+        .empty         ( fifo_empty      ),
+        .prog_empty    (                 ),
+        .underflow     (                 ),
+        .wr_rst_busy   (                 ),
+        .rd_rst_busy   (                 ),
+        .wr_data_count (                 ),
+        .rd_data_count (                 ),
+        .overflow      (                 ),
+        .sleep         ( 1'b0            ),
+        .injectsbiterr ( 1'b0            ),
+        .injectdbiterr ( 1'b0            ),
+        .sbiterr       (                 ),
+        .dbiterr       (                 )
+    );
 
     ///////////////////////////////////////////////////////////////////////////
-    // Counters tracking NFA load and query processing status
+    // FIFO EMPTY SIGNAL GENERATION
     ///////////////////////////////////////////////////////////////////////////
 
-    always @ (posedge data_clk) begin
-
-        if (data_rst_n == 1'b0) begin
-            nfa_cls_total   <= {C_LENGTH_WIDTH{1'b0}};
-            query_cls_total <= {C_LENGTH_WIDTH{1'b0}};
-        end else if (ctrl_start) begin
-            nfa_cls_total   <= nfadata_cls - 1'b1;
-            query_cls_total <= queries_cls - 1'b1;
-        end
-    end
-
-    always @ (posedge m_axis_aclk) begin
-        if (m_axis_areset_n == 1'b0) begin
-            nfa_cls_received   <= {C_LENGTH_WIDTH{1'b0}};
-            query_cls_received <= {C_LENGTH_WIDTH{1'b0}};
+    always@(posedge m_axis_aclk) begin
+        if (~m_axis_areset_n) begin
+            fifo_rd_count <= 1'b1;
         end
         else begin
-            //
-            if (nfa_done) begin
-                nfa_cls_received <= {C_LENGTH_WIDTH{1'b0}};
+            if (fifo_done == 1'b1) begin
+                fifo_rd_count <= 1'b1;
             end
-            // POTENTIAL FAILURE: CAN'T WAIT FOR TREADY
-            else if (~nfa_fifo_tvalid_n && nfa_fifo_tready) begin
-                nfa_cls_received <= nfa_cls_received + 1'b1;
-            end
-            //
-            if (query_done) begin
-                query_cls_received  <= {C_LENGTH_WIDTH{1'b0}};
-            end
-            // POTENTIAL FAILURE: CAN'T WAIT FOR TREADY
-            else if (~query_fifo_tvalid_n && query_fifo_tready) begin
-                query_cls_received <= query_cls_received + 1'b1;
+            else if ((m_axis_tvalid && m_axis_tready) == 1'b1) begin
+                fifo_rd_count <= fifo_rd_count + 1'b1;
             end
         end
     end
 
-    // POSSIBLE CDC ISSUE!
-    //   - nfa_cls_received : m_axis_aclk
-    //   - nfa_cls_total: data_clk
-    // WRONG OPERATOR: & to use instead of &&
-    assign nfa_done   = ~nfa_fifo_tvalid_n   & nfa_fifo_tready   & (nfa_cls_received == nfa_cls_total);
-    assign query_done = ~query_fifo_tvalid_n & query_fifo_tready & (query_cls_received == query_cls_total);
-
-    ///////////////////////////////////////////////////////////////////////////
-    // NFA DATA CHANNEL
-    ///////////////////////////////////////////////////////////////////////////
-
-    // AXI4 Read Master
-    xdma_axi_read_master #(
-        .C_ADDR_WIDTH       ( C_M_AXI_ADDR_WIDTH    ),
-        .C_DATA_WIDTH       ( C_M_AXI_DATA_WIDTH    ),
-        .C_LENGTH_WIDTH     ( C_LENGTH_WIDTH        ),
-        .C_BURST_LEN        ( LP_AXI_BURST_LEN      ),
-        .C_LOG_BURST_LEN    ( LP_LOG_BURST_LEN      ),
-        .C_MAX_OUTSTANDING  ( LP_RD_MAX_OUTSTANDING )
-    )
-
-    // AVOID USING RESET TO CONTROL THE MODULE
-    nfa_axi_read_master (
-        .aclk           ( data_clk            ),
-        .areset         ( ~data_rst_n | nfa_done_dataclk ),
-        .ctrl_start     ( nfa_start           ),
-        .ctrl_done      (                     ),
-        .ctrl_offset    ( nfadata_ptr         ),
-        .ctrl_length    ( nfadata_cls         ),
-        .ctrl_prog_full ( nfa_fifo_full       ),
-        .arvalid        ( nfa_m_axi_arvalid   ),
-        .arready        ( nfa_m_axi_arready   ),
-        .araddr         ( nfa_m_axi_araddr    ),
-        .arlen          ( nfa_m_axi_arlen     ),
-        .arsize         ( nfa_m_axi_arsize    ),
-        .rvalid         ( nfa_m_axi_rvalid    ),
-        .rready         ( nfa_m_axi_rready    ),
-        .rdata          ( nfa_m_axi_rdata     ),
-        .rlast          ( nfa_m_axi_rlast     ),
-        .rresp          ( nfa_m_axi_rresp     ),
-
-        .m_tvalid       ( nfa_axis_tvalid     ),
-        .m_tready       ( ~nfa_axis_tready_n  ),
-        .m_tdata        ( nfa_axis_tdata      )
-    );
-
-    // FIFO for CDC
-    xpm_fifo_async # (
-        .FIFO_MEMORY_TYPE     ( "auto"                     ),
-        .ECC_MODE             ( "no_ecc"                   ),
-        .RELATED_CLOCKS       ( 0                          ),
-        .FIFO_WRITE_DEPTH     ( LP_RD_FIFO_DEPTH           ),
-        .WRITE_DATA_WIDTH     ( C_M_AXI_DATA_WIDTH         ),
-        .WR_DATA_COUNT_WIDTH  ( $clog2(LP_RD_FIFO_DEPTH)+1 ),
-        .PROG_FULL_THRESH     ( LP_AXI_BURST_LEN-2         ),
-        .FULL_RESET_VALUE     ( 1                          ),
-        .READ_MODE            ( "fwft"                     ),
-        .FIFO_READ_LATENCY    ( 1                          ),
-        .READ_DATA_WIDTH      ( C_M_AXI_DATA_WIDTH         ),
-        .RD_DATA_COUNT_WIDTH  ( $clog2(LP_RD_FIFO_DEPTH)+1 ),
-        .PROG_EMPTY_THRESH    ( 10                         ),
-        .DOUT_RESET_VALUE     ( "0"                        ),
-        .CDC_SYNC_STAGES      ( 3                          ),
-        .WAKEUP_TIME          ( 0                          )
-    )
-
-    nfa_rd_xpm_fifo_async (
-        .rst           ( ~data_rst_n       ),
-        .wr_clk        ( data_clk          ),
-        .wr_en         ( nfa_axis_tvalid   ),
-        .din           ( nfa_axis_tdata    ),
-        .full          ( nfa_axis_tready_n ),
-        .overflow      (                   ),
-        .wr_rst_busy   (                   ),
-        .rd_clk        ( m_axis_aclk       ),
-        .rd_en         ( nfa_fifo_tready   ),
-        .dout          ( nfa_fifo_tdata    ),
-        .empty         ( nfa_fifo_tvalid_n ),
-        .underflow     (                   ),
-        .rd_rst_busy   (                   ),
-        .prog_full     ( nfa_fifo_full     ),
-        .wr_data_count (                   ),
-        .prog_empty    (                   ),
-        .rd_data_count (                   ),
-        .sleep         ( 1'b0              ),
-        .injectsbiterr ( 1'b0              ),
-        .injectdbiterr ( 1'b0              ),
-        .sbiterr       (                   ),
-        .dbiterr       (                   )
-    );
-
-
-    ///////////////////////////////////////////////////////////////////////////
-    // QUERY DATA CHANNEL
-    ///////////////////////////////////////////////////////////////////////////
-
-    // AXI4 Read Master
-    xdma_axi_read_master #(
-        .C_ADDR_WIDTH       ( C_M_AXI_ADDR_WIDTH    ),
-        .C_DATA_WIDTH       ( C_M_AXI_DATA_WIDTH    ),
-        .C_LENGTH_WIDTH     ( C_LENGTH_WIDTH        ),
-        .C_BURST_LEN        ( LP_AXI_BURST_LEN      ),
-        .C_LOG_BURST_LEN    ( LP_LOG_BURST_LEN      ),
-        .C_MAX_OUTSTANDING  ( LP_RD_MAX_OUTSTANDING )
-    )
-
-    // AVOID USING RESET TO CONTROL THE MODULE
-    query_axi_read_master (
-        .aclk           ( data_clk            ),
-        .areset         ( ~data_rst_n | query_done_dataclk ),
-
-        .ctrl_start     ( query_start          ),
-        .ctrl_done      (                      ),
-        .ctrl_offset    ( queries_ptr          ),
-        .ctrl_length    ( queries_cls          ),
-        .ctrl_prog_full ( query_fifo_full      ),
-
-        .arvalid        ( query_m_axi_arvalid  ),
-        .arready        ( query_m_axi_arready  ),
-        .araddr         ( query_m_axi_araddr   ),
-        .arlen          ( query_m_axi_arlen    ),
-        .arsize         ( query_m_axi_arsize   ),
-        .rvalid         ( query_m_axi_rvalid   ),
-        .rready         ( query_m_axi_rready   ),
-        .rdata          ( query_m_axi_rdata    ),
-        .rlast          ( query_m_axi_rlast    ),
-        .rresp          ( query_m_axi_rresp    ),
-
-        .m_tvalid       ( query_axis_tvalid    ),
-        .m_tready       ( ~query_axis_tready_n ),
-        .m_tdata        ( query_axis_tdata     )
-    );
-
-    // FIFO for CDC
-    xpm_fifo_async # (
-        .FIFO_MEMORY_TYPE     ( "auto"                     ),
-        .ECC_MODE             ( "no_ecc"                   ),
-        .RELATED_CLOCKS       ( 0                          ),
-        .FIFO_WRITE_DEPTH     ( LP_RD_FIFO_DEPTH           ),
-        .WRITE_DATA_WIDTH     ( C_M_AXI_DATA_WIDTH         ),
-        .WR_DATA_COUNT_WIDTH  ( $clog2(LP_RD_FIFO_DEPTH)+1 ),
-        .PROG_FULL_THRESH     ( LP_AXI_BURST_LEN-2         ),
-        .FULL_RESET_VALUE     ( 1                          ),
-        .READ_MODE            ( "fwft"                     ),
-        .FIFO_READ_LATENCY    ( 1                          ),
-        .READ_DATA_WIDTH      ( C_M_AXI_DATA_WIDTH         ),
-        .RD_DATA_COUNT_WIDTH  ( $clog2(LP_RD_FIFO_DEPTH)+1 ),
-        .PROG_EMPTY_THRESH    ( 10                         ),
-        .DOUT_RESET_VALUE     ( "0"                        ),
-        .CDC_SYNC_STAGES      ( 3                          ),
-        .WAKEUP_TIME          ( 0                          )
-    )
-
-    query_rd_xpm_fifo_async (
-        .rst           ( ~data_rst_n         ),
-        .wr_clk        ( data_clk            ),
-        .wr_en         ( query_axis_tvalid   ),
-        .din           ( query_axis_tdata    ),
-        .full          ( query_axis_tready_n ),
-        .overflow      (                     ),
-        .wr_rst_busy   (                     ),
-        .rd_clk        ( m_axis_aclk         ),
-        .rd_en         ( query_fifo_tready   ),
-        .dout          ( query_fifo_tdata    ),
-        .empty         ( query_fifo_tvalid_n ),
-        .underflow     (                     ),
-        .rd_rst_busy   (                     ),
-        .prog_full     ( query_fifo_full     ),
-        .wr_data_count (                     ),
-        .prog_empty    (                     ),
-        .rd_data_count (                     ),
-        .sleep         ( 1'b0                ),
-        .injectsbiterr ( 1'b0                ),
-        .injectdbiterr ( 1'b0                ),
-        .sbiterr       (                     ),
-        .dbiterr       (                     )
-    );
+    // AXI stream to user core
+    assign m_axis_tvalid = ~fifo_empty;
+    assign m_axis_tlast  = (fifo_rd_count == axim_length_axisclk);
+    assign fifo_done     = m_axis_tvalid & m_axis_tready & (fifo_rd_count == axim_length_axisclk);
 
     ///////////////////////////////////////////////////////////////////////////
     // CDC
     ///////////////////////////////////////////////////////////////////////////
 
-    // xpm_cdc_pulse: Pulse Transfer
-    // Xilinx Parameterized Macro, version 2018.3
     xpm_cdc_pulse #(
         .DEST_SYNC_FF   ( 3 ),
         .INIT_SYNC_FF   ( 0 ),
         .REG_OUTPUT     ( 0 ),
         .RST_USED       ( 0 ),
         .SIM_ASSERT_CHK ( 0 )
-    ) inst_nfa_done_dataclk (
-        .dest_pulse     ( nfa_done_dataclk ),
-        .dest_clk       ( data_clk         ),
-        .src_clk        ( m_axis_aclk      ),
-        .src_pulse      ( nfa_done         )
+    )
+    inst_query_done_dataclk (
+        .dest_pulse     ( fifo_done_dataclk ),
+        .dest_clk       ( data_clk          ),
+        .src_clk        ( m_axis_aclk       ),
+        .src_pulse      ( fifo_done         )
     );
 
-    xpm_cdc_pulse #(
+    xpm_cdc_array_single #(
         .DEST_SYNC_FF   ( 3 ),
         .INIT_SYNC_FF   ( 0 ),
-        .REG_OUTPUT     ( 0 ),
-        .RST_USED       ( 0 ),
-        .SIM_ASSERT_CHK ( 0 )
-    ) inst_query_done_dataclk (
-        .dest_pulse     ( query_done_dataclk ),
-        .dest_clk       ( data_clk           ),
-        .src_clk        ( m_axis_aclk        ),
-        .src_pulse      ( query_done         )
+        .SIM_ASSERT_CHK ( 0 ),
+        .SRC_INPUT_REG  ( 1 ),
+        .WIDTH          ( 1 )
+    ) cdc_m_axis_ttype_dataclk (
+        .dest_out       ( m_axis_ttype         ),
+        .dest_clk       ( m_axis_aclk          ),
+        .src_clk        ( data_clk             ),
+        .src_in         ( m_axis_ttype_dataclk )
     );
+
+    xpm_cdc_array_single #(
+        .DEST_SYNC_FF   ( 3 ),
+        .INIT_SYNC_FF   ( 0 ),
+        .SIM_ASSERT_CHK ( 0 ),
+        .SRC_INPUT_REG  ( 1 ),
+        .WIDTH          ( 1 )
+    ) cdc_axim_done_axisclk (
+        .dest_out       ( axim_done_axisclk ),
+        .dest_clk       ( m_axis_aclk       ),
+        .src_clk        ( data_clk          ),
+        .src_in         ( axim_done         )
+    );
+
+    xpm_cdc_array_single #(
+        .DEST_SYNC_FF   ( 3 ),
+        .INIT_SYNC_FF   ( 0 ),
+        .SIM_ASSERT_CHK ( 0 ),
+        .SRC_INPUT_REG  ( 1 ),
+        .WIDTH          ( C_M_AXI_ADDR_WIDTH )
+    ) cdc_axim_length_axisclk (
+        .dest_out       ( axim_length_axisclk ),
+        .dest_clk       ( m_axis_aclk         ),
+        .src_clk        ( data_clk            ),
+        .src_in         ( axim_length         )
+    );
+    
 
 endmodule
 

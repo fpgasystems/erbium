@@ -119,17 +119,17 @@ assign m_axi_gmem_arregion = 4'b0000 ;
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Wires and Variables
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-wire            ap_start           ;
-wire            ap_ready           ;
-wire            ap_done            ;
-wire            ap_idle     = 1'b1 ;
-wire [32-1:0]   nfadata_cls        ;
-wire [32-1:0]   queries_cls        ;
-wire [32-1:0]   results_cls        ;
-wire [64-1:0]   nfa_hash           ;
-wire [64-1:0]   nfadata_ptr        ;
-wire [64-1:0]   queries_ptr        ;
-wire [64-1:0]   results_ptr        ;
+wire            ap_start    ;
+wire            ap_ready    ;
+wire            ap_done     ;
+wire            ap_idle     ;
+wire [32-1:0]   nfadata_cls ;
+wire [32-1:0]   queries_cls ;
+wire [32-1:0]   results_cls ;
+wire [64-1:0]   nfa_hash    ;
+wire [64-1:0]   nfadata_ptr ;
+wire [64-1:0]   queries_ptr ;
+wire [64-1:0]   results_ptr ;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Begin control interface RTL

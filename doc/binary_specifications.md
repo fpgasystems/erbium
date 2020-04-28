@@ -9,8 +9,8 @@ Each query is 512-bit aligned. Within each query, values are 16-bit aligned, the
 |  0  ...  12 |   ....   | 16  ...  28 |   ....   |  32  ...  495 | 496  ...  508 | .... 511 |
 |   value 0   | zero-pad |   value 1   | zero-pad |     .....     |    value 31   | zero-pad |
 ```
-Constant | Description | 
-----------------------------------|-------------|---
+Constant                          | Description  
+----------------------------------|-----------------------------------
 `CFG_ENGINE_NCRITERIA` (22)       | # of criteria
 `CFG_CRITERION_VALUE_WIDTH` (13b) | # of bits per criterion value
 `CFG_RAW_OPERAND_WIDTH` (16b)     | # of bits for SW/HW communication

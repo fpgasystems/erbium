@@ -39,8 +39,8 @@ help:
 	$(ECHO) "      Command to run application (emulation or on hw platform)"
 	$(ECHO) ""
 	$(ECHO) "  options:"
-	$(ECHO) "      TARGET=<hw_emu/hw>"
-	$(ECHO) "      DEVICE= <$AWS_PLATFORM (default), xilinx_u250_xdma_201830_2, xilinx_u250_qdma_201920_1, xilinx_u280_xdma_201920_1>"
+	$(ECHO) "      TARGET=<hw (default) / hw_emu>"
+	$(ECHO) "      DEVICE=<$AWS_PLATFORM (default), xilinx_u250_xdma_201830_2, xilinx_u250_qdma_201920_1, xilinx_u280_xdma_201920_1>"
 	$(ECHO) "      KERNELS=# -- in dec"
 	$(ECHO) "      ENGINES=# -- in hex"
 	$(ECHO) "      HEURISTIC=<h1Asc / h1Des / h2Asc / h2Des (default) / hRand>"
@@ -59,10 +59,10 @@ COMMON_REPO = ../../Vitis_Accel_Examples
 PWD = $(shell readlink -f .)
 ABS_COMMON_REPO = $(shell readlink -f $(COMMON_REPO))
 
-TARGET := hw_emu
-HOST_ARCH := x86
-SYSROOT := 
-DEVICE := xilinx_u250_qdma_201920_1
+TARGET = hw
+HOST_ARCH = x86
+SYSROOT = 
+DEVICE = $(AWS_PLATFORM)
 KERNELS = 1# in dec
 ENGINES = 1# in hex
 HEURISTIC = h2Des
@@ -164,7 +164,7 @@ BENCHMARK_FILE := $(DATA_OUTPUT_PATH)/ben_$(FRIENDLY_DEVICE)_$(HEURISTIC)_$(KERN
 # datetime time
 # exec directory
 
-.PHONY: all clean cleanall help emconfig build compile run aws_build aws_copy
+.PHONY: all clean cleanall help emconfig build compile run aws_build aws_notify aws_copy
 
 # Build all generation files (for a given target)
 all: check-devices compile build emconfig
@@ -180,7 +180,8 @@ $(BUILD_DIR)/erbium.xclbin: $(BINARY_CONTAINER_erbium_OBJS)
 	mkdir -p $(BUILD_DIR)
 	v++ $(CLFLAGS) --temp_dir $(BUILD_DIR) -l $(LDCLFLAGS) \
 		--jobs $(shell grep -c ^processor /proc/cpuinfo) \
-		--optimize 3 --nk erbium:$(KERNELS) -o'$@' $(+)
+		--optimize 3 --nk erbium:$(KERNELS) -o'$@' $(+) \
+		--dk chipscope:erbium_1
 
 # Build kernel
 $(TEMP_DIR)/erbium.xo: $(HW_SRCS)
@@ -239,12 +240,15 @@ aws_build: build
 	-$(RMDIR) $(BUILD_DIR)/erbium.awsxclbin
 	-$(RMDIR) _aws/to_aws
 	(cd _aws && ../aws_create_afi.py .$(BINARY_CONTAINERS))
+
+# Notify via email as soon as the AFI is ready for deployment
+aws_notify: aws_build
 	wait_for_afi.py --afi $(call GetFromJson,$(shell find _aws/ -name '*_afi_id.txt' | sort -d | tail -1),FpgaImageId) --notify --email $(EMAIL)
 
 # Copy locally generated bitstream to AWS instance
 aws_copy:
 	ssh -i ../keys/fpga_aws.pem centos@$(AWS_VM_IP) "mkdir -p /home/centos/gitlab/erbium/xilinx_work/$(BUILD_DIR)/"
-	#scp -rpq -i ../keys/fpga_aws.pem ../sw/build-* centos@$(AWS_VM_IP):/home/centos/erbium
+	scp -rpq -i ../keys/fpga_aws.pem ../sw/build-* centos@$(AWS_VM_IP):/home/centos/gitlab/erbium/sw/
 	scp -rqp -i ../keys/fpga_aws.pem $(BUILD_DIR)/erbium.awsxclbin centos@$(AWS_VM_IP):/home/centos/gitlab/erbium/xilinx_work/$(BUILD_DIR)/erbium.awsxclbin
 
 # Cleaning stuff

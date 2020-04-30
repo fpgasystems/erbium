@@ -186,7 +186,7 @@ $(BUILD_DIR)/erbium.xclbin: $(BINARY_CONTAINER_erbium_OBJS)
 # Build kernel
 $(TEMP_DIR)/erbium.xo: $(HW_SRCS)
 	mkdir -p $(TEMP_DIR)
-	$(VIVADO) -mode batch -nojournal -nolog -source gen_xo.tcl -tclargs $(TEMP_DIR)/erbium.xo \
+	$(VIVADO) -mode batch -source gen_xo.tcl -tclargs $(TEMP_DIR)/erbium.xo \
 		erbium $(TARGET) $(XSA) $(XL_SHELL) $(ENGINES) $(HEURISTIC)
 
 # HW Emulation config file

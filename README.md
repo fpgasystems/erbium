@@ -19,65 +19,73 @@ Two files are required;
  - Rules data set, formatted as `data/demo_01.csv`; and
  - Rule structure file, formatted as `data/demo_ruletype.csv`.
 
-```
-	cd sw
-	make <demo|benchmarks>
+```bash
+cd sw
+make <demo|benchmarks>
 ```
 
 For advanced compilation, check file `sw/erbium.cc` and read all parameters.
 
-> Place `sw/<build_dir>/cfg_criteria_<heuristic>.vhd` into `./hw/custom/`
+Place `sw/<build_dir>/cfg_criteria_<heuristic>.vhd` into `./hw/custom/`
+
 
 ## Hardware Compilation ##
-> Set the `COMMON_DIR` variable in file `xilinx_work/Makefile` to your local [Xilinx Vitis Accel Examples](https://github.com/Xilinx/Vitis_Accel_Examples) directory.
+Set the `COMMON_DIR` variable in file `xilinx_work/Makefile` to your local [Xilinx Vitis Accel Examples](https://github.com/Xilinx/Vitis_Accel_Examples) directory.
 
+```bash
+cd xilinx_work
+make <all|build|compile> TARGET=<sw_emu|hw_emu|hw> DEVICE=<FPGA Platform>
 ```
-	cd xilinx_work
-	make <all|build|compile> TARGET=<sw_emu|hw_emu|hw> DEVICE=<FPGA Platform>
-```
+
 
 ## AWS F1 Generation ##
 You first need to setup the environment and install the AWS F1 shell. More information [here](https://github.com/aws/aws-fpga/tree/master/Vitis).
-```
-	cd ..
-	git clone https://github.com/aws/aws-fpga.git $AWS_FPGA_REPO_DIR  
-	cd $AWS_FPGA_REPO_DIR                                         
-	source vitis_setup.sh
+
+```bash
+cd ..
+git clone https://github.com/aws/aws-fpga.git $AWS_FPGA_REPO_DIR
+cd $AWS_FPGA_REPO_DIR
+source vitis_setup.sh
 ```
 
-The following script will take care of generating the bitstream, the AFI and waiting script
+The following will take care of generating the bitstream, the AFI and notification script:
+
+```bash
+cd erbium/xilinx_work
+make aws_notify TARGET=hw DEVICE=$AWS_PLATFORM EMAIL=<your.email@for_nofication_when.done>
 ```
-	cd erbium/xilinx_work
-	make aws_build TAREGT=hw DEVICE=$AWS_PLATFORM EMAIL=<your.email@for_nofication_when.done>
-```
+
 
 ## Execution ##
-```
-	cd erbium/xilinx_work
-	make check TAREGT=hw DEVICE=<FPGA Platform>
+```bash
+cd erbium/xilinx_work
+make <check|run> TARGET=hw DEVICE=<FPGA Platform>
 ```
 For advanced execution, check file `sw/kernel_<shell>.cpp` and read all parameters.
 
+
 ## Publications ##
-- Fabio Maschi, Muhsen Owaida, Gustavo Alonso, Matteo Casalino, and Anthony Hock-Koon. *Making Search Engines Faster by Lowering the Cost of Querying Business Rules Through FPGAs*. In *Proceedings of the 2020 ACM SIGMOD International Conference on Management of Data (SIGMOD’20), June 14–19, 2020, Portland, OR, USA*. ACM, New York, NY, USA, 17 pages. https://doi.org/10.1145/3318464.3386133
+- Fabio Maschi, Muhsen Owaida, Gustavo Alonso, Matteo Casalino, and Anthony Hock-Koon. *Making Search Engines Faster by Lowering the Cost of Querying Business Rules Through FPGAs*. In *Proceedings of the 2020 ACM SIGMOD International Conference on Management of Data (SIGMOD’20), June 14–19, 2020, Portland, OR, USA*. ACM, New York, NY, USA, 16 pages. https://doi.org/10.1145/3318464.3386133
+ \[[Publication](https://doi.org/10.1145/3318464.3386133)\] \[[Paper](https://dl.acm.org/doi/pdf/10.1145/3318464.3386133)\] \[[Talk](https://www.youtube.com/watch?v=vCIW_RL91as)\] \[[Slides](https://www.research-collection.ethz.ch/bitstream/handle/20.500.11850/419479/2020-06-18SIGMOD.pdf)\] \[[Code](https://github.com/fpgasystems/erbium)\]
 
 ## Citation ##
 If you find the ERBium engine useful, please consider citing the following paper:
+
 ```
 @inproceedings{maschi2020erbium,
   author    = {Fabio Maschi and
                Muhsen Owaida and
                Gustavo Alonso and
                Matteo Casalino and
-               Anthony Hock-Koon},
-  title     = {Making Search Engines Faster by Lowering the Cost of Querying
-               Business Rules Through FPGAs},
-  booktitle = {Proceedings of the 2020 ACM SIGMOD International Conference on
-               Management of Data (SIGMOD'20), June 14--19, 2020, Portland,
-               OR, USA},
+               Anthony Hock{-}Koon},
+  title     = {Making Search Engines Faster by Lowering the Cost of Querying Business
+               Rules Through FPGAs},
+  booktitle = {Proceedings of the 2020 International Conference on Management of
+               Data, {SIGMOD'20}, June 14-19, 2020, Portland, OR, USA},
+  pages     = {2255--2270},
   publisher = {{ACM}},
   year      = {2020},
   url       = {https://doi.org/10.1145/3318464.3386133},
-  doi       = {10.1145/3318464.3386133},
+  doi       = {10.1145/3318464.3386133}
 }
 ```
